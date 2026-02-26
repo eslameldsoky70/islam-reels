@@ -331,12 +331,29 @@
       .dev {
         font-size: 11px;
       }
-      .prv {
+      .prv-marquee-wrap {
         margin-right: auto;
+        overflow: hidden;
+        max-width: 160px;
+        direction: ltr;
+      }
+      .prv-marquee {
+        display: inline-flex;
+        gap: 20px;
+        white-space: nowrap;
+        animation: ticker 6s linear infinite;
         font-size: 10px;
         font-weight: bold;
-        color: rgba(201, 151, 58, 0.8);
-        white-space: nowrap;
+        color: rgba(201, 151, 58, 0.85);
+      }
+      .prv-marquee-inner {
+        display: inline-flex;
+        gap: 20px;
+        flex-shrink: 0;
+      }
+      @keyframes ticker {
+        0%   { transform: translateX(0); }
+        100% { transform: translateX(-50%); }
       }
       .prv-bar {
         text-align: center;
@@ -1332,7 +1349,12 @@
               id="scSocialBar"
               style="display: flex; gap: 5px; align-items: center"
             ></div>
-            <span class="prv">لا تنسونا من دعائكم 🤍</span>
+            <div class="prv-marquee-wrap">
+              <div class="prv-marquee">
+                <span class="prv-marquee-inner">لا تنسونا من دعائكم 🤍 &nbsp;❋&nbsp; </span>
+                <span class="prv-marquee-inner">لا تنسونا من دعائكم 🤍 &nbsp;❋&nbsp; </span>
+              </div>
+            </div>
           </div>
           <div class="stage">
             <div
@@ -2640,7 +2662,15 @@
           flag: "🇩🇿",
           country: "الجزائر",
         },
-      
+        {
+          folder: "Maher_AlMuaiqly_128kbps",
+          islamicId: "ar.mahermuaiqly",
+          versesId: "MaherAlMuaiqly",
+          qdcId: 10,
+          name: "ماهر المعيقلي",
+          flag: "🇸🇦",
+          country: "السعودية",
+        },
         {
           folder: "Abdurrahmaan_As-Sudais_192kbps",
           islamicId: "ar.abdurrahmaansudais",
