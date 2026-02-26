@@ -2600,7 +2600,7 @@
           updateScreen();
           verseChunks = splitIntoChunks(vd.arText || "");
           currentChunkIdx = 0;
-          showChunk(0, false);
+          showChunk(0, true);
           const ayahLabel = item.isBasmala
             ? "البسملة"
             : `آية ${arN(item.ayahN)}`;
@@ -2612,9 +2612,7 @@
           src.buffer = buffers[idx];
           src.connect(destNode);
           src.connect(audioCtx.destination);
-          if (verseChunks.length > 1) {
-            setTimeout(() => startChunkCycle(duration, true), 50);
-          }
+          if (verseChunks.length > 1) { const _interval = (duration * 1000) / verseChunks.length; let _ci = 1; function _tick() { if (_ci >= verseChunks.length || !isExporting) return; showChunk(_ci, true); _ci++; chunkTimer = setTimeout(_tick, _interval); } chunkTimer = setTimeout(_tick, _interval); }
           src.onended = () => {
             stopWordHighlight();
             clearChunkCycle();
@@ -3454,16 +3452,17 @@
         clearChunkCycle();
         if (verseChunks.length <= 1) return;
 
+        // وزّع الوقت بالنسبة لعدد الكلمات في كل جزء
         const totalWords = verseChunks.reduce((s, c) => s + c.words.length, 0);
         const msPerWord = (totalDuration * 1000) / totalWords;
         const FADE_OFFSET = instant ? 0 : 220;
-        const cycleStart = performance.now();
 
         let ci = 1;
         function scheduleNext() {
           if (ci >= verseChunks.length) return;
-          const chunkStartMs = verseChunks[ci].startIdx * msPerWord;
-          const elapsed = performance.now() - cycleStart;
+          const wordsBeforeChunk = verseChunks[ci].startIdx;
+          const chunkStartMs = wordsBeforeChunk * msPerWord;
+          const elapsed = (audio.currentTime || 0) * 1000;
           const delay = Math.max(50, chunkStartMs - elapsed - FADE_OFFSET);
           chunkTimer = setTimeout(() => {
             showChunk(ci, instant);
