@@ -8,6 +8,14 @@ const os = require("os");
 const app = express();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 500 * 1024 * 1024 } });
 
+// Serve static files (icons, manifest, sw)
+app.use('/icons', express.static(path.join(__dirname, 'icons')));
+app.get('/manifest.json', (req, res) => res.sendFile(path.join(__dirname, 'manifest.json')));
+app.get('/sw.js', (req, res) => {
+  res.setHeader('Content-Type', 'application/javascript');
+  res.sendFile(path.join(__dirname, 'sw.js'));
+});
+
 // Serve the main HTML file
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "index.html"));
