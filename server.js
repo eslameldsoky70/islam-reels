@@ -6,6 +6,13 @@ const path = require("path");
 const os = require("os");
 
 const app = express();
+
+// Required headers for FFmpeg.wasm (SharedArrayBuffer)
+app.use((req, res, next) => {
+  res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
+  res.setHeader("Cross-Origin-Embedder-Policy", "require-corp");
+  next();
+});
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 500 * 1024 * 1024 } });
 
 // Serve the main HTML file

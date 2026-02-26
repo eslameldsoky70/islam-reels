@@ -3,6 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Cross-Origin-Opener-Policy" content="same-origin" />
+    <meta http-equiv="Cross-Origin-Embedder-Policy" content="require-corp" />
     <title>إسلام ريلز ✨</title>
     <link
       href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@300;400;600;700;900&family=Scheherazade+New:wght@400;700&family=Noto+Naskh+Arabic:wght@400;700&family=Lateef:wght@400;700&family=Reem+Kufi:wght@400;700&family=Harmattan:wght@400;700&display=swap"
@@ -2521,27 +2523,36 @@
             downloadWebm();
             return;
           }
-          toast$("⏫ جارٍ التحويل إلى MP4...");
-          setSbar("⏫ جارٍ التحويل...", "#c9973a");
+          // Convert using FFmpeg.wasm (client-side, no server needed)
+          toast$("⏳ جارٍ تحميل محوّل MP4...");
+          setSbar("⏳ جارٍ التحويل في المتصفح...", "#c9973a");
           try {
-            const ctrl = new AbortController();
-            const t = setTimeout(() => ctrl.abort(), 180_000);
-            const formData = new FormData();
-            formData.append("video", webmBlob, "reel.webm");
-            const res = await fetch("/convert", {
-              method: "POST",
-              body: formData,
-              signal: ctrl.signal,
+            // Load FFmpeg.wasm if not already loaded
+            if (!window._ffmpegLoaded) {
+              await new Promise((resolve, reject) => {
+                const s1 = document.createElement("script");
+                s1.src = "https://cdnjs.cloudflare.com/ajax/libs/ffmpeg.wasm/0.12.10/ffmpeg.min.js";
+                s1.onload = resolve;
+                s1.onerror = reject;
+                document.head.appendChild(s1);
+              });
+              window._ffmpegLoaded = true;
+            }
+            const { FFmpeg } = window.FFmpegWASM || FFmpegWASM || window;
+            const ffmpeg = new FFmpeg();
+            ffmpeg.on("progress", ({ progress }) => {
+              const pct = Math.round(progress * 100);
+              setSbar(`⏳ تحويل MP4... ${pct}%`, "#c9973a");
             });
-            clearTimeout(t);
-            if (!res.ok)
-              throw new Error(
-                "HTTP " +
-                  res.status +
-                  ": " +
-                  (await res.text().catch(() => "")),
-              );
-            const mp4Blob = await res.blob();
+            await ffmpeg.load({
+              coreURL: "https://cdnjs.cloudflare.com/ajax/libs/ffmpeg.wasm/0.12.10/ffmpeg-core.js",
+              wasmURL: "https://cdnjs.cloudflare.com/ajax/libs/ffmpeg.wasm/0.12.10/ffmpeg-core.wasm",
+            });
+            const webmData = new Uint8Array(await webmBlob.arrayBuffer());
+            await ffmpeg.writeFile("input.webm", webmData);
+            await ffmpeg.exec(["-i", "input.webm", "-c:v", "libx264", "-preset", "fast", "-crf", "22", "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart", "output.mp4"]);
+            const mp4Data = await ffmpeg.readFile("output.mp4");
+            const mp4Blob = new Blob([mp4Data.buffer], { type: "video/mp4" });
             if (mp4Blob.size < 1000) throw new Error("الملف الناتج فارغ");
             const url = URL.createObjectURL(mp4Blob);
             const a = document.createElement("a");
@@ -2552,7 +2563,7 @@
             toast$("✅ تم حفظ الفيديو MP4 ✨");
             setSbar("✅ تم الحفظ بنجاح", "#5ec285");
           } catch (err) {
-            console.error("[export]", err);
+            console.error("[ffmpeg.wasm error]", err);
             toast$("⚠️ فشل التحويل — جارٍ حفظ WebM...");
             setSbar("⚠️ " + err.message, "#e4b55a");
             setTimeout(downloadWebm, 800);
