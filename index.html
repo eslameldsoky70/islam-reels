@@ -3456,13 +3456,15 @@
         const totalWords = verseChunks.reduce((s, c) => s + c.words.length, 0);
         const msPerWord = (totalDuration * 1000) / totalWords;
         const FADE_OFFSET = instant ? 0 : 220;
+        const startTime = performance.now();
 
         let ci = 1;
         function scheduleNext() {
           if (ci >= verseChunks.length) return;
           const wordsBeforeChunk = verseChunks[ci].startIdx;
           const chunkStartMs = wordsBeforeChunk * msPerWord;
-          const elapsed = (audio.currentTime || 0) * 1000;
+          // استخدم performance.now بدل audio.currentTime عشان يشتغل صح في التصدير
+          const elapsed = performance.now() - startTime;
           const delay = Math.max(50, chunkStartMs - elapsed - FADE_OFFSET);
           chunkTimer = setTimeout(() => {
             showChunk(ci, instant);
