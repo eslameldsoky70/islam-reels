@@ -2612,7 +2612,9 @@
           src.buffer = buffers[idx];
           src.connect(destNode);
           src.connect(audioCtx.destination);
-          if (verseChunks.length > 1) startChunkCycle(duration, true);
+          if (verseChunks.length > 1) {
+            setTimeout(() => startChunkCycle(duration, true), 50);
+          }
           src.onended = () => {
             stopWordHighlight();
             clearChunkCycle();
@@ -3452,19 +3454,16 @@
         clearChunkCycle();
         if (verseChunks.length <= 1) return;
 
-        // وزّع الوقت بالنسبة لعدد الكلمات في كل جزء
         const totalWords = verseChunks.reduce((s, c) => s + c.words.length, 0);
         const msPerWord = (totalDuration * 1000) / totalWords;
         const FADE_OFFSET = instant ? 0 : 220;
-        const startTime = performance.now();
+        const cycleStart = performance.now();
 
         let ci = 1;
         function scheduleNext() {
           if (ci >= verseChunks.length) return;
-          const wordsBeforeChunk = verseChunks[ci].startIdx;
-          const chunkStartMs = wordsBeforeChunk * msPerWord;
-          // استخدم performance.now بدل audio.currentTime عشان يشتغل صح في التصدير
-          const elapsed = performance.now() - startTime;
+          const chunkStartMs = verseChunks[ci].startIdx * msPerWord;
+          const elapsed = performance.now() - cycleStart;
           const delay = Math.max(50, chunkStartMs - elapsed - FADE_OFFSET);
           chunkTimer = setTimeout(() => {
             showChunk(ci, instant);
