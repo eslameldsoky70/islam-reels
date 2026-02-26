@@ -2671,7 +2671,15 @@
           flag: "🇩🇿",
           country: "الجزائر",
         },
-        
+        {
+          folder: "Maher_AlMuaiqly_128kbps",
+          islamicId: "ar.mahermuaiqly",
+          versesId: "MaherAlMuaiqly",
+          qdcId: 10,
+          name: "ماهر المعيقلي",
+          flag: "🇸🇦",
+          country: "السعودية",
+        },
         {
           folder: "Abdurrahmaan_As-Sudais_192kbps",
           islamicId: "ar.abdurrahmaansudais",
@@ -2717,15 +2725,6 @@
           flag: "🇸🇦",
           country: "السعودية",
         },
-        {
- folder:"Ghamadi_40kbps",
- islamicId:"ar.ghamadi",
- versesId:"Ghamadi",
- qdcId:8,
- name:"سعد الغامدي",
- flag:"🇸🇦",
- country:"السعودية"
-},
       ];
 
       const SURAHS = [
@@ -3461,15 +3460,18 @@
         clearChunkCycle();
         if (verseChunks.length <= 1) return;
         const interval = (totalDuration / verseChunks.length) * 1000;
+        // نخصم 220ms وقت الـ fade عشان الكلام يظهر مع الصوت مش بعده
+        const FADE_OFFSET = instant ? 0 : 220;
+        const adjustedInterval = Math.max(100, interval - FADE_OFFSET);
         let ci = 0;
         function next() {
           ci++;
           if (ci < verseChunks.length) {
             showChunk(ci, instant);
-            chunkTimer = setTimeout(next, interval);
+            chunkTimer = setTimeout(next, adjustedInterval);
           }
         }
-        chunkTimer = setTimeout(next, interval);
+        chunkTimer = setTimeout(next, adjustedInterval);
       }
       function clearChunkCycle() {
         if (chunkTimer) {
