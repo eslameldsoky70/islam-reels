@@ -3459,19 +3459,26 @@
       function startChunkCycle(totalDuration, instant = false) {
         clearChunkCycle();
         if (verseChunks.length <= 1) return;
-        const interval = (totalDuration / verseChunks.length) * 1000;
-        // نخصم 220ms وقت الـ fade عشان الكلام يظهر مع الصوت مش بعده
+
+        // وزّع الوقت بالنسبة لعدد الكلمات في كل جزء
+        const totalWords = verseChunks.reduce((s, c) => s + c.words.length, 0);
+        const msPerWord = (totalDuration * 1000) / totalWords;
         const FADE_OFFSET = instant ? 0 : 220;
-        const adjustedInterval = Math.max(100, interval - FADE_OFFSET);
-        let ci = 0;
-        function next() {
-          ci++;
-          if (ci < verseChunks.length) {
+
+        let ci = 1;
+        function scheduleNext() {
+          if (ci >= verseChunks.length) return;
+          const wordsBeforeChunk = verseChunks[ci].startIdx;
+          const chunkStartMs = wordsBeforeChunk * msPerWord;
+          const elapsed = (audio.currentTime || 0) * 1000;
+          const delay = Math.max(50, chunkStartMs - elapsed - FADE_OFFSET);
+          chunkTimer = setTimeout(() => {
             showChunk(ci, instant);
-            chunkTimer = setTimeout(next, adjustedInterval);
-          }
+            ci++;
+            scheduleNext();
+          }, delay);
         }
-        chunkTimer = setTimeout(next, adjustedInterval);
+        scheduleNext();
       }
       function clearChunkCycle() {
         if (chunkTimer) {
