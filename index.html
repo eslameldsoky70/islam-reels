@@ -487,14 +487,14 @@
       }
       @media (max-width: 700px) {
         .v-a {
-          font-size: 10px;
-          line-height: 1.5;
+          font-size: 16px !important;
+          line-height: 1.7;
         }
       }
       @media (max-width: 400px) {
         .v-a {
-          font-size: 10px;
-          line-height: 1.5;
+          font-size: 14px !important;
+          line-height: 1.6;
         }
       }
       .v-a span {
@@ -3567,7 +3567,12 @@
         const ff = fontMap[S.font] || fontMap.sch;
         $("vAr").style.fontFamily = ff;
         $("vAr").style.setProperty("--word-color", S.color || "#fff");
-        $("vAr").style.fontSize = (S.size || 26) + "px";
+        // نضبط الخط بناءً على حجم sc-v الفعلي (الـ container الحقيقي للنص)
+        const _container = document.getElementById('vArea');
+        const _containerW = _container ? _container.offsetWidth : 216;
+        const _scl = Math.min(1, _containerW / 216); // 216 = عرض sc-v على desktop
+        const _fs = Math.max(10, Math.round((S.size || 26) * _scl));
+        $("vAr").style.fontSize = _fs + "px";
         $("vAr").style.lineHeight = "1.75";
       }
 
