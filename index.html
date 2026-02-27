@@ -2612,7 +2612,25 @@
           src.buffer = buffers[idx];
           src.connect(destNode);
           src.connect(audioCtx.destination);
-          if (verseChunks.length > 1) { const _interval = (duration * 1000) / verseChunks.length; let _ci = 1; function _tick() { if (_ci >= verseChunks.length || !isExporting) return; showChunk(_ci, true); _ci++; chunkTimer = setTimeout(_tick, _interval); } chunkTimer = setTimeout(_tick, _interval); }
+          if (verseChunks.length > 1) {
+            // حساب التوقيت بناءً على عدد الكلمات في كل جزء
+            const totalWords = verseChunks.reduce((s, c) => s + c.words.length, 0);
+            const msPerWord = (duration * 1000) / totalWords;
+            const exportStart = audioCtx.currentTime; // وقت بداية الصوت
+            let ci = 1;
+            function scheduleExportChunk() {
+              if (ci >= verseChunks.length || !isExporting) return;
+              const chunkStartSec = (verseChunks[ci].startIdx * msPerWord) / 1000;
+              const elapsed = audioCtx.currentTime - exportStart;
+              const delay = Math.max(50, (chunkStartSec - elapsed) * 1000);
+              chunkTimer = setTimeout(() => {
+                showChunk(ci, true);
+                ci++;
+                scheduleExportChunk();
+              }, delay);
+            }
+            scheduleExportChunk();
+          }
           src.onended = () => {
             stopWordHighlight();
             clearChunkCycle();
@@ -3420,15 +3438,15 @@
         const applyAndShow = () => {
           vAr.innerHTML = html;
           vAr.style.opacity = "1";
-          if (useFade) {
-            // Save words for canvas-level animation during export
-            if (isExporting) {
-              canvasFadeWords = chunk.words.map((w) => ({
-                text: w,
-                color: clr,
-              }));
-              canvasFadeStart = performance.now();
-            }
+          // في التصدير: نملى canvasFadeWords دايماً لو fadein مفعل
+          if (isExporting && S.fx.fadein) {
+            canvasFadeWords = chunk.words.map((w) => ({
+              text: w,
+              color: clr,
+            }));
+            canvasFadeStart = performance.now();
+          }
+          if (useFade && !isExporting) {
             requestAnimationFrame(() => {
               requestAnimationFrame(() => {
                 vAr
@@ -3438,7 +3456,7 @@
             });
           }
         };
-        if (instant) {
+        if (instant || isExporting) {
           vAr.style.transition = "none";
           applyAndShow();
         } else {
