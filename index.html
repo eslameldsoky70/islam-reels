@@ -3461,17 +3461,14 @@
           )
           .join(" ");
         const vAr = $("vAr");
+        // في التصدير: نملأ canvasFadeWords قبل applyAndShow عشان syncCSTATE يلاقيها
+        if (isExporting && S.fx.fadein) {
+          canvasFadeWords = chunk.words.map((w) => ({ text: w, color: clr }));
+          canvasFadeStart = performance.now();
+        }
         const applyAndShow = () => {
           vAr.innerHTML = html;
           vAr.style.opacity = "1";
-          // في التصدير: نملى canvasFadeWords دايماً لو fadein مفعل
-          if (isExporting && S.fx.fadein) {
-            canvasFadeWords = chunk.words.map((w) => ({
-              text: w,
-              color: clr,
-            }));
-            canvasFadeStart = performance.now();
-          }
           if (useFade && !isExporting) {
             requestAnimationFrame(() => {
               requestAnimationFrame(() => {
