@@ -8,11 +8,19 @@
     <meta name="theme-color" content="#c9973a" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="إسلام ريلز" />
+    <meta
+      name="apple-mobile-web-app-status-bar-style"
+      content="black-translucent"
+    />
+    <meta name="apple-mobile-web-app-title" content="Islam Reels" />
     <link rel="apple-touch-icon" href="/icons/icon-192.png" />
-    <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
-    <title>إسلام ريلز ✨</title>
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="192x192"
+      href="/icons/icon-192.png"
+    />
+    <title>Islam Reels ✨</title>
     <link
       href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@300;400;600;700;900&family=Scheherazade+New:wght@400;700&family=Noto+Naskh+Arabic:wght@400;700&family=Lateef:wght@400;700&family=Reem+Kufi:wght@400;700&family=Harmattan:wght@400;700&display=swap"
       rel="stylesheet"
@@ -361,8 +369,12 @@
         flex-shrink: 0;
       }
       @keyframes ticker {
-        0%   { transform: translateX(0); }
-        100% { transform: translateX(-50%); }
+        0% {
+          transform: translateX(0);
+        }
+        100% {
+          transform: translateX(-50%);
+        }
       }
       .prv-bar {
         text-align: center;
@@ -1142,7 +1154,7 @@
       <div class="top">
         <div class="logo">
           <div class="logo-icon">🌙</div>
-          <span class="logo-text">إسلام ريلز</span>
+          <span class="logo-text">Islam Reels</span>
         </div>
         <div class="tabs">
           <div class="tab on" onclick="switchTab('sheikh')">🎙 الشيوخ</div>
@@ -1360,8 +1372,12 @@
             ></div>
             <div class="prv-marquee-wrap">
               <div class="prv-marquee">
-                <span class="prv-marquee-inner">لا تنسونا من دعائكم 🤍 &nbsp;❋&nbsp; </span>
-                <span class="prv-marquee-inner">لا تنسونا من دعائكم 🤍 &nbsp;❋&nbsp; </span>
+                <span class="prv-marquee-inner"
+                  >لا تنسونا من دعائكم 🤍 &nbsp;❋&nbsp;
+                </span>
+                <span class="prv-marquee-inner"
+                  >لا تنسونا من دعائكم 🤍 &nbsp;❋&nbsp;
+                </span>
               </div>
             </div>
           </div>
@@ -1614,7 +1630,7 @@
           <div class="player">
             <div class="pt">
               <div class="np-i">
-                <div class="np-t" id="npT">إسلام ريلز ✨</div>
+                <div class="np-t" id="npT">Islam Reels ✨</div>
                 <div class="np-s" id="npS">اختر شيخاً وسورة للبدء</div>
               </div>
               <div class="pbtns">
@@ -2539,7 +2555,7 @@
           isExporting = false;
           updateExportBtn(false);
           const webmBlob = new Blob(exportChunks, { type: "video/webm" });
-          const fname = `اسلام-ريلز-${S.surah?.ar || "قرآن"}-${new Date().toISOString().slice(0, 10)}`;
+          const fname = `Islam Reels-${S.surah?.ar || "قرآن"}`;
           function downloadWebm() {
             const url = URL.createObjectURL(webmBlob);
             const a = document.createElement("a");
@@ -2560,7 +2576,9 @@
             const mp4Blob2 = new Blob(exportChunks, { type: "video/mp4" });
             const url2 = URL.createObjectURL(mp4Blob2);
             const a2 = document.createElement("a");
-            a2.href = url2; a2.download = fname + ".mp4"; a2.click();
+            a2.href = url2;
+            a2.download = fname + ".mp4";
+            a2.click();
             setTimeout(() => URL.revokeObjectURL(url2), 3000);
             toast$("✅ تم حفظ الفيديو MP4 ✨");
             setSbar("✅ تم الحفظ بنجاح", "#5ec285");
@@ -2569,7 +2587,10 @@
             downloadWebm();
             setTimeout(() => {
               toast$("💡 حوّل الفيديو لـ MP4 مجاناً على cloudconvert.com");
-              setSbar("💡 افتح cloudconvert.com وحوّل الـ WebM لـ MP4 مجاناً", "#e4b55a");
+              setSbar(
+                "💡 افتح cloudconvert.com وحوّل الـ WebM لـ MP4 مجاناً",
+                "#e4b55a",
+              );
             }, 1500);
           }
         };
@@ -2614,13 +2635,17 @@
           src.connect(audioCtx.destination);
           if (verseChunks.length > 1) {
             // حساب التوقيت بناءً على عدد الكلمات في كل جزء
-            const totalWords = verseChunks.reduce((s, c) => s + c.words.length, 0);
+            const totalWords = verseChunks.reduce(
+              (s, c) => s + c.words.length,
+              0,
+            );
             const msPerWord = (duration * 1000) / totalWords;
             const exportStart = audioCtx.currentTime; // وقت بداية الصوت
             let ci = 1;
             function scheduleExportChunk() {
               if (ci >= verseChunks.length || !isExporting) return;
-              const chunkStartSec = (verseChunks[ci].startIdx * msPerWord) / 1000;
+              const chunkStartSec =
+                (verseChunks[ci].startIdx * msPerWord) / 1000;
               const elapsed = audioCtx.currentTime - exportStart;
               const delay = Math.max(50, (chunkStartSec - elapsed) * 1000);
               chunkTimer = setTimeout(() => {
@@ -2689,7 +2714,7 @@
           flag: "🇩🇿",
           country: "الجزائر",
         },
-        
+
         {
           folder: "Abdurrahmaan_As-Sudais_192kbps",
           islamicId: "ar.abdurrahmaansudais",
@@ -3568,7 +3593,7 @@
         $("vAr").style.fontFamily = ff;
         $("vAr").style.setProperty("--word-color", S.color || "#fff");
         // نضبط الخط بناءً على حجم sc-v الفعلي (الـ container الحقيقي للنص)
-        const _container = document.getElementById('vArea');
+        const _container = document.getElementById("vArea");
         const _containerW = _container ? _container.offsetWidth : 216;
         const _scl = Math.min(1, _containerW / 216); // 216 = عرض sc-v على desktop
         const _fs = Math.max(10, Math.round((S.size || 26) * _scl));
@@ -3897,12 +3922,12 @@
         _origSwitchTab(t);
       };
     </script>
-  <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js').catch(() => {});
-      });
-    }
-  </script>
+    <script>
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+          navigator.serviceWorker.register("/sw.js").catch(() => {});
+        });
+      }
+    </script>
   </body>
 </html>
