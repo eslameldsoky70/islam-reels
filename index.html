@@ -2030,6 +2030,7 @@
         const vAr = document.getElementById("vAr");
         if (vAr) {
           const spans = Array.from(vAr.querySelectorAll("span"));
+          CSTATE.fadein = !!S.fx.fadein; // تأكد إن fadein محدّث دايماً
           if (isExporting && CSTATE.fadein && canvasFadeWords.length) {
             // During export: compute animated opacity from elapsed time per word
             const elapsed = performance.now() - canvasFadeStart;
