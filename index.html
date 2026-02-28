@@ -398,8 +398,8 @@
         overflow: hidden;
       }
       .phone {
-        width: 244px;
-        height: 434px;
+        width: 220px;
+        height: 390px;
         border-radius: 37px;
         border: 2px solid rgba(255, 255, 255, 0.1);
         background: #000;
@@ -1073,10 +1073,16 @@
           min-height: 0;
         }
 
-        /* ── Phone preview ── */
+        /* ── Phone preview — 80% من الـ stage ── */
+        .stage {
+          overflow: visible;
+        }
         .phone {
-          width: 155px;
-          height: 276px;
+          width: auto;
+          height: min(60dvh, 80vw * 16 / 9);
+          aspect-ratio: 9 / 16;
+          max-height: 80dvh;
+          max-width: 80vw;
           border-radius: 26px;
         }
         .screen {
@@ -1138,8 +1144,8 @@
 
       @media (max-width: 400px) {
         .phone {
-          width: 130px;
-          height: 231px;
+          width: 150px;
+          height: 290px;
           border-radius: 22px;
         }
         .screen {
