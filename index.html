@@ -21,6 +21,7 @@
       href="/icons/icon-192.png"
     />
     <title>Islam Reels ✨</title>
+    <script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5/build/mp4-muxer.js"></script>
     <link
       href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@300;400;600;700;900&family=Scheherazade+New:wght@400;700&family=Noto+Naskh+Arabic:wght@400;700&family=Lateef:wght@400;700&family=Reem+Kufi:wght@400;700&family=Harmattan:wght@400;700&display=swap"
       rel="stylesheet"
@@ -87,7 +88,7 @@
       }
       .logo-text {
         font-family: "Amiri", serif;
-        font-size: 18px;
+        font-size: 14px;
         color: #e4b55a;
       }
       .tabs {
@@ -493,7 +494,7 @@
         word-break: break-word;
         transition: opacity 0.25s ease;
         font-family: "Scheherazade New", serif;
-        font-size: 26px;
+        font-size: 14px;
         line-height: 1.75;
         overflow: visible;
       }
@@ -793,9 +794,24 @@
         transition: 0.3s;
         pointer-events: none;
       }
-      .toast.show {
-        transform: translateX(-50%) translateY(0);
-      }
+      .toast.show { transform: translateX(-50%) translateY(0); }
+      .xov{position:fixed;inset:0;background:rgba(0,0,0,.85);backdrop-filter:blur(10px);z-index:10000;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .35s}
+      .xov.show{opacity:1;pointer-events:all}
+      .xbox{background:linear-gradient(145deg,#0a1a0e,#0f2415);border:1px solid rgba(201,151,58,.35);border-radius:24px;padding:32px 28px 24px;width:270px;text-align:center;box-shadow:0 30px 80px rgba(0,0,0,.9)}
+      .xring{position:relative;width:150px;height:150px;margin:0 auto 18px}
+      .xring svg{width:150px;height:150px;transform:rotate(-90deg)}
+      .xring-bg{fill:none;stroke:#18301e;stroke-width:10}
+      .xring-fg{fill:none;stroke:url(#xgrad);stroke-width:10;stroke-linecap:round;stroke-dasharray:283;stroke-dashoffset:283;transition:stroke-dashoffset .25s ease}
+      .xring-inner{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px}
+      .xring-pct{font-family:'Cairo',sans-serif;font-size:30px;font-weight:900;color:#e4b55a;line-height:1}
+      .xring-eta{font-family:'Cairo',sans-serif;font-size:12px;color:#8aaa94;line-height:1}
+      .x-ttl{font-family:'Cairo',sans-serif;font-size:15px;font-weight:700;color:#e4b55a;margin-bottom:4px}
+      .x-sub{font-size:11px;color:#6e8878;margin-bottom:16px;min-height:16px}
+      .x-cnt{font-size:12px;color:#8aaa94;margin-bottom:18px}
+      .x-stop{padding:9px 28px;border-radius:100px;background:linear-gradient(135deg,#5c2424,#a03030);border:none;color:#fff;font-family:'Cairo',sans-serif;font-size:13px;font-weight:600;cursor:pointer}
+      .x-stop:hover{opacity:.8}
+      .xsp{display:inline-block;width:11px;height:11px;border:2px solid rgba(201,151,58,.3);border-top-color:#e4b55a;border-radius:50%;animation:xspin .7s linear infinite;vertical-align:middle;margin-left:5px}
+      @keyframes xspin{to{transform:rotate(360deg)}}
       ::-webkit-scrollbar {
         width: 3px;
       }
@@ -835,6 +851,119 @@
           opacity: 1;
         }
       }
+
+      /* ══ SYNC PANEL STYLES ══ */
+      .sync-panel {
+        position: fixed; inset: 0;
+        background: rgba(0,0,0,.88);
+        backdrop-filter: blur(12px);
+        z-index: 5000;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 12px;
+      }
+      .sync-panel.show { display: flex; }
+      .sync-box {
+        background: linear-gradient(145deg,#071a0a,#0c1810);
+        border: 1px solid rgba(201,151,58,.3);
+        border-radius: 18px;
+        width: 100%;
+        max-width: 480px;
+        max-height: 90vh;
+        overflow-y: auto;
+        padding: 18px 16px 14px;
+        box-shadow: 0 30px 80px rgba(0,0,0,.9);
+      }
+      .sync-hdr {
+        display: flex; align-items: center; justify-content: space-between;
+        margin-bottom: 14px;
+      }
+      .sync-ttl {
+        font-size: 14px; font-weight: 700; color: #e4b55a;
+        display: flex; align-items: center; gap: 7px;
+      }
+      .sync-close {
+        width: 28px; height: 28px; border-radius: 50%;
+        background: rgba(255,255,255,.07); border: none;
+        color: rgba(255,255,255,.6); cursor: pointer; font-size: 14px;
+        display: flex; align-items: center; justify-content: center;
+      }
+      .sync-tabs {
+        display: flex; gap: 4px; margin-bottom: 12px;
+        border-bottom: 1px solid rgba(255,255,255,.06); padding-bottom: 8px;
+      }
+      .sync-tab {
+        padding: 5px 12px; border-radius: 100px;
+        font-size: 11px; cursor: pointer;
+        border: 1px solid rgba(255,255,255,.07);
+        background: transparent; color: #6e8878; transition: .2s;
+        font-family: 'Cairo',sans-serif;
+      }
+      .sync-tab.on {
+        border-color: rgba(201,151,58,.5);
+        background: rgba(201,151,58,.1); color: #e4b55a;
+      }
+      .sync-tc { display: none; }
+      .sync-tc.on { display: block; }
+
+      /* offset table */
+      .oft { width:100%; border-collapse:collapse; font-size:12px; }
+      .oft th { padding:5px 6px; color:rgba(255,255,255,.35); font-size:10px;
+        letter-spacing:1px; border-bottom:1px solid rgba(255,255,255,.07); text-align:right; }
+      .oft td { padding:5px 6px; border-bottom:1px solid rgba(255,255,255,.04); vertical-align:middle; }
+      .oft input[type=number] {
+        width:58px; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.1);
+        border-radius:6px; color:#fff; font-family:'Cairo',sans-serif;
+        font-size:11px; padding:4px 6px; outline:none; text-align:center;
+      }
+      .oft-ar { font-family:'Scheherazade New',serif; font-size:13px;
+        color:#e4b55a; max-width:140px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; direction:rtl; }
+      .syn-btn {
+        width:100%; padding:9px; border-radius:8px; border:none;
+        font-family:'Cairo',sans-serif; font-size:13px; font-weight:700;
+        cursor:pointer; transition:.2s; margin-bottom:6px;
+        display:flex; align-items:center; justify-content:center; gap:5px;
+      }
+      .syn-gold { background:linear-gradient(135deg,#6b4e18,#c9973a); color:#fff; }
+      .syn-grn  { background:linear-gradient(135deg,#245c38,#3ea066); color:#fff; }
+      .syn-red  { background:linear-gradient(135deg,#5c1a1a,#a03030); color:#fff; }
+      .syn-ghost{ background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.1); color:rgba(255,255,255,.6); }
+      .syn-btn:disabled { opacity:.4; cursor:not-allowed; }
+
+      /* live sync */
+      .ls-verse-card {
+        background: rgba(201,151,58,.06);
+        border: 1px solid rgba(201,151,58,.2);
+        border-radius: 10px;
+        padding: 10px 12px;
+        margin-bottom: 10px;
+        text-align: center;
+      }
+      .ls-verse-ar { font-family:'Scheherazade New',serif; font-size:15px; color:#e4b55a; line-height:1.8; direction:rtl; }
+      .ls-verse-ref { font-size:10px; color:rgba(255,255,255,.35); margin-top:4px; }
+      .ls-prog { display:flex; align-items:center; gap:5px; margin-bottom:8px; font-size:11px; color:#6e8878; }
+      .ls-result-tbl { width:100%; border-collapse:collapse; font-size:11px; margin-top:6px; }
+      .ls-result-tbl th { padding:4px 5px; color:rgba(255,255,255,.3); font-size:9px; letter-spacing:1px;
+        border-bottom:1px solid rgba(255,255,255,.07); text-align:right; }
+      .ls-result-tbl td { padding:4px 5px; border-bottom:1px solid rgba(255,255,255,.04); vertical-align:middle; }
+      .ls-mark-flash { animation: lsFlash .25s ease; }
+      @keyframes lsFlash { 0%{transform:scale(1)} 50%{transform:scale(.94)} 100%{transform:scale(1)} }
+
+      /* sync open button */
+      #syncOpenBtn {
+        padding: 7px 13px;
+        background: rgba(201,151,58,.12);
+        border: 1px solid rgba(201,151,58,.3);
+        border-radius: 7px;
+        color: #e4b55a;
+        font-family: 'Cairo',sans-serif;
+        font-size: 12px; font-weight: 700;
+        cursor: pointer; transition: .2s;
+        white-space: nowrap;
+      }
+      #syncOpenBtn:hover { background: rgba(201,151,58,.22); }
+
       .wave-bar {
         width: 3px;
         height: 4px;
@@ -1655,6 +1784,9 @@
               </div>
               <span class="prog-t" id="tD" style="text-align: left">0:00</span>
             </div>
+            <div style="display:flex;justify-content:center;margin-top:7px;">
+              <button id="syncOpenBtn" onclick="openSyncPanel()">⏱ ضبط المزامنة</button>
+            </div>
           </div>
         </div>
 
@@ -1729,7 +1861,7 @@
                 id="fontSizeSlider"
                 min="16"
                 max="52"
-                value="26"
+                value="14"
                 oninput="setFontSize(this.value)"
                 style="flex: 1"
               />
@@ -1751,7 +1883,7 @@
                   min-width: 28px;
                   text-align: center;
                 "
-                >26</span
+                >14</span
               >
             </div>
           </div>
@@ -1932,7 +2064,39 @@
             </div>
           </div>
           <div class="sec">
-            <span class="lbl">التصدير</span>
+            <span class="lbl">صيغة التصدير</span>
+            <!-- خيارات الصيغة -->
+            <div style="display:flex;gap:7px;margin-bottom:9px;">
+              <!-- MP4 -->
+              <div id="fmtMp4" onclick="setExportFmt('mp4')" style="flex:1;border:2px solid rgba(201,151,58,.7);border-radius:10px;padding:9px 7px;text-align:center;cursor:pointer;background:rgba(201,151,58,.08);transition:.2s;">
+                <div style="display:flex;align-items:center;justify-content:center;gap:5px;margin-bottom:3px;">
+                  <span style="font-size:13px;font-weight:700;color:#e4b55a;">MP4</span>
+                  <span style="background:#c9973a;color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:20px;">موصى به</span>
+                </div>
+                <div style="font-size:10px;color:#6e8878;">H.264 + AAC</div>
+                <div style="margin-top:4px;width:14px;height:14px;border-radius:50%;border:2px solid #c9973a;background:#c9973a;margin:4px auto 0;box-shadow:0 0 6px rgba(201,151,58,.6);"></div>
+              </div>
+              <!-- WebM -->
+              <div id="fmtWebm" onclick="setExportFmt('webm')" style="flex:1;border:2px solid rgba(255,255,255,.1);border-radius:10px;padding:9px 7px;text-align:center;cursor:pointer;background:rgba(255,255,255,.03);transition:.2s;">
+                <div style="font-size:13px;font-weight:700;color:#b5c4bc;margin-bottom:3px;">WebM</div>
+                <div style="font-size:10px;color:#6e8878;">VP8 / VP9</div>
+                <div style="margin-top:4px;width:14px;height:14px;border-radius:50%;border:2px solid rgba(255,255,255,.2);background:transparent;margin:4px auto 0;"></div>
+              </div>
+            </div>
+            <!-- Turbo MP4 toggle -->
+            <div id="turboRow" style="display:flex;align-items:center;gap:9px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:9px;padding:9px 10px;margin-bottom:9px;">
+              <div id="turboSw" onclick="toggleTurbo()" style="width:36px;height:20px;border-radius:20px;background:linear-gradient(135deg,#245c38,#3ea066);cursor:pointer;position:relative;flex-shrink:0;transition:.2s;">
+                <div style="position:absolute;top:3px;right:3px;width:14px;height:14px;border-radius:50%;background:#fff;transition:.2s;"></div>
+              </div>
+              <div style="flex:1;">
+                <div style="font-size:12px;font-weight:700;color:#e4b55a;display:flex;align-items:center;gap:5px;">
+                  Turbo MP4 <span style="background:rgba(62,160,102,.2);color:#3ea066;font-size:9px;padding:1px 5px;border-radius:10px;font-weight:700;">WebCodecs</span> <span style="color:#e4b55a;">⚡</span>
+                </div>
+                <div style="font-size:10px;color:#6e8878;margin-top:2px;" id="turboDesc">أسرع على الأجهزة المدعومة. سيتم الرجوع تلقائياً لـ WebM عند عدم الدعم.</div>
+                <div id="turboWarn" style="display:none;font-size:10px;color:#c9973a;margin-top:2px;">⚠ mp4-muxer لم يُحمَّل بعد...</div>
+              </div>
+            </div>
+            <!-- زرار التصدير -->
             <button
               id="exportBtn"
               onclick="startExport()"
@@ -1943,13 +2107,14 @@
                 border: none;
                 border-radius: 8px;
                 color: #fff;
-                font-family: &quot;Cairo&quot;, sans-serif;
+                font-family: 'Cairo', sans-serif;
                 font-weight: 700;
                 cursor: pointer;
+                font-size:13px;
                 transition: 0.3s;
               "
             >
-              ⬇ تصدير فيديو MP4
+              ⬇ تصدير MP4
             </button>
           </div>
         </div>
@@ -1992,6 +2157,127 @@
     <div class="toast" id="toast"></div>
     <audio id="audio" preload="auto"></audio>
 
+    <!-- ══ SYNC PANEL ══ -->
+    <div class="sync-panel" id="syncPanel">
+      <div class="sync-box">
+        <div class="sync-hdr">
+          <div class="sync-ttl">⏱ ضبط المزامنة</div>
+          <button class="sync-close" onclick="closeSyncPanel()">✕</button>
+        </div>
+        <div class="sync-tabs">
+          <button class="sync-tab on" onclick="switchSyncTab('offset')">تأخير الآيات</button>
+          <button class="sync-tab" onclick="switchSyncTab('manual')">يدوي (Space)</button>
+          <button class="sync-tab" onclick="switchSyncTab('live')">مزامنة مباشرة</button>
+        </div>
+
+        <!-- TAB 1: Offset per ayah -->
+        <div class="sync-tc on" id="stc-offset">
+          <div style="font-size:11px;color:rgba(255,255,255,.35);margin-bottom:10px;direction:rtl;line-height:1.7;">
+            تحكم في وقت ظهور نص كل آية بالنسبة للصوت.<br>
+            <b style="color:#e4b55a;">موجب (+)</b> = النص يظهر بعد الصوت &nbsp;|&nbsp; <b style="color:#3ea066;">سالب (-)</b> = يظهر قبله
+          </div>
+          <div style="display:flex;gap:6px;margin-bottom:10px;align-items:center;">
+            <span style="font-size:11px;color:#6e8878;">تأخير عام (ثانية)</span>
+            <input type="number" id="globalOffsetInp" value="0" step="0.1" min="-5" max="10"
+              style="width:70px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:7px;color:#e4b55a;font-family:'Cairo',sans-serif;font-size:13px;padding:5px 8px;outline:none;text-align:center;"
+              oninput="applyGlobalOffset(this.value)">
+            <button class="syn-btn syn-ghost" style="width:auto;padding:5px 10px;font-size:11px;margin:0;" onclick="resetAllOffsets()">↺ تصفير الكل</button>
+          </div>
+          <div style="max-height:280px;overflow-y:auto;">
+            <table class="oft">
+              <thead><tr><th>آية</th><th>النص</th><th>التأخير (ث)</th></tr></thead>
+              <tbody id="offsetTbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- TAB 2: Manual sync -->
+        <div class="sync-tc" id="stc-manual">
+          <div style="font-size:11px;color:rgba(255,255,255,.35);margin-bottom:10px;direction:rtl;line-height:1.8;">
+            🎯 شغّل الصوت ثم اضغط <b style="color:#e4b55a;">Space</b> أو زرار "علّم" عند بداية كل آية.<br>
+            التوقيتات المحفوظة بتتطبق تلقائياً على الـ offset.
+          </div>
+          <div style="background:rgba(201,151,58,.06);border:1px solid rgba(201,151,58,.15);border-radius:9px;padding:9px 11px;margin-bottom:9px;">
+            <div style="font-size:10px;color:#6e8878;margin-bottom:5px;">الآية الحالية</div>
+            <div style="font-family:'Scheherazade New',serif;font-size:14px;color:#e4b55a;direction:rtl;" id="ms-cur-ar">—</div>
+            <div style="font-size:10px;color:rgba(255,255,255,.3);margin-top:3px;" id="ms-cur-ref">—</div>
+          </div>
+          <div style="display:flex;gap:5px;margin-bottom:8px;">
+            <div style="font-size:12px;color:#6e8878;flex:1;align-self:center;" id="ms-progress">٠ / ٠</div>
+            <button class="syn-btn syn-gold" style="width:auto;flex:1;margin:0;padding:7px 10px;" id="ms-mark-btn" onclick="msMark()" disabled>✦ علّم (Space)</button>
+          </div>
+          <div style="display:flex;gap:5px;margin-bottom:10px;">
+            <button class="syn-btn syn-grn" style="flex:1;margin:0;padding:7px;" id="ms-start-btn" onclick="msToggle()">▶ ابدأ</button>
+            <button class="syn-btn syn-red" style="flex:1;margin:0;padding:7px;" onclick="msReset()">↺ إعادة</button>
+          </div>
+          <div style="max-height:200px;overflow-y:auto;">
+            <table class="ls-result-tbl">
+              <thead><tr><th>آية</th><th>النص</th><th>التوقيت (ث)</th><th>حالة</th></tr></thead>
+              <tbody id="ms-result-body">
+                <tr><td colspan="4" style="text-align:center;padding:10px;color:rgba(255,255,255,.22);">ابدأ المزامنة لرؤية النتائج</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <button class="syn-btn syn-gold" style="margin-top:8px;" onclick="msApply()" id="ms-apply-btn" disabled>✅ تطبيق التوقيتات على الآيات</button>
+        </div>
+
+        <!-- TAB 3: Live sync -->
+        <div class="sync-tc" id="stc-live">
+          <div style="font-size:11px;color:rgba(255,255,255,.35);margin-bottom:10px;direction:rtl;line-height:1.8;">
+            🎙 شغّل الصوت ثم اضغط <b style="color:#e4b55a;">Space</b> أو "مارك" عند بداية كل آية.<br>
+            يصلح لرفع صوت مخصص أو القارئ التلقائي.
+          </div>
+          <div class="ls-verse-card">
+            <div class="ls-verse-ar" id="ls-cur-ar">—</div>
+            <div class="ls-verse-ref" id="ls-cur-ref">آية <span id="ls-vnum">٠</span> / <span id="ls-vtot">٠</span></div>
+          </div>
+          <div style="display:flex;gap:5px;margin-bottom:8px;">
+            <button class="syn-btn syn-grn" style="flex:1;margin:0;padding:8px;" id="ls-play-btn" onclick="lsToggle()">▶ شغّل</button>
+            <button class="syn-btn" id="ls-mark-btn" onclick="lsMark()" disabled
+              style="flex:1;margin:0;padding:8px;background:rgba(201,151,58,.15);border:1px solid rgba(201,151,58,.3);color:#e4b55a;border-radius:8px;font-family:'Cairo',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">
+              ✦ مارك (Space)
+            </button>
+          </div>
+          <button class="syn-btn syn-red" style="margin-bottom:10px;" onclick="lsStop()">⏹ إيقاف</button>
+          <div style="max-height:200px;overflow-y:auto;">
+            <table class="ls-result-tbl">
+              <thead><tr><th>آية</th><th>النص</th><th>التوقيت (ث)</th><th>حالة</th></tr></thead>
+              <tbody id="ls-result-body">
+                <tr><td colspan="4" style="text-align:center;padding:10px;color:rgba(255,255,255,.22);">ابدأ المزامنة لرؤية النتائج</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <button class="syn-btn syn-gold" style="margin-top:8px;" onclick="lsApply()" id="ls-apply-btn" disabled>✅ تطبيق على جدول التأخير</button>
+        </div>
+
+      </div>
+    </div>
+    <div class="xov" id="xov">
+      <div class="xbox">
+        <div class="x-ttl"><span class="xsp"></span>جارٍ التصدير</div>
+        <div class="x-sub" id="xsub">جارٍ تحضير الآيات...</div>
+        <div class="xring">
+          <svg viewBox="0 0 100 100">
+            <defs>
+              <linearGradient id="xgrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%"   stop-color="#245c38"/>
+                <stop offset="60%"  stop-color="#3ea066"/>
+                <stop offset="100%" stop-color="#e4b55a"/>
+              </linearGradient>
+            </defs>
+            <circle class="xring-bg" cx="50" cy="50" r="45"/>
+            <circle class="xring-fg" id="xringFg" cx="50" cy="50" r="45"/>
+          </svg>
+          <div class="xring-inner">
+            <span class="xring-pct" id="xpct">٠٪</span>
+            <span class="xring-eta" id="xeta"></span>
+          </div>
+        </div>
+        <div class="x-cnt" id="xcnt">٠ / ٠ آية</div>
+        <button class="x-stop" onclick="stopExport()">⏹ إيقاف التصدير</button>
+      </div>
+    </div>
+
     <script>
       function surahHasLeadingBasmala(surahN) {
         return surahN !== 1 && surahN !== 9;
@@ -2000,11 +2286,50 @@
       const canvas = document.createElement("canvas");
       canvas.width = 1440;
       canvas.height = 2560;
-      const ctx = canvas.getContext("2d");
+      const ctx = canvas.getContext("2d", { alpha: false }); // alpha:false يسرّع compositing
       let drawLoopActive = false;
-      const TARGET_FPS = 60,
+      const TARGET_FPS = 30,           // 30fps كافية وبتوفّر نص CPU
         FRAME_MS = 1000 / TARGET_FPS;
       let lastDrawTime = 0;
+
+      /* ── Gradient cache — يتبنى مرة واحدة عند التغيير ── */
+      let _gradCache = null, _gradKey = '';
+      function getCachedGradient(gradStr, W, H) {
+        const key = gradStr + '|' + W + '|' + H;
+        if (_gradCache && _gradKey === key) return _gradCache;
+        _gradKey = key;
+        try {
+          const colors = [...gradStr.matchAll(/#[0-9a-fA-F]{3,6}/g)].map(m => m[0]);
+          if (colors.length >= 2) {
+            const angle = (160 * Math.PI) / 180;
+            const grd = ctx.createLinearGradient(
+              W/2 - Math.cos(angle)*W, H/2 - Math.sin(angle)*H,
+              W/2 + Math.cos(angle)*W, H/2 + Math.sin(angle)*H
+            );
+            grd.addColorStop(0, colors[0]);
+            grd.addColorStop(1, colors[colors.length-1]);
+            return (_gradCache = grd);
+          }
+        } catch(e) {}
+        return (_gradCache = '#070e09');
+      }
+
+      /* ── measureText cache — تجنّب إعادة الحساب لنفس الكلمة ── */
+      const _mtCache = new Map();
+      function measureW(text, font) {
+        const k = font + '|' + text;
+        if (_mtCache.has(k)) return _mtCache.get(k);
+        const saved = ctx.font; ctx.font = font;
+        const w = ctx.measureText(text).width;
+        ctx.font = saved;
+        if (_mtCache.size > 2000) _mtCache.clear();
+        _mtCache.set(k, w);
+        return w;
+      }
+
+      /* ── CSTATE dirty flag — نتجنب DOM reads لما مفيش تغيير ── */
+      let _cstateDirty = true;
+      function markCstateDirty() { _cstateDirty = true; }
 
       const CSTATE = {
         bgGradient: "linear-gradient(160deg,#020d04,#071a0a)",
@@ -2033,19 +2358,19 @@
       };
 
       function syncCSTATE() {
+        // لو مفيش تصدير ومفيش تغيير، مفيش داعي نعمل DOM reads
+        if (!isExporting && !_cstateDirty) return;
+        _cstateDirty = false;
+
         const vAr = document.getElementById("vAr");
         if (vAr) {
           const spans = Array.from(vAr.querySelectorAll("span"));
-          CSTATE.fadein = !!S.fx.fadein; // تأكد إن fadein محدّث دايماً
+          CSTATE.fadein = !!S.fx.fadein;
           if (isExporting && CSTATE.fadein && canvasFadeWords.length) {
-            // During export: compute animated opacity from elapsed time per word
             const elapsed = performance.now() - canvasFadeStart;
             CSTATE.words = canvasFadeWords.map((w, i) => {
-              const delay = i * 90; // ms — matches 0.09s CSS delay
-              const progress = Math.min(
-                1,
-                Math.max(0, (elapsed - delay) / CANVAS_FADE_DURATION),
-              );
+              const delay = i * 90;
+              const progress = Math.min(1, Math.max(0, (elapsed - delay) / CANVAS_FADE_DURATION));
               return { text: w.text, color: w.color, opacity: progress };
             });
           } else {
@@ -2061,14 +2386,10 @@
         CSTATE.shName = document.getElementById("elSh")?.textContent || "";
         CSTATE.watermark = document.getElementById("elWm")?.textContent || "";
         CSTATE.color = S.color || "#fff";
-        CSTATE.fontSize = S.size || 26;
+        CSTATE.fontSize = S.size || 14;
         const fontMap = {
-          amiri: "Amiri",
-          cairo: "Cairo",
-          noto: "Noto Naskh Arabic",
-          lateef: "Lateef",
-          kufi: "Reem Kufi",
-          harmattan: "Harmattan",
+          amiri: "Amiri", cairo: "Cairo", noto: "Noto Naskh Arabic",
+          lateef: "Lateef", kufi: "Reem Kufi", harmattan: "Harmattan",
         };
         CSTATE.fontFamily = fontMap[S.font] || "Scheherazade New";
         CSTATE.showMoon = S.fx.moon !== false;
@@ -2079,23 +2400,18 @@
         CSTATE.showParticles = !!S.fx.particles;
         CSTATE.fadein = !!S.fx.fadein;
         const bgMedia = document.getElementById("bgMedia");
-        if (
-          bgMedia &&
-          (bgMedia.tagName === "VIDEO" || bgMedia.tagName === "IMG")
-        ) {
+        if (bgMedia && (bgMedia.tagName === "VIDEO" || bgMedia.tagName === "IMG")) {
           CSTATE.bgImage = bgMedia;
           CSTATE.bgGradient = null;
+          _gradCache = null; // invalidate gradient cache when switching to image
         } else {
           CSTATE.bgImage = null;
-          CSTATE.bgGradient =
-            document.getElementById("screen")?.style.background ||
-            "linear-gradient(160deg,#020d04,#071a0a)";
+          const newGrad = document.getElementById("screen")?.style.background || "linear-gradient(160deg,#020d04,#071a0a)";
+          if (newGrad !== CSTATE.bgGradient) { CSTATE.bgGradient = newGrad; _gradCache = null; }
         }
         const dimOv = document.getElementById("bgDimOverlay");
         if (dimOv && dimOv.style.display !== "none") {
-          const m = (dimOv.style.background || "").match(
-            /rgba\(0,0,0,([\d.]+)\)/,
-          );
+          const m = (dimOv.style.background || "").match(/rgba\(0,0,0,([\d.]+)\)/);
           CSTATE.bgDim = m ? parseFloat(m[1]) : 0.5;
         } else {
           CSTATE.bgDim = 0;
@@ -2103,66 +2419,37 @@
       }
 
       function parseCSSGradient(gradStr, w, h) {
-        try {
-          const colors = [...gradStr.matchAll(/#[0-9a-fA-F]{3,6}/g)].map(
-            (m) => m[0],
-          );
-          if (colors.length >= 2) {
-            const angle = (160 * Math.PI) / 180;
-            const x0 = w / 2 - Math.cos(angle) * w;
-            const y0 = h / 2 - Math.sin(angle) * h;
-            const x1 = w / 2 + Math.cos(angle) * w;
-            const y1 = h / 2 + Math.sin(angle) * h;
-            const grd = ctx.createLinearGradient(x0, y0, x1, y1);
-            grd.addColorStop(0, colors[0]);
-            grd.addColorStop(1, colors[colors.length - 1]);
-            return grd;
-          }
-        } catch (e) {}
-        return "#070e09";
+        return getCachedGradient(gradStr, w, h);
       }
 
-      function drawArabicText(
-        words,
-        cx,
-        cy,
-        maxWidth,
-        lineHeight,
-        fontSize,
-        fontFamily,
-      ) {
+      function drawArabicText(words, cx, cy, maxWidth, lineHeight, fontSize, fontFamily) {
         if (!words || !words.length) return;
-        ctx.font = `${fontSize}px "${fontFamily}", serif`;
+        const font = `${fontSize}px "${fontFamily}", serif`;
+        ctx.font = font;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
+        const spaceW = measureW(" ", font);
         const lines = [];
-        let currentLine = [];
-        let currentWidth = 0;
-        const spaceW = ctx.measureText(" ").width;
+        let currentLine = [], currentWidth = 0;
         for (const wo of words) {
-          const ww = ctx.measureText(wo.text).width;
-          const needed =
-            currentLine.length === 0 ? ww : currentWidth + spaceW + ww;
+          const ww = measureW(wo.text, font);
+          const needed = currentLine.length === 0 ? ww : currentWidth + spaceW + ww;
           if (needed > maxWidth && currentLine.length > 0) {
-            lines.push(currentLine);
-            currentLine = [wo];
-            currentWidth = ww;
+            lines.push(currentLine); currentLine = [wo]; currentWidth = ww;
           } else {
-            currentLine.push(wo);
-            currentWidth = needed;
+            currentLine.push(wo); currentWidth = needed;
           }
         }
         if (currentLine.length) lines.push(currentLine);
         const totalH = lines.length * lineHeight;
         let y = cy - totalH / 2 + lineHeight / 2;
         for (const ln of lines) {
-          const fullText = ln.map((w) => w.text).join(" ");
-          const lineW = ctx.measureText(fullText).width;
+          const fullText = ln.map(w => w.text).join(" ");
+          const lineW = measureW(fullText, font);
           let x = cx + lineW / 2;
           for (const wo of ln) {
-            const ww = ctx.measureText(wo.text).width;
-            const opacity = wo.opacity !== undefined ? wo.opacity : 1;
-            ctx.globalAlpha = opacity;
+            const ww = measureW(wo.text, font);
+            ctx.globalAlpha = wo.opacity !== undefined ? wo.opacity : 1;
             ctx.fillStyle = wo.color || CSTATE.color;
             ctx.shadowColor = "rgba(0,0,0,0.95)";
             ctx.shadowBlur = 16;
@@ -2415,11 +2702,17 @@
       }
 
       function startDrawLoop() {
+        if (drawLoopActive) return;
         drawLoopActive = true;
+        lastDrawTime = 0;
         function loop(ts) {
           if (!drawLoopActive) return;
-          if (ts - lastDrawTime >= FRAME_MS) {
+          const ready = isExporting
+            ? true                                       // تصدير: ارسم كل frame بدون قيود
+            : (_cstateDirty && ts - lastDrawTime >= 50); // معاينة: فقط لما يتغيّر شيء
+          if (ready) {
             lastDrawTime = ts;
+            _cstateDirty = true; // أجبر syncCSTATE على القراءة دائماً أثناء التصدير
             syncCSTATE();
             drawFrameDirect();
           }
@@ -2458,231 +2751,417 @@
         throw new Error(`فشل تحميل الصوت: ${lastErr?.message}`);
       }
 
-      async function startExport() {
-        if (isExporting) return stopExport();
-        if (!S.sh) return toast$("⚠ اختر شيخاً أولاً");
-        if (!S.surah) return toast$("⚠ اختر سورة أولاً");
-        audio.pause();
-        if (!audioCtx)
-          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        if (audioCtx.state === "suspended") await audioCtx.resume();
-        destNode = audioCtx.createMediaStreamDestination();
-        const ayahsList = [];
-        if (surahHasLeadingBasmala(S.surah.n))
-          ayahsList.push({ surahN: 1, ayahN: 1, isBasmala: true });
-        const exportAyahs = apSelected.size
-          ? [...apSelected].sort((a, b) => a - b)
-          : Array.from({ length: S.vTo - S.vFrom + 1 }, (_, i) => S.vFrom + i);
-        exportAyahs.forEach((ayahN, idx) => {
-          ayahsList.push({
-            surahN: S.surah.n,
-            ayahN,
-            isBasmala: false,
-            verseIdx: idx,
-          });
-        });
-        const total = ayahsList.length;
-        toast$(`⏳ جارٍ تحضير ${total} آية...`);
-        setSbar(`⏳ تحميل (0/${total})...`, "#c9973a");
-        if (S.sh.qdcId && surahHasLeadingBasmala(S.surah.n))
-          fetchWordTiming(
-            S.surah.n,
-            ayahsList.find((a) => !a.isBasmala)?.ayahN || 1,
-          ).catch(() => {});
-        const buffers = [],
-          verseData = [];
-        for (let i = 0; i < ayahsList.length; i++) {
-          const item = ayahsList[i];
-          try {
-            const buf = await fetchAyahBuffer(item.surahN, item.ayahN);
-            buffers.push(buf);
-            if (item.isBasmala) {
-              verseData.push({
-                arText: "بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ",
-                ref: "﴿ البسملة ﴾",
-                npT: "البسملة",
-                segments: null,
-              });
-            } else {
-              const s = item.surahN,
-                a = item.ayahN;
-              const arRes = await fetch(
-                `https://api.alquran.cloud/v1/ayah/${s}:${a}/ar`,
-              ).then((r) => r.json());
-              const segs = await fetchWordTiming(s, a);
-              const arText =
-                s === 1
-                  ? arRes.data?.text || ""
-                  : stripBasmala(arRes.data?.text || "");
-              verseData.push({
-                arText,
-                ref: `﴿ ${S.surah.ar} : ${arN(a)} ﴾`,
-                npT: `${S.surah.ar} — آية ${arN(a)}`,
-                segments: segs,
-              });
-            }
-            setSbar(`⏳ تحميل (${i + 1}/${total})...`, "#c9973a");
-          } catch (e) {
-            toast$(`❌ فشل تحميل آية ${item.ayahN}: ${e.message}`);
-            setSbar("❌ " + e.message, "#f47c7c");
-            return;
-          }
-        }
-        stopDrawLoop();
-        startDrawLoop();
-        const qp = QUALITY_PRESETS[currentQuality] || QUALITY_PRESETS.hd;
-        canvas.width = qp.w;
-        canvas.height = qp.h;
-        const videoStream = canvas.captureStream(qp.fps);
-        const combined = new MediaStream([
-          ...videoStream.getVideoTracks(),
-          ...destNode.stream.getAudioTracks(),
-        ]);
-        let recOptions = { videoBitsPerSecond: qp.bitrate };
-        for (const mime of [
-          "video/mp4;codecs=avc1,mp4a",
-          "video/mp4",
-          "video/webm;codecs=vp9,opus",
-          "video/webm;codecs=vp8,opus",
-          "video/webm",
-        ]) {
-          if (MediaRecorder.isTypeSupported(mime)) {
-            recOptions.mimeType = mime;
-            break;
-          }
-        }
-        exportChunks = [];
-        exportRecorder = new MediaRecorder(combined, recOptions);
-        exportRecorder.ondataavailable = (e) => {
-          if (e.data.size > 0) exportChunks.push(e.data);
-        };
-        exportRecorder.onstop = async () => {
-          stopDrawLoop();
-          lastDrawTime = 0;
-          isExporting = false;
-          updateExportBtn(false);
-          const webmBlob = new Blob(exportChunks, { type: "video/webm" });
-          const fname = `Islam Reels-${S.surah?.ar || "قرآن"}`;
-          function downloadWebm() {
-            const url = URL.createObjectURL(webmBlob);
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = fname + ".webm";
-            a.click();
-            setTimeout(() => URL.revokeObjectURL(url), 3000);
-            toast$("✅ تم حفظ الفيديو (WebM)");
-            setSbar("✅ محفوظ — يمكنك تحويله لـ MP4 بـ HandBrake", "#5ec285");
-          }
-          if (window.location.protocol === "file:") {
-            downloadWebm();
-            return;
-          }
-          // Try to save as MP4 directly if browser recorded in MP4
-          const isMP4 = (recOptions.mimeType || "").includes("mp4");
-          if (isMP4) {
-            const mp4Blob2 = new Blob(exportChunks, { type: "video/mp4" });
-            const url2 = URL.createObjectURL(mp4Blob2);
-            const a2 = document.createElement("a");
-            a2.href = url2;
-            a2.download = fname + ".mp4";
-            a2.click();
-            setTimeout(() => URL.revokeObjectURL(url2), 3000);
-            toast$("✅ تم حفظ الفيديو MP4 ✨");
-            setSbar("✅ تم الحفظ بنجاح", "#5ec285");
-          } else {
-            // WebM — show cloudconvert link
-            downloadWebm();
-            setTimeout(() => {
-              toast$("💡 حوّل الفيديو لـ MP4 مجاناً على cloudconvert.com");
-              setSbar(
-                "💡 افتح cloudconvert.com وحوّل الـ WebM لـ MP4 مجاناً",
-                "#e4b55a",
-              );
-            }, 1500);
-          }
-        };
-        exportRecorder.start(500);
-        isExporting = true;
-        updateExportBtn(true);
-        toast$("🔴 بدأ التسجيل...");
-        setSbar(`🔴 يسجّل ${total} آية...`, "#f47c7c");
-        function playSequence(idx) {
-          if (!isExporting) return;
-          if (idx >= buffers.length) {
-            setTimeout(stopExport, 300);
-            return;
-          }
-          const item = ayahsList[idx],
-            vd = verseData[idx],
-            duration = buffers[idx].duration;
-          stopWordHighlight();
-          clearChunkCycle();
-          canvasFadeWords = []; // reset fade for new ayah
-          if (item.isBasmala) S.active = -1;
-          else {
-            S.active = item.verseIdx;
-            renderVList();
-          }
-          $("vRef").textContent = vd.ref;
-          $("npT").textContent = vd.npT;
-          updateScreen();
-          verseChunks = splitIntoChunks(vd.arText || "");
-          currentChunkIdx = 0;
-          showChunk(0, true);
-          const ayahLabel = item.isBasmala
-            ? "البسملة"
-            : `آية ${arN(item.ayahN)}`;
-          setSbar(
-            `🔴 ${S.surah.ar} — ${ayahLabel} (${idx + 1}/${total})`,
-            "#f47c7c",
-          );
-          const src = audioCtx.createBufferSource();
-          src.buffer = buffers[idx];
-          src.connect(destNode);
-          src.connect(audioCtx.destination);
-          if (verseChunks.length > 1) {
-            // حساب التوقيت بناءً على عدد الكلمات في كل جزء
-            const totalWords = verseChunks.reduce(
-              (s, c) => s + c.words.length,
-              0,
-            );
-            const msPerWord = (duration * 1000) / totalWords;
-            const exportStart = audioCtx.currentTime; // وقت بداية الصوت
-            let ci = 1;
-            function scheduleExportChunk() {
-              if (ci >= verseChunks.length || !isExporting) return;
-              const chunkStartSec =
-                (verseChunks[ci].startIdx * msPerWord) / 1000;
-              const elapsed = audioCtx.currentTime - exportStart;
-              const delay = Math.max(50, (chunkStartSec - elapsed) * 1000);
-              chunkTimer = setTimeout(() => {
-                showChunk(ci, true);
-                ci++;
-                scheduleExportChunk();
-              }, delay);
-            }
-            scheduleExportChunk();
-          }
-          src.onended = () => {
-            stopWordHighlight();
-            clearChunkCycle();
-            playSequence(idx + 1);
-          };
-          src.start(0);
-        }
-        playSequence(0);
+      // ══════════════════════════════════════════════════════
+      //  نظام التصدير — WebCodecs MP4 + WebM fallback
+      // ══════════════════════════════════════════════════════
+      let _expCtxRef = null;
+      let _expTotalDur = 0, _expElapsedBefore = 0;
+      let _expAbort = false;
+      let _expProgressIv = null;
+
+      function _stopProgressIv() {
+        if (_expProgressIv) { clearInterval(_expProgressIv); _expProgressIv = null; }
+      }
+
+      function _setProgress(elapsed) {
+        if (!_expTotalDur) return;
+        const pct = Math.min(99, Math.round(elapsed / _expTotalDur * 100));
+        const rem = Math.max(0, _expTotalDur - elapsed);
+        const m = Math.floor(rem / 60), s = Math.floor(rem % 60);
+        const circ = 2 * Math.PI * 45;
+        const fg = document.getElementById("xringFg");
+        if (fg) { fg.style.strokeDasharray = circ; fg.style.strokeDashoffset = circ * (1 - pct / 100); }
+        const pe = document.getElementById("xpct"); if (pe) pe.textContent = arN(pct) + "%";
+        const et = document.getElementById("xeta"); if (et) et.textContent = (m > 0 ? arN(m) + "د " : "") + arN(s) + "ث";
+      }
+
+      function _finishExport(ctx, msg, color) {
+        isExporting = false; _expAbort = false;
+        updateExportBtn(false); xHide(); _stopProgressIv();
+        stopDrawLoop(); lastDrawTime = 0; startDrawLoop();
+        if (ctx) ctx.close().catch(() => {});
+        if (msg) { toast$(msg); setSbar(msg, color || "#5ec285"); }
+      }
+
+      function _downloadBlob(blob, filename) {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url; a.download = filename; a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 30000);
       }
 
       function stopExport() {
-        if (!exportRecorder) return;
-        try {
-          exportRecorder.stop();
-        } catch (e) {}
-        stopDrawLoop();
-        audio.pause();
-        audio.currentTime = 0;
-        isExporting = false;
+        _expAbort = true;
+        if (exportRecorder && exportRecorder.state !== "inactive") try { exportRecorder.stop(); } catch(e) {}
+        if (_expCtxRef) { _expCtxRef.close().catch(() => {}); _expCtxRef = null; }
+        isExporting = false; _stopProgressIv();
+        stopDrawLoop(); updateExportBtn(false); xHide(); startDrawLoop();
+        toast$("⏹ تم إيقاف التصدير");
       }
+
+      async function _loadData(expCtx, exportAyahs, sn) {
+        if (S.sh.qdcId) await fetchWordTiming(sn, exportAyahs[0]).catch(() => {});
+        const total = exportAyahs.length; let loaded = 0;
+        return Promise.all(exportAyahs.map(async ayahN => {
+          const urls = ayahUrls(S.sh, sn, ayahN);
+          let buf = null;
+          for (const url of urls) {
+            try { const r = await fetch(url,{mode:"cors"}); if(!r.ok) continue; buf = await expCtx.decodeAudioData(await r.arrayBuffer()); break; } catch(e) {}
+          }
+          if (!buf) throw Object.assign(new Error("فشل تحميل آية "+ayahN), {ayahN});
+          const [arRes, segs, qdcW] = await Promise.all([
+            fetch("https://api.alquran.cloud/v1/ayah/"+sn+":"+ayahN+"/ar").then(r=>r.json()),
+            fetchWordTiming(sn, ayahN),
+            S.sh&&S.sh.qdcId ? fetchQdcWords(sn,ayahN) : Promise.resolve(null)
+          ]);
+          const arText = sn===1 ? (arRes.data?.text||"") : stripBasmala(arRes.data?.text||"");
+          loaded++;
+          xShow(loaded, total, "تحميل "+S.surah.ar+" — آية "+arN(ayahN));
+          setSbar("⏳ تحميل ("+loaded+"/"+total+")...", "#c9973a");
+          return { ayahN, buf, arText, wordList: qdcW?.length?qdcW:null, ref:"﴿ "+S.surah.ar+" : "+arN(ayahN)+" ﴾", segs };
+        }));
+      }
+
+      function _prepVerse(vd, exportAyahs) {
+        stopWordHighlight(); clearChunkCycle(); canvasFadeWords=[];
+        S.active = exportAyahs.indexOf(vd.ayahN); renderVList();
+        $("vRef").textContent = vd.ref; updateScreen();
+        verseChunks = splitIntoChunks(vd.wordList?vd.wordList.join(" "):vd.arText||"", vd.wordList||null);
+        currentChunkIdx=0; showChunk(0,true); markCstateDirty();
+      }
+
+      function _drawVerseFrame(vd, f, msPerFrame, hlActive) {
+        // chunk transition
+        if (window._expChunkAt) {
+          for (const sc of window._expChunkAt) if (f===sc.f) showChunk(sc.ci, true);
+        }
+        // highlight
+        let newHL = hlActive;
+        if (vd.segs) {
+          const nowMs = f * msPerFrame; let found = -1;
+          for (const seg of vd.segs) if (nowMs>=seg[1]&&nowMs<seg[2]) { found=seg[0]; break; }
+          if (found !== hlActive) {
+            if (hlActive>=0) { const o=document.getElementById("w"+hlActive); if(o){o.style.color=o.dataset.base||S.color||"#fff";o.style.textShadow="";} }
+            if (found>=0)    { const el=document.getElementById("w"+found);   if(el){el.style.color="#e4b55a";el.style.textShadow="0 0 18px rgba(228,181,90,.9)";} }
+            newHL = found;
+          }
+        }
+        _cstateDirty=true; syncCSTATE(); drawFrameDirect();
+        return newHL;
+      }
+
+      async function startExport() {
+        if (isExporting) return stopExport();
+        if (!S.sh)    return toast$("⚠ اختر شيخاً أولاً");
+        if (!S.surah) return toast$("⚠ اختر سورة أولاً");
+        audio.pause();
+
+        const exportAyahs = apSelected.size
+          ? [...apSelected].sort((a,b)=>a-b)
+          : Array.from({length:S.vTo-S.vFrom+1},(_,i)=>S.vFrom+i);
+        const total=exportAyahs.length, sn=S.surah.n;
+
+        xShow(0, total, "جارٍ تحضير الآيات...");
+        setSbar("⏳ تحميل...", "#c9973a");
+
+        const expCtx = new (window.AudioContext||window.webkitAudioContext)({sampleRate:44100});
+        _expCtxRef = expCtx;
+
+        const loadResults = await _loadData(expCtx, exportAyahs, sn).catch(e=>{
+          xHide(); expCtx.close(); toast$("❌ "+e.message); setSbar("❌ "+e.message,"#f47c7c"); return null;
+        });
+        if (!loadResults) return;
+
+        const ordered   = exportAyahs.map(n=>loadResults.find(r=>r.ayahN===n));
+        const buffers   = ordered.map(r=>r.buf);
+        const verseData = ordered.map(r=>({...r}));
+        _expTotalDur    = buffers.reduce((s,b)=>s+b.duration,0);
+        _expElapsedBefore=0; _expAbort=false;
+
+        const qp = QUALITY_PRESETS[currentQuality]||QUALITY_PRESETS.hd;
+        canvas.width=qp.w; canvas.height=qp.h;
+        _gradCache=null; _mtCache.clear(); stopDrawLoop();
+        isExporting=true; updateExportBtn(true);
+
+        // اختيار المسار
+        const canMP4 = typeof VideoEncoder!=="undefined"
+                    && typeof AudioEncoder!=="undefined"
+                    && typeof Mp4Muxer!=="undefined";
+
+        if (_exportFmt==="mp4" && _turboMode && canMP4) {
+          toast$("⚡ تصدير MP4...");
+          setSbar("🔴 يصدّر "+total+" آية...", "#f47c7c");
+          await _exportMP4(expCtx, qp, buffers, verseData, exportAyahs, total);
+        } else {
+          toast$("🔴 تصدير WebM...");
+          setSbar("🔴 يسجّل "+total+" آية...", "#f47c7c");
+          await _exportWebM(expCtx, qp, buffers, verseData, exportAyahs, total);
+        }
+      }
+
+      // ══════════════════════════════════════════════════════
+      //  MP4 عبر WebCodecs — الحل الصح لمشكلة flush
+      //  السر: نستنى encoder queue يخف قبل ما نكمل
+      // ══════════════════════════════════════════════════════
+      async function _exportMP4(expCtx, qp, buffers, verseData, exportAyahs, total) {
+        const W=qp.w, H=qp.h, FPS=qp.fps, SR=44100;
+        const frameDurUs = Math.round(1e6/FPS);
+
+        const muxer = new Mp4Muxer.Muxer({
+          target: new Mp4Muxer.ArrayBufferTarget(),
+          video: { codec:"avc", width:W, height:H, frameRate:FPS },
+          audio: { codec:"aac", sampleRate:SR, numberOfChannels:2 },
+          fastStart: "in-memory"
+        });
+
+        // VideoEncoder مع queue pressure control
+        let vEncErr = null;
+        const videoEnc = new VideoEncoder({
+          output: (chunk,meta) => muxer.addVideoChunk(chunk,meta),
+          error: e => { vEncErr=e; console.error("VEnc:",e); }
+        });
+
+        // نجرب codecs
+        let codecOk = false;
+        for (const codec of ["avc1.640033","avc1.4d0029","avc1.42001f"]) {
+          try {
+            const s = await VideoEncoder.isConfigSupported({codec,width:W,height:H,bitrate:qp.bitrate,framerate:FPS});
+            if (!s.supported) continue;
+            videoEnc.configure({codec,width:W,height:H,bitrate:qp.bitrate,framerate:FPS});
+            codecOk=true; break;
+          } catch(e) {}
+        }
+        if (!codecOk) {
+          videoEnc.close();
+          toast$("⚠ WebCodecs غير مدعوم — تصدير WebM...");
+          return _exportWebM(expCtx, qp, buffers, verseData, exportAyahs, total);
+        }
+
+        // AudioEncoder
+        const audioEnc = new AudioEncoder({
+          output: (chunk,meta) => muxer.addAudioChunk(chunk,meta),
+          error: e => console.error("AEnc:",e)
+        });
+        audioEnc.configure({codec:"mp4a.40.2", sampleRate:SR, numberOfChannels:2, bitrate:192000});
+
+        // بناء audio arrays
+        const totalSamp = Math.ceil(_expTotalDur*SR)+SR;
+        const aL=new Float32Array(totalSamp), aR=new Float32Array(totalSamp);
+        let aOff=0;
+        for (const buf of buffers) {
+          const n=Math.min(Math.round(buf.duration*SR), totalSamp-aOff);
+          aL.set(buf.getChannelData(0).subarray(0,n), aOff);
+          aR.set((buf.numberOfChannels>1?buf.getChannelData(1):buf.getChannelData(0)).subarray(0,n), aOff);
+          aOff+=n;
+        }
+
+        let globalFrame=0, audioSent=0;
+        const sampPerFrame = Math.round(SR/FPS);
+
+        for (let idx=0; idx<verseData.length; idx++) {
+          if (_expAbort || vEncErr) break;
+          const vd=verseData[idx], buf=buffers[idx];
+
+          _prepVerse(vd, exportAyahs);
+          window._expChunkAt = [];
+          if (verseChunks.length>1) {
+            const tw=verseChunks.reduce((s,c)=>s+c.words.length,0);
+            for (let ci=1;ci<verseChunks.length;ci++)
+              window._expChunkAt.push({f:Math.round(verseChunks[ci].startIdx*buf.duration*FPS/tw),ci});
+          }
+          xShow(idx+1, total, S.surah.ar+" — آية "+arN(vd.ayahN));
+          setSbar("🔴 آية "+arN(vd.ayahN)+" ("+(idx+1)+"/"+total+")", "#f47c7c");
+
+          const ayahFrames = Math.ceil(buf.duration*FPS);
+          const msPerFrame = 1000/FPS;
+          let hlActive=-1;
+
+          for (let f=0; f<ayahFrames; f++) {
+            if (_expAbort || vEncErr) break;
+
+            hlActive = _drawVerseFrame(vd, f, msPerFrame, hlActive);
+
+            // audio chunk لهذا الـ frame
+            if (audioSent < totalSamp) {
+              const aLen = Math.min(sampPerFrame, totalSamp-audioSent);
+              const planar = new Float32Array(aLen*2);
+              planar.set(aL.subarray(audioSent, audioSent+aLen), 0);
+              planar.set(aR.subarray(audioSent, audioSent+aLen), aLen);
+              audioEnc.encode(new AudioData({
+                format:"f32-planar", sampleRate:SR,
+                numberOfFrames:aLen, numberOfChannels:2,
+                timestamp:Math.round(audioSent/SR*1e6), data:planar
+              }));
+              audioSent+=aLen;
+            }
+
+            // video frame
+            const ts = globalFrame*frameDurUs;
+            const vf = new VideoFrame(canvas, {timestamp:ts, duration:frameDurUs});
+            videoEnc.encode(vf, {keyFrame: globalFrame%(FPS*2)===0});
+            vf.close();
+            globalFrame++;
+
+            _setProgress(_expElapsedBefore + f/FPS);
+
+            // ← الحل الجوهري: نستنى لو الـ queue امتلأ
+            // encodeQueueSize > 10 = ننتظر قبل ما نكمل
+            while (videoEnc.encodeQueueSize > 10) {
+              await new Promise(r => setTimeout(r, 5));
+            }
+            if (f%5===0) await new Promise(r=>setTimeout(r,0));
+          }
+
+          if (hlActive>=0) { const o=document.getElementById("w"+hlActive); if(o){o.style.color=o.dataset.base||S.color||"#fff";o.style.textShadow="";} }
+          _expElapsedBefore+=buf.duration;
+        }
+
+        if (_expAbort || vEncErr) {
+          if (vEncErr) { toast$("❌ خطأ encoder — تصدير WebM..."); _expElapsedBefore=0; isExporting=false; startDrawLoop(); return _exportWebM(expCtx,qp,buffers,verseData,exportAyahs,total); }
+          _finishExport(expCtx); return;
+        }
+
+        xShow(total, total, "جارٍ تجميع MP4...");
+        setSbar("⏳ جارٍ تجميع MP4...", "#c9973a");
+
+        try {
+          // ← الحل: ننتظر القطعة الأخيرة تتحول قبل flush
+          while (videoEnc.encodeQueueSize > 0) {
+            await new Promise(r => setTimeout(r, 10));
+          }
+          await videoEnc.flush();
+          await audioEnc.flush();
+          muxer.finalize();
+
+          const blob = new Blob([muxer.target.buffer], {type:"video/mp4"});
+          if (blob.size < 1000) throw new Error("ملف تالف");
+          const mb=(blob.size/1024/1024).toFixed(1);
+          _downloadBlob(blob, "Islam-Reels-"+((S.surah?.ar)||"قرآن")+".mp4");
+          _setProgress(_expTotalDur);
+          _finishExport(expCtx, "✅ تم حفظ MP4 — "+mb+" MB ✨", "#5ec285");
+        } catch(e) {
+          console.error("finalize:", e);
+          toast$("⚠ فشل التجميع — تصدير WebM...");
+          _expElapsedBefore=0; isExporting=false; startDrawLoop();
+          await _exportWebM(expCtx, qp, buffers, verseData, exportAyahs, total);
+        }
+      }
+
+      // ══════════════════════════════════════════════════════
+      //  WebM عبر captureStream(0) + requestFrame
+      // ══════════════════════════════════════════════════════
+      async function _exportWebM(expCtx, qp, buffers, verseData, exportAyahs, total) {
+        // الخطوة 1: رسم كل الـ frames وحفظها
+        const FPS=qp.fps, msPerFrame=1000/FPS;
+        const frameBlobs=[];
+
+        for (let idx=0; idx<verseData.length; idx++) {
+          if (_expAbort) break;
+          const vd=verseData[idx], buf=buffers[idx];
+          _prepVerse(vd, exportAyahs);
+          window._expChunkAt=[];
+          if (verseChunks.length>1) {
+            const tw=verseChunks.reduce((s,c)=>s+c.words.length,0);
+            for (let ci=1;ci<verseChunks.length;ci++)
+              window._expChunkAt.push({f:Math.round(verseChunks[ci].startIdx*buf.duration*FPS/tw),ci});
+          }
+          xShow(idx+1, total, S.surah.ar+" — آية "+arN(vd.ayahN));
+          setSbar("🎬 رسم آية "+arN(vd.ayahN)+" ("+(idx+1)+"/"+total+")", "#f47c7c");
+
+          const ayahFrames=Math.ceil(buf.duration*FPS);
+          let hlActive=-1;
+          for (let f=0; f<ayahFrames; f++) {
+            if (_expAbort) break;
+            hlActive = _drawVerseFrame(vd, f, msPerFrame, hlActive);
+            const blob = await new Promise(res=>canvas.toBlob(res,"image/jpeg",0.88));
+            frameBlobs.push(blob);
+            _setProgress(_expElapsedBefore + f/FPS);
+            if (f%8===0) await new Promise(r=>setTimeout(r,0));
+          }
+          if (hlActive>=0) { const o=document.getElementById("w"+hlActive); if(o){o.style.color=o.dataset.base||S.color||"#fff";o.style.textShadow="";} }
+          _expElapsedBefore+=buf.duration;
+        }
+        if (_expAbort) { _finishExport(expCtx); return; }
+
+        // الخطوة 2: replay الـ frames مع الصوت
+        xShow(total, total, "جارٍ تسجيل الفيديو...");
+        setSbar("⏳ جارٍ تسجيل...", "#c9973a");
+
+        // بناء audio blob
+        const SR=44100;
+        const totalSamp=buffers.reduce((s,b)=>s+Math.round(b.duration*SR),0);
+        const wavLen=44+totalSamp*4;
+        const wav=new ArrayBuffer(wavLen);
+        const dv=new DataView(wav);
+        const ws=(p,s)=>{for(let i=0;i<s.length;i++)dv.setUint8(p+i,s.charCodeAt(i));};
+        ws(0,"RIFF");dv.setUint32(4,wavLen-8,true);ws(8,"WAVE");ws(12,"fmt ");
+        dv.setUint32(16,16,true);dv.setUint16(20,3,true);dv.setUint16(22,1,true);
+        dv.setUint32(24,SR,true);dv.setUint32(28,SR*4,true);
+        dv.setUint16(32,4,true);dv.setUint16(34,32,true);
+        ws(36,"data");dv.setUint32(40,totalSamp*4,true);
+        const pcm=new Float32Array(wav,44); let off=0;
+        for (const buf of buffers) {
+          const n=Math.round(buf.duration*SR);
+          const c0=buf.getChannelData(0), c1=buf.numberOfChannels>1?buf.getChannelData(1):c0;
+          for(let i=0;i<n&&off<totalSamp;i++) pcm[off++]=(c0[i]+c1[i])*0.5;
+        }
+        const audioBlob=new Blob([wav],{type:"audio/wav"});
+        const audioBuf=await expCtx.decodeAudioData(await audioBlob.arrayBuffer());
+
+        // captureStream(0) + requestFrame
+        const videoStream=canvas.captureStream(0);
+        const videoTrack=videoStream.getVideoTracks()[0];
+        const expDest=expCtx.createMediaStreamDestination();
+        const combined=new MediaStream([...videoStream.getVideoTracks(),...expDest.stream.getAudioTracks()]);
+
+        let mimeType="";
+        for (const m of ["video/webm;codecs=vp9,opus","video/webm;codecs=vp8,opus","video/webm"])
+          if(MediaRecorder.isTypeSupported(m)){mimeType=m;break;}
+
+        exportChunks=[];
+        exportRecorder=new MediaRecorder(combined,{mimeType,videoBitsPerSecond:qp.bitrate});
+        exportRecorder.ondataavailable=e=>{if(e.data?.size>0)exportChunks.push(e.data);};
+        exportRecorder.onstop=()=>{
+          const blob=new Blob(exportChunks,{type:"video/webm"});
+          const mb=(blob.size/1024/1024).toFixed(1);
+          _downloadBlob(blob,"Islam-Reels-"+((S.surah?.ar)||"قرآن")+".webm");
+          _setProgress(_expTotalDur);
+          _finishExport(expCtx,"✅ تم الحفظ WebM — "+mb+" MB","#5ec285");
+        };
+        exportRecorder.start(100);
+
+        const audioSrc=expCtx.createBufferSource();
+        audioSrc.buffer=audioBuf; audioSrc.connect(expDest); audioSrc.start(0);
+
+        const t0=performance.now();
+        for (let f=0; f<frameBlobs.length; f++) {
+          if (_expAbort) break;
+          const img=await createImageBitmap(frameBlobs[f]);
+          ctx.drawImage(img,0,0); img.close();
+          if (videoTrack?.requestFrame) videoTrack.requestFrame();
+          const wait=((f+1)*msPerFrame)-(performance.now()-t0);
+          if (wait>0) await new Promise(r=>setTimeout(r,wait));
+          if (f%20===0) _setProgress(_expTotalDur*f/frameBlobs.length);
+        }
+        await new Promise(r=>setTimeout(r,800));
+        if (exportRecorder?.state!=="inactive") exportRecorder.stop();
+      }
+
+            /* ══ Modal — xShow بيُحدَّث من الـ interval مش هنا ══ */
+      function xShow(cur,tot,sub){
+        document.getElementById("xov")?.classList.add("show");
+        const c=document.getElementById("xcnt"); if(c)c.textContent=`${arN(cur)} / ${arN(tot)} آية`;
+        const s=document.getElementById("xsub"); if(s)s.textContent=sub||"";
+        // إعادة تعيين الدائرة للصفر عند الآية الأولى
+        if(cur<=1){
+          const fg=document.getElementById("xringFg");
+          const circ=2*Math.PI*45;
+          if(fg){fg.style.strokeDasharray=circ;fg.style.strokeDashoffset=circ;}
+          const p=document.getElementById("xpct"); if(p)p.textContent="٠%";
+          const e=document.getElementById("xeta"); if(e)e.textContent="";
+        }
+      }
+      function xHide(){document.getElementById("xov")?.classList.remove("show");}
       function updateExportBtn(recording) {
         const btn = document.getElementById("exportBtn");
         if (!btn) return;
@@ -2919,7 +3398,7 @@
         active: 0,
         bgIdx: 0,
         font: "sch",
-        size: 26,
+        size: 14,
         color: "#fff",
         fx: {
           moon: true,
@@ -3059,6 +3538,10 @@
           fetchWordTiming(S.surah.n, curAN()).then((segs) => {
             if (segs) startWordHighlight(segs, S.color);
           });
+      });
+      audio.addEventListener("seeked",()=>{
+        if(S.playing&&S.surah&&S.active>=0)
+          fetchWordTiming(S.surah.n,curAN()).then(s=>{if(s)startWordHighlight(s,S.color);});
       });
       audio.addEventListener("pause", () => {
         S.playing = false;
@@ -3370,6 +3853,26 @@
         }
       }
 
+      // cache للكلمات من QuranCDN (بنفس تقسيم segments)
+      const _qdcWordCache = {};
+      async function fetchQdcWords(surahN, ayahN) {
+        const k = `${surahN}:${ayahN}`;
+        if (_qdcWordCache[k] !== undefined) return _qdcWordCache[k];
+        try {
+          const r = await fetch(
+            `https://api.qurancdn.com/api/qdc/verses/by_key/${surahN}:${ayahN}?words=true&word_fields=text_uthmani`,
+            { mode: "cors" }
+          );
+          if (!r.ok) { _qdcWordCache[k] = null; return null; }
+          const d = await r.json();
+          const words = (d.verse?.words || [])
+            .filter(w => w.char_type_name === "word")
+            .map(w => w.text_uthmani || w.text || "");
+          _qdcWordCache[k] = words.length ? words : null;
+        } catch { _qdcWordCache[k] = null; }
+        return _qdcWordCache[k];
+      }
+
       async function fetchWordTiming(surahN, ayahN) {
         const key = `${surahN}:${ayahN}`;
         if (timingCache[key] !== undefined) return timingCache[key];
@@ -3395,7 +3898,7 @@
               }
               const off = ts.timestamp_from;
               timingCache[k] = ts.segments.map(([wIdx, wStart, wEnd]) => [
-                wIdx,
+                wIdx - 1,            // QuranCDN: 1-based → 0-based لمطابقة span id
                 Math.max(0, wStart - off),
                 Math.max(0, wEnd - off),
               ]);
@@ -3433,20 +3936,18 @@
           .join(" ");
       }
 
-      const WORDS_PER_CHUNK = 16;
       let verseChunks = [],
         currentChunkIdx = 0,
         chunkTimer = null;
 
-      function splitIntoChunks(text) {
-        const words = (text || "").trim().split(/\s+/).filter(Boolean);
+      function splitIntoChunks(text, wordList) {
+        const words = wordList || (text || "").trim().split(/\s+/).filter(Boolean);
         if (!words.length) return [];
+        const n = words.length;
+        const sz = n <= 10 ? n : n <= 20 ? Math.ceil(n/2) : Math.ceil(n/3);
         const chunks = [];
-        for (let i = 0; i < words.length; i += WORDS_PER_CHUNK)
-          chunks.push({
-            words: words.slice(i, i + WORDS_PER_CHUNK),
-            startIdx: i,
-          });
+        for (let i = 0; i < words.length; i += sz)
+          chunks.push({ words: words.slice(i, i+sz), startIdx: i });
         return chunks;
       }
 
@@ -3488,10 +3989,11 @@
         if (instant || isExporting) {
           vAr.style.transition = "none";
           applyAndShow();
+          markCstateDirty();
         } else {
           vAr.style.opacity = "0";
           vAr.style.transition = "opacity .2s ease";
-          setTimeout(applyAndShow, 220);
+          setTimeout(() => { applyAndShow(); markCstateDirty(); }, 220);
         }
       }
 
@@ -3525,15 +4027,31 @@
           chunkTimer = null;
         }
       }
-      function startWordHighlight(segments, color) {}
-      function stopWordHighlight() {
-        activeWordTimers.forEach(clearTimeout);
-        activeWordTimers = [];
-        document.querySelectorAll("#vAr span").forEach((el) => {
-          el.style.color = el.dataset.base || S.color || "#fff";
-          el.style.textShadow = "";
-          el.style.transform = "";
-        });
+      let _hlRAF=null,_hlLast=-1;
+      function startWordHighlight(segments,color){
+        stopWordHighlight();
+        if(!segments?.length)return;
+        const segs=segments,clr=color||S.color||"#fff";
+        _hlLast=-1;
+        function tick(){
+          if(!S.playing)return;
+          const now=audio.currentTime*1000;
+          let a=-1;
+          for(const[wi,ws,we]of segs)if(now>=ws&&now<we){a=wi;break;}
+          if(a!==_hlLast){
+            if(_hlLast>=0){const o=document.getElementById("w"+_hlLast);if(o){o.style.color=o.dataset.base||clr;o.style.textShadow="";o.style.transform="";}}
+            if(a>=0){const e=document.getElementById("w"+a);if(e){e.style.color="#e4b55a";e.style.textShadow="0 0 18px rgba(228,181,90,.9)";e.style.transform="scale(1.09)";}}
+            _hlLast=a;
+          }
+          _hlRAF=requestAnimationFrame(tick);
+        }
+        _hlRAF=requestAnimationFrame(tick);
+      }
+      function stopWordHighlight(){
+        if(_hlRAF){cancelAnimationFrame(_hlRAF);_hlRAF=null;}
+        activeWordTimers.forEach(clearTimeout);activeWordTimers=[];
+        if(_hlLast>=0){const o=document.getElementById("w"+_hlLast);if(o){o.style.color=o.dataset.base||S.color||"#fff";o.style.textShadow="";o.style.transform="";}  _hlLast=-1;}
+        document.querySelectorAll("#vAr span").forEach(el=>{el.style.color=el.dataset.base||S.color||"#fff";el.style.textShadow="";el.style.transform="";});
       }
 
       async function loadVerse() {
@@ -3573,36 +4091,41 @@
         }
         let { ar, en } = verseCache[ckey];
         if (s !== 1) ar = stripBasmala(ar);
-        verseChunks = splitIntoChunks(ar);
+
+        // جلب الكلمات من QuranCDN (نفس تقسيم segments) — parallel مع التوقيت
+        const [segments, qdcWords] = await Promise.all([
+          fetchWordTiming(s, ayahNum),
+          S.sh?.qdcId ? fetchQdcWords(s, ayahNum) : Promise.resolve(null),
+        ]);
+
+        // استخدم QuranCDN words إن أمكن (تطابق مضمون مع segments)
+        const wordList = qdcWords?.length ? qdcWords : null;
+        verseChunks = splitIntoChunks(wordList ? wordList.join(" ") : ar, wordList);
         currentChunkIdx = 0;
         $("vRef").textContent = `﴿ ${S.surah.ar} : ${arN(ayahNum)} ﴾`;
         $("npT").textContent = S.surah.ar + " — آية " + arN(ayahNum);
         if (verseChunks.length > 0) showChunk(0, false);
-        const segments = await fetchWordTiming(s, ayahNum);
         if (segments && S.playing) startWordHighlight(segments, S.color);
       }
 
       function updateScreen() {
         if (!S.surah) return;
         const fontMap = {
-          sch: "'Scheherazade New', serif",
-          amiri: "'Amiri', serif",
-          cairo: "'Cairo', sans-serif",
-          noto: "'Noto Naskh Arabic', serif",
-          lateef: "'Lateef', serif",
-          kufi: "'Reem Kufi', sans-serif",
+          sch: "'Scheherazade New', serif", amiri: "'Amiri', serif",
+          cairo: "'Cairo', sans-serif", noto: "'Noto Naskh Arabic', serif",
+          lateef: "'Lateef', serif", kufi: "'Reem Kufi', sans-serif",
           harmattan: "'Harmattan', sans-serif",
         };
         const ff = fontMap[S.font] || fontMap.sch;
         $("vAr").style.fontFamily = ff;
         $("vAr").style.setProperty("--word-color", S.color || "#fff");
-        // نضبط الخط بناءً على حجم sc-v الفعلي (الـ container الحقيقي للنص)
         const _container = document.getElementById("vArea");
         const _containerW = _container ? _container.offsetWidth : 216;
-        const _scl = Math.min(1, _containerW / 216); // 216 = عرض sc-v على desktop
-        const _fs = Math.max(10, Math.round((S.size || 26) * _scl));
+        const _scl = Math.min(1, _containerW / 216);
+        const _fs = Math.max(10, Math.round((S.size || 14) * _scl));
         $("vAr").style.fontSize = _fs + "px";
         $("vAr").style.lineHeight = "1.75";
+        markCstateDirty(); // ← notify canvas
       }
 
       function renderBGs() {
@@ -3616,6 +4139,8 @@
         $("screen").style.background = BGS[i].g;
         clearCustomBg(true);
         renderBGs();
+        _gradCache = null; // invalidate gradient cache
+        markCstateDirty();
         toast$("✓ " + BGS[i].l);
       }
 
@@ -3758,13 +4283,12 @@
       function applyColor(c) {
         S.color = c;
         document.querySelectorAll("#vAr span").forEach((sp) => {
-          sp.dataset.base = c;
-          sp.style.color = c;
+          sp.dataset.base = c; sp.style.color = c;
         });
-        const prev = document.getElementById("clrPreview"),
-          hex = document.getElementById("clrHex");
+        const prev = document.getElementById("clrPreview"), hex = document.getElementById("clrHex");
         if (prev) prev.style.background = c;
         if (hex) hex.textContent = c;
+        markCstateDirty();
         updateScreen();
       }
       function pickCustomColor(c) {
@@ -3776,29 +4300,15 @@
         const on = S.fx[k];
         const sw = $("sw-" + k);
         if (sw) {
-          sw.style.background = on
-            ? "linear-gradient(135deg,#245c38,#3ea066)"
-            : "#18301e";
-          sw.style.borderColor = on
-            ? "rgba(62,160,102,.4)"
-            : "rgba(255,255,255,.08)";
+          sw.style.background = on ? "linear-gradient(135deg,#245c38,#3ea066)" : "#18301e";
+          sw.style.borderColor = on ? "rgba(62,160,102,.4)" : "rgba(255,255,255,.08)";
           sw.querySelector(".sw-k").style.right = on ? "3px" : "18px";
         }
-        const mp = {
-          moon: "elMoon",
-          stars: "elStars",
-          glow: "elGlow",
-          border: "elBorder",
-        };
+        const mp = { moon: "elMoon", stars: "elStars", glow: "elGlow", border: "elBorder" };
         if (mp[k]) $(mp[k]).style.display = on ? "block" : "none";
-        if (k === "wave") {
-          const el = $("elWave");
-          if (el) el.style.display = on ? "flex" : "none";
-        }
-        if (k === "particles") {
-          if (on) startParticles();
-          else stopParticles();
-        }
+        if (k === "wave") { const el = $("elWave"); if (el) el.style.display = on ? "flex" : "none"; }
+        if (k === "particles") { if (on) startParticles(); else stopParticles(); }
+        markCstateDirty();
       }
 
       let particleRAF = null,
@@ -3861,6 +4371,71 @@
         "4k": { w: 2160, h: 3840, fps: 60, bitrate: 40_000_000 },
       };
       let currentQuality = "hd";
+      let _exportFmt = "mp4";   // "mp4" | "webm"
+      let _turboMode = true;    // WebCodecs لو متاح
+
+      function setExportFmt(fmt) {
+        _exportFmt = fmt;
+        const mp4 = document.getElementById("fmtMp4");
+        const webm = document.getElementById("fmtWebm");
+        const turboRow = document.getElementById("turboRow");
+        const btn = document.getElementById("exportBtn");
+        if (!mp4 || !webm) return;
+        if (fmt === "mp4") {
+          mp4.style.border  = "2px solid rgba(201,151,58,.7)";
+          mp4.style.background = "rgba(201,151,58,.08)";
+          mp4.querySelector("div:last-child").style.background = "#c9973a";
+          mp4.querySelector("div:last-child").style.borderColor = "#c9973a";
+          mp4.querySelector("div:last-child").style.boxShadow = "0 0 6px rgba(201,151,58,.6)";
+          webm.style.border = "2px solid rgba(255,255,255,.1)";
+          webm.style.background = "rgba(255,255,255,.03)";
+          webm.querySelector("div:last-child").style.background = "transparent";
+          webm.querySelector("div:last-child").style.borderColor = "rgba(255,255,255,.2)";
+          webm.querySelector("div:last-child").style.boxShadow = "none";
+          turboRow.style.display = "flex";
+          if (btn) btn.textContent = "⬇ تصدير MP4";
+        } else {
+          webm.style.border = "2px solid rgba(201,151,58,.7)";
+          webm.style.background = "rgba(201,151,58,.08)";
+          webm.querySelector("div:last-child").style.background = "#c9973a";
+          webm.querySelector("div:last-child").style.borderColor = "#c9973a";
+          webm.querySelector("div:last-child").style.boxShadow = "0 0 6px rgba(201,151,58,.6)";
+          mp4.style.border  = "2px solid rgba(255,255,255,.1)";
+          mp4.style.background = "rgba(255,255,255,.03)";
+          mp4.querySelector("div:last-child").style.background = "transparent";
+          mp4.querySelector("div:last-child").style.borderColor = "rgba(255,255,255,.2)";
+          mp4.querySelector("div:last-child").style.boxShadow = "none";
+          turboRow.style.display = "none";
+          if (btn) btn.textContent = "⬇ تصدير WebM";
+        }
+      }
+
+      function toggleTurbo() {
+        _turboMode = !_turboMode;
+        const sw = document.getElementById("turboSw");
+        const warn = document.getElementById("turboWarn");
+        if (!sw) return;
+        const on = _turboMode;
+        sw.style.background = on ? "linear-gradient(135deg,#245c38,#3ea066)" : "#18301e";
+        sw.querySelector("div").style.right = on ? "3px" : "18px";
+        // تحقق من توفر الـ muxer
+        if (on && typeof Mp4Muxer === "undefined") {
+          if (warn) warn.style.display = "block";
+        } else {
+          if (warn) warn.style.display = "none";
+        }
+      }
+
+      // تحقق من الـ muxer عند التحميل
+      window.addEventListener("load", () => {
+        if (typeof Mp4Muxer === "undefined") {
+          const warn = document.getElementById("turboWarn");
+          if (warn) warn.style.display = "block";
+          _turboMode = false;
+          const sw = document.getElementById("turboSw");
+          if (sw) { sw.style.background = "#18301e"; sw.querySelector("div").style.right = "18px"; }
+        }
+      });
 
       function setQuality(q) {
         currentQuality = q;
@@ -3868,25 +4443,22 @@
           const btn = document.getElementById("qBtn-" + id);
           if (!btn) return;
           const on = id === q;
-          btn.style.border = on
-            ? "1px solid rgba(201,151,58,0.45)"
-            : "1px solid rgba(255,255,255,0.07)";
+          btn.style.border = on ? "1px solid rgba(201,151,58,0.45)" : "1px solid rgba(255,255,255,0.07)";
           btn.style.background = on ? "rgba(201,151,58,0.1)" : "#112016";
           btn.querySelector("div").style.color = on ? "#e4b55a" : "#b5c4bc";
         });
         const p = QUALITY_PRESETS[q];
-        canvas.width = p.w;
-        canvas.height = p.h;
-        toast$(
-          "✓ جودة " +
-            (q === "hd" ? "HD 1080p" : q === "fhd" ? "FHD 1440p" : "4K 2160p"),
-        );
+        canvas.width = p.w; canvas.height = p.h;
+        _gradCache = null; _mtCache.clear(); // clear caches after resolution change
+        markCstateDirty();
+        toast$("✓ جودة " + (q === "hd" ? "HD 1080p" : q === "fhd" ? "FHD 1440p" : "4K 2160p"));
       }
 
       /* ══ INIT ══ */
       renderShuyukh();
       renderSurahs();
       renderBGs();
+      startDrawLoop(); // بدء الـ draw loop مع بداية الصفحة (للمعاينة)
 
       /* ══ MOBILE NAVIGATION ══ */
       function mobShow(panel, tab) {
@@ -3927,7 +4499,365 @@
       };
     </script>
     <script>
-      if ("serviceWorker" in navigator) {
+      // ─────────────────────────────────────────────
+      // نظام المزامنة — Sync System
+      // ─────────────────────────────────────────────
+
+      /* ── State ── */
+      const SYNC = {
+        // offset per ayah: { ayahNum: offsetSec }
+        offsets: {},
+        globalOffset: 0,
+
+        // manual sync
+        ms: {
+          active: false,
+          idx: 0,      // index in play queue
+          marks: [],   // [{ayahNum, time}]
+        },
+
+        // live sync
+        ls: {
+          active: false,
+          idx: 0,
+          marks: [],   // [{ayahNum, time}]
+        },
+      };
+
+      /* ── helpers ── */
+      function syncGetQueue() {
+        // returns sorted array of ayah numbers currently selected
+        return [...apSelected].sort((a, b) => a - b);
+      }
+      function syncAyahAr(ayahNum) {
+        if (!S.surah) return '';
+        const cached = verseCache[S.surah.n + ':' + ayahNum];
+        return cached ? cached.ar : '';
+      }
+
+      /* ═══════════════════════════════════════
+         1. SYNC PANEL open / close / tab switch
+      ═══════════════════════════════════════ */
+      function openSyncPanel() {
+        renderOffsetTable();
+        document.getElementById('syncPanel').classList.add('show');
+      }
+      function closeSyncPanel() {
+        document.getElementById('syncPanel').classList.remove('show');
+      }
+      function switchSyncTab(t) {
+        ['offset','manual','live'].forEach(id => {
+          document.getElementById('stc-'+id).classList.toggle('on', id===t);
+        });
+        document.querySelectorAll('.sync-tab').forEach((btn,i) => {
+          btn.classList.toggle('on', ['offset','manual','live'][i]===t);
+        });
+      }
+
+      /* ═══════════════════════════════════════
+         2. OFFSET TABLE
+      ═══════════════════════════════════════ */
+      function renderOffsetTable() {
+        const q = syncGetQueue();
+        if (!q.length) {
+          document.getElementById('offsetTbody').innerHTML =
+            '<tr><td colspan="3" style="text-align:center;padding:10px;color:rgba(255,255,255,.22);">اختر سورة وآيات أولاً</td></tr>';
+          return;
+        }
+        document.getElementById('offsetTbody').innerHTML = q.map(n => {
+          const ar = syncAyahAr(n);
+          const off = (SYNC.offsets[n] !== undefined ? SYNC.offsets[n] : SYNC.globalOffset).toFixed(1);
+          return `<tr>
+            <td style="color:#e4b55a;font-weight:700;">${arN(n)}</td>
+            <td><div class="oft-ar">${ar ? ar.substring(0,28)+'…' : '—'}</div></td>
+            <td><input type="number" value="${off}" step="0.1" min="-10" max="30"
+              onchange="SYNC.offsets[${n}]=parseFloat(this.value)"
+              style="direction:ltr;"></td>
+          </tr>`;
+        }).join('');
+      }
+
+      function applyGlobalOffset(val) {
+        const v = parseFloat(val) || 0;
+        SYNC.globalOffset = v;
+        // apply to all ayahs
+        syncGetQueue().forEach(n => { SYNC.offsets[n] = v; });
+        renderOffsetTable();
+        toast$('✓ تم تطبيق التأخير العام: ' + v + 'ث');
+      }
+
+      function resetAllOffsets() {
+        SYNC.offsets = {};
+        SYNC.globalOffset = 0;
+        document.getElementById('globalOffsetInp').value = '0';
+        renderOffsetTable();
+        toast$('↺ تم تصفير جميع التأخيرات');
+      }
+
+      /* ═══════════════════════════════════════
+         3. MANUAL SYNC (TAB 2)
+         المستخدم يضغط Space أو "علّم" عند بداية كل آية
+      ═══════════════════════════════════════ */
+      function msToggle() {
+        if (SYNC.ms.active) {
+          // pause
+          SYNC.ms.active = false;
+          document.getElementById('ms-start-btn').textContent = '▶ ابدأ';
+          document.getElementById('ms-mark-btn').disabled = true;
+        } else {
+          const q = syncGetQueue();
+          if (!q.length) { toast$('⚠ اختر آيات أولاً'); return; }
+          if (!S.sh) { toast$('⚠ اختر شيخاً أولاً'); return; }
+          SYNC.ms.active = true;
+          SYNC.ms.idx = 0;
+          SYNC.ms.marks = [];
+          document.getElementById('ms-start-btn').textContent = '⏸ إيقاف مؤقت';
+          document.getElementById('ms-mark-btn').disabled = false;
+          document.getElementById('ms-apply-btn').disabled = true;
+          msUpdateUI();
+          // ensure audio plays
+          if (audio.paused) {
+            S.active = 0; curUrl='';
+            loadAudio(true);
+          }
+        }
+      }
+
+      function msMark() {
+        if (!SYNC.ms.active) return;
+        const q = syncGetQueue();
+        const now = audio.currentTime || 0;
+        const ayahNum = q[SYNC.ms.idx];
+        SYNC.ms.marks.push({ ayahNum, time: now });
+        SYNC.ms.idx++;
+        if (SYNC.ms.idx >= q.length) {
+          // done
+          SYNC.ms.active = false;
+          document.getElementById('ms-start-btn').textContent = '▶ ابدأ';
+          document.getElementById('ms-mark-btn').disabled = true;
+          document.getElementById('ms-apply-btn').disabled = false;
+          toast$('✅ تم تسجيل ' + SYNC.ms.marks.length + ' توقيت');
+        }
+        msUpdateUI();
+        msFlash();
+      }
+
+      function msUpdateUI() {
+        const q = syncGetQueue();
+        const idx = Math.min(SYNC.ms.idx, q.length - 1);
+        const ayahNum = q[idx];
+        document.getElementById('ms-progress').textContent = arN(SYNC.ms.idx + 1) + ' / ' + arN(q.length);
+        document.getElementById('ms-cur-ar').textContent = ayahNum ? syncAyahAr(ayahNum).substring(0,55) + '…' : '—';
+        document.getElementById('ms-cur-ref').textContent = (S.surah && ayahNum) ? `﴿ ${S.surah.ar} : ${arN(ayahNum)} ﴾` : '—';
+
+        if (SYNC.ms.marks.length === 0) {
+          document.getElementById('ms-result-body').innerHTML =
+            '<tr><td colspan="4" style="text-align:center;padding:10px;color:rgba(255,255,255,.22);">ابدأ المزامنة لرؤية النتائج</td></tr>';
+          return;
+        }
+        document.getElementById('ms-result-body').innerHTML = SYNC.ms.marks.map(m => {
+          const ar = syncAyahAr(m.ayahNum);
+          return `<tr>
+            <td style="color:#e4b55a;font-weight:700;">${arN(m.ayahNum)}</td>
+            <td><div class="oft-ar">${ar ? ar.substring(0,22)+'…' : '—'}</div></td>
+            <td style="color:#3ea066;font-weight:700;direction:ltr;">${m.time.toFixed(2)}s</td>
+            <td style="color:#5ec285;font-size:10px;">✓</td>
+          </tr>`;
+        }).join('');
+      }
+
+      function msFlash() {
+        const btn = document.getElementById('ms-mark-btn');
+        btn.classList.add('ls-mark-flash');
+        setTimeout(() => btn.classList.remove('ls-mark-flash'), 300);
+      }
+
+      function msReset() {
+        SYNC.ms.active = false; SYNC.ms.idx = 0; SYNC.ms.marks = [];
+        document.getElementById('ms-start-btn').textContent = '▶ ابدأ';
+        document.getElementById('ms-mark-btn').disabled = true;
+        document.getElementById('ms-apply-btn').disabled = true;
+        msUpdateUI();
+        toast$('↺ تمت إعادة المزامنة اليدوية');
+      }
+
+      function msApply() {
+        if (!SYNC.ms.marks.length) return;
+        // نحسب offset: وقت الضغط = بداية الآية في الصوت
+        // بنحفظ الـ time كـ syncOffset لكل آية
+        SYNC.ms.marks.forEach(m => { SYNC.offsets[m.ayahNum] = m.time; });
+        renderOffsetTable();
+        switchSyncTab('offset');
+        toast$('✅ تم تطبيق التوقيتات على جدول التأخير');
+      }
+
+      /* ═══════════════════════════════════════
+         4. LIVE SYNC (TAB 3)
+         المستخدم يضغط Space أو "مارك" عند بداية كل آية
+         بيشتغل مع صوت القارئ الجاري في الـ audio element
+      ═══════════════════════════════════════ */
+      function lsToggle() {
+        if (SYNC.ls.active) {
+          SYNC.ls.active = false;
+          document.getElementById('ls-play-btn').textContent = '▶ شغّل';
+          document.getElementById('ls-mark-btn').disabled = true;
+          if (SYNC.ls.marks.length > 0) {
+            document.getElementById('ls-apply-btn').disabled = false;
+          }
+        } else {
+          const q = syncGetQueue();
+          if (!q.length) { toast$('⚠ اختر آيات أولاً'); return; }
+          if (!S.sh) { toast$('⚠ اختر شيخاً أولاً'); return; }
+          SYNC.ls.active = true;
+          SYNC.ls.idx = 0;
+          SYNC.ls.marks = [];
+          document.getElementById('ls-play-btn').textContent = '⏸ إيقاف';
+          document.getElementById('ls-mark-btn').disabled = false;
+          document.getElementById('ls-apply-btn').disabled = true;
+          lsUpdateUI();
+          // تشغيل الصوت إن لم يكن يعزف
+          if (audio.paused) {
+            S.active = 0; curUrl = '';
+            loadAudio(true);
+          }
+        }
+      }
+
+      function lsMark() {
+        if (!SYNC.ls.active) return;
+        const q = syncGetQueue();
+        const now = audio.currentTime || 0;
+        const ayahNum = q[SYNC.ls.idx];
+        SYNC.ls.marks.push({ ayahNum, time: now });
+        SYNC.ls.idx++;
+
+        if (SYNC.ls.idx >= q.length) {
+          // انتهينا
+          lsStop();
+          toast$('✅ تم تسجيل ' + SYNC.ls.marks.length + ' توقيت');
+          document.getElementById('ls-apply-btn').disabled = false;
+          return;
+        }
+        lsUpdateUI();
+        lsFlash();
+      }
+
+      function lsStop() {
+        SYNC.ls.active = false;
+        document.getElementById('ls-play-btn').textContent = '▶ شغّل';
+        document.getElementById('ls-mark-btn').disabled = true;
+        if (SYNC.ls.marks.length > 0) document.getElementById('ls-apply-btn').disabled = false;
+        lsUpdateUI();
+      }
+
+      function lsUpdateUI() {
+        const q = syncGetQueue();
+        const idx = Math.min(SYNC.ls.idx, q.length - 1);
+        const ayahNum = q[idx];
+        document.getElementById('ls-vnum').textContent = arN(SYNC.ls.idx + 1);
+        document.getElementById('ls-vtot').textContent = arN(q.length);
+        document.getElementById('ls-cur-ar').textContent = ayahNum ? syncAyahAr(ayahNum).substring(0,60)+'…' : '—';
+        document.getElementById('ls-cur-ref').textContent = '';
+
+        if (SYNC.ls.marks.length === 0) {
+          document.getElementById('ls-result-body').innerHTML =
+            '<tr><td colspan="4" style="text-align:center;padding:10px;color:rgba(255,255,255,.22);">ابدأ المزامنة لرؤية النتائج</td></tr>';
+          return;
+        }
+        document.getElementById('ls-result-body').innerHTML = SYNC.ls.marks.map(m => {
+          const ar = syncAyahAr(m.ayahNum);
+          return `<tr>
+            <td style="color:#e4b55a;font-weight:700;">${arN(m.ayahNum)}</td>
+            <td><div class="oft-ar">${ar ? ar.substring(0,22)+'…' : '—'}</div></td>
+            <td style="color:#3ea066;font-weight:700;direction:ltr;">${m.time.toFixed(2)}s</td>
+            <td style="color:#5ec285;font-size:10px;">✓</td>
+          </tr>`;
+        }).join('');
+      }
+
+      function lsFlash() {
+        const btn = document.getElementById('ls-mark-btn');
+        btn.classList.add('ls-mark-flash');
+        setTimeout(() => btn.classList.remove('ls-mark-flash'), 300);
+      }
+
+      function lsApply() {
+        if (!SYNC.ls.marks.length) return;
+        SYNC.ls.marks.forEach(m => { SYNC.offsets[m.ayahNum] = m.time; });
+        renderOffsetTable();
+        switchSyncTab('offset');
+        toast$('✅ تم تطبيق توقيتات المزامنة المباشرة');
+      }
+
+      /* ═══════════════════════════════════════
+         5. SPACE KEY — يخدم نظامَي المزامنة
+      ═══════════════════════════════════════ */
+      document.addEventListener('keydown', e => {
+        if (e.code !== 'Space') return;
+        const panel = document.getElementById('syncPanel');
+        if (!panel.classList.contains('show')) return;
+        // أيهما نشط؟
+        if (SYNC.ms.active) { e.preventDefault(); msMark(); return; }
+        if (SYNC.ls.active) { e.preventDefault(); lsMark(); return; }
+      });
+
+      /* ═══════════════════════════════════════
+         6. APPLY OFFSET during playback
+         — يُستدعى من audio playing/timeupdate
+         — يُضيف تأخير ظهور النص لكل آية
+      ═══════════════════════════════════════ */
+      function getSyncOffset(ayahNum) {
+        if (SYNC.offsets[ayahNum] !== undefined) return SYNC.offsets[ayahNum];
+        return SYNC.globalOffset;
+      }
+
+      // hook into the playing event to apply offset
+      audio.addEventListener('playing', () => {
+        const ayahNum = curAN();
+        const offset = getSyncOffset(ayahNum);
+        if (offset > 0 && typeof applyTextDelay === 'function') {
+          applyTextDelay(offset);
+        }
+      });
+
+      // تأخير ظهور نص الآية بعد بدء الصوت بعدد الثواني المحددة
+      let _textDelayTimer = null;
+      function applyTextDelay(sec) {
+        clearTimeout(_textDelayTimer);
+        const vAr = document.getElementById('vAr');
+        if (!vAr) return;
+        const savedOpacity = vAr.style.opacity;
+        vAr.style.opacity = '0';
+        vAr.style.transition = 'none';
+        _textDelayTimer = setTimeout(() => {
+          vAr.style.transition = 'opacity 0.4s ease';
+          vAr.style.opacity = '1';
+        }, sec * 1000);
+      }
+
+      // تصفير الـ delay عند إيقاف أو انتهاء الصوت
+      audio.addEventListener('pause', () => {
+        clearTimeout(_textDelayTimer);
+        const vAr = document.getElementById('vAr');
+        if (vAr) { vAr.style.opacity = '1'; vAr.style.transition = ''; }
+      });
+      audio.addEventListener('ended', () => {
+        clearTimeout(_textDelayTimer);
+        const vAr = document.getElementById('vAr');
+        if (vAr) { vAr.style.opacity = '1'; vAr.style.transition = ''; }
+      });
+
+      // إعادة render جدول الـ offset عند تغيير السورة أو الآيات
+      const _origPickSurah = window.pickSurah;
+      window.pickSurah = function(n) {
+        _origPickSurah(n);
+        SYNC.offsets = {};
+        SYNC.globalOffset = 0;
+        if (document.getElementById('globalOffsetInp'))
+          document.getElementById('globalOffsetInp').value = '0';
+        setTimeout(renderOffsetTable, 400);
+      };
+
         window.addEventListener("load", () => {
           navigator.serviceWorker.register("/sw.js").catch(() => {});
         });
