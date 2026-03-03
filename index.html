@@ -4126,21 +4126,8 @@ global.JSZip = JSZip;
 
       function _downloadBlob(blob, filename) {
         const url = URL.createObjectURL(blob);
-        if (_isIOS) {
-          // iOS Safari: a.download مش شغّال — نفتح في تاب جديد
-          const over = document.createElement("div");
-          over.id = "_iosSave";
-          over.style.cssText = "position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.92);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;font-family:Cairo,sans-serif;direction:rtl;padding:28px;";
-          over.innerHTML = `
-            <div style="font-size:36px">📱</div>
-            <div style="color:#e4b55a;font-size:16px;font-weight:700;text-align:center">حفظ الفيديو</div>
-            <div style="color:#b5c4bc;font-size:13px;text-align:center;line-height:1.9;max-width:290px">
-              اضغط <b style="color:#fff">فتح</b> ثم اضغط مطوّلاً على الفيديو واختر <b style="color:#fff">"حفظ الفيديو"</b>
-            </div>
-            <a href="${url}" target="_blank" rel="noopener" style="background:linear-gradient(135deg,#6b4e18,#c9973a);color:#fff;font-weight:700;font-size:14px;padding:13px 32px;border-radius:100px;text-decoration:none;font-family:Cairo,sans-serif;">▶ فتح</a>
-            <button onclick="document.getElementById('_iosSave')?.remove();URL.revokeObjectURL('${url}')" style="background:transparent;border:1px solid rgba(255,255,255,.2);color:#6e8878;font-size:12px;padding:8px 20px;border-radius:100px;cursor:pointer;font-family:Cairo,sans-serif;">إغلاق</button>
-          `;
-          document.body.appendChild(over);
+        if (_isIOS && blob.type.startsWith("video/")) {
+          _showIOSVideoSave(url, filename);
         } else {
           const a = document.createElement("a");
           a.href = url;
@@ -4148,7 +4135,87 @@ global.JSZip = JSZip;
           document.body.appendChild(a);
           a.click();
           document.body.removeChild(a);
-          setTimeout(() => URL.revokeObjectURL(url), 30000);
+          setTimeout(() => URL.revokeObjectURL(url), 60000);
+        }
+      }
+
+      function _showIOSVideoSave(url, filename) {
+        // إزالة أي overlay قديم
+        document.getElementById("_iosSave")?.remove();
+
+        const over = document.createElement("div");
+        over.id = "_iosSave";
+        over.style.cssText = [
+          "position:fixed;inset:0;z-index:99999",
+          "background:rgba(0,0,0,.95)",
+          "display:flex;flex-direction:column;align-items:center;justify-content:flex-start",
+          "font-family:Cairo,sans-serif;direction:rtl",
+          "padding:24px 20px;overflow-y:auto",
+          "gap:14px"
+        ].join(";");
+
+        over.innerHTML = `
+          <div style="color:#e4b55a;font-size:16px;font-weight:700;text-align:center;margin-top:8px">
+            📥 حفظ الفيديو على iOS
+          </div>
+
+          <video
+            id="_iosVid"
+            src="${url}"
+            controls
+            playsinline
+            style="
+              width:100%;max-width:360px;border-radius:12px;
+              background:#000;outline:none;
+            "
+          ></video>
+
+          <div style="
+            background:rgba(201,151,58,.1);border:1px solid rgba(201,151,58,.3);
+            border-radius:10px;padding:14px 16px;width:100%;max-width:360px;
+            color:#e4b55a;font-size:13px;line-height:2;text-align:right;
+          ">
+            <b>طريقة الحفظ:</b><br>
+            ١. اضغط مطوّلاً على الفيديو بالأعلى<br>
+            ٢. اختر <b>"حفظ الفيديو"</b> أو <b>"إضافة إلى الصور"</b>
+          </div>
+
+          <div style="
+            background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);
+            border-radius:10px;padding:14px 16px;width:100%;max-width:360px;
+            color:#b5c4bc;font-size:12px;line-height:2;text-align:right;
+          ">
+            <b style="color:#fff">لو مش ظاهر خيار الحفظ:</b><br>
+            اضغط <b style="color:#e4b55a">فتح في Safari</b> ↓<br>
+            ثم اضغط مطوّلاً على الفيديو هناك
+          </div>
+
+          <div style="display:flex;gap:10px;width:100%;max-width:360px;">
+            <a href="${url}" target="_blank" rel="noopener" style="
+              flex:1;background:rgba(255,255,255,.07);color:#b5c4bc;
+              font-size:12px;padding:11px 8px;border-radius:10px;
+              text-decoration:none;text-align:center;font-family:Cairo,sans-serif;
+              border:1px solid rgba(255,255,255,.12);
+            ">🌐 فتح في Safari</a>
+            <button onclick="
+              document.getElementById('_iosSave')?.remove();
+              URL.revokeObjectURL('${url}');
+            " style="
+              flex:1;background:rgba(201,151,58,.15);
+              border:1px solid rgba(201,151,58,.4);
+              color:#e4b55a;font-size:12px;padding:11px 8px;
+              border-radius:10px;cursor:pointer;font-family:Cairo,sans-serif;
+            ">✅ تم الحفظ</button>
+          </div>
+        `;
+
+        document.body.appendChild(over);
+
+        // تشغيل الفيديو تلقائياً عشان يظهر
+        const vid = document.getElementById("_iosVid");
+        if (vid) {
+          vid.load();
+          vid.play().catch(() => {});
         }
       }
 
