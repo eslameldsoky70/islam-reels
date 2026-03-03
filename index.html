@@ -22,6 +22,15 @@
     />
     <title>Islam Reels ✨</title>
     <script>
+    // تحميل JSZip (pure JS - يشتغل على كل الأجهزة)
+    (function() {
+      const s = document.createElement("script");
+      s.src = "https://cdn.jsdelivr.net/npm/jszip@3/dist/jszip.min.js";
+      s.crossOrigin = "anonymous";
+      document.head.appendChild(s);
+    })();
+    </script>
+    <script>
     // تحميل mp4-muxer من أكثر من مصدر مع retry
     window._mp4MuxerReady = false;
     window._mp4MuxerCallbacks = [];
@@ -74,6 +83,7 @@
       const hasWebM = !isIOS_ && typeof MediaRecorder !== "undefined" &&
         (MediaRecorder.isTypeSupported?.("video/webm") ||
          MediaRecorder.isTypeSupported?.("video/webm;codecs=vp8,opus") || false);
+      const hasZip = typeof JSZip !== "undefined";
 
       const bar = document.getElementById("deviceSupportBar");
       if (bar) {
@@ -84,11 +94,13 @@
           bar.textContent = "⏳ جارٍ تحميل مكتبة MP4...";
           bar.style.color = "#c9973a";
         } else if (hasWebM) {
-          bar.textContent = "🔶 WebM متاح فقط على هذا المتصفح";
+          bar.textContent = "🔶 WebM متاح فقط — أو اختر ZIP";
           bar.style.color = "#c9973a";
         } else {
-          bar.textContent = "❌ التصدير غير مدعوم — جرّب Safari أو Chrome";
-          bar.style.color = "#f47c7c";
+          bar.textContent = "📦 سيتم التصدير كـ ZIP (frames + صوت) تلقائياً";
+          bar.style.color = "#e4b55a";
+          // تلقائياً: اختر ZIP في الواجهة
+          if (typeof setExportFmt === "function") setExportFmt("zip");
         }
       }
 
@@ -2630,6 +2642,32 @@
                   "
                 ></div>
               </div>
+              <!-- ZIP Frames -->
+              <div
+                id="fmtZip"
+                onclick="setExportFmt('zip')"
+                style="
+                  flex: 1;
+                  border: 2px solid rgba(255, 255, 255, 0.1);
+                  border-radius: 10px;
+                  padding: 9px 7px;
+                  text-align: center;
+                  cursor: pointer;
+                  background: rgba(255, 255, 255, 0.03);
+                  transition: 0.2s;
+                "
+              >
+                <div style="font-size:13px;font-weight:700;color:#b5c4bc;margin-bottom:3px">
+                  ZIP
+                </div>
+                <div style="font-size:10px;color:#6e8878">كل الأجهزة</div>
+                <div
+                  style="
+                    margin-top:4px;width:14px;height:14px;border-radius:50%;
+                    border:2px solid rgba(255,255,255,.2);background:transparent;margin:4px auto 0;
+                  "
+                ></div>
+              </div>
             </div>
             <!-- Turbo MP4 toggle -->
             <div
@@ -3995,6 +4033,14 @@
         //  اختيار مسار التصدير الأفضل للجهاز تلقائياً
         //  الأولوية: MP4 WebCodecs > WebM > رسالة خطأ
         // ═══════════════════════════════════════════════════
+        // المستخدم اختار ZIP صراحةً
+        if (_exportFmt === "zip") {
+          toast$("📦 تصدير ZIP...");
+          setSbar("📦 جارٍ التصدير كـ ZIP...", "#c9973a");
+          await _exportFrameZip(expCtx, qp, buffers, verseData, exportAyahs, total);
+          return;
+        }
+
         const useMP4 = _canMP4() && (_exportFmt === "mp4" || _isIOS || !_canWebM());
         const useWebM = !useMP4 && _canWebM() && !_isIOS;
 
@@ -4007,13 +4053,10 @@
           setSbar("🔴 يسجّل " + total + " آية...", "#f47c7c");
           await _exportWebM(expCtx, qp, buffers, verseData, exportAyahs, total);
         } else {
-          // لا يوجد دعم لأي صيغة
-          const msg = _isIOS && _iosVer > 0 && _iosVer < 16
-            ? "❌ يحتاج iOS 16 أو أحدث للتصدير"
-            : "❌ هذا المتصفح لا يدعم تصدير الفيديو. جرّب Chrome أو Safari.";
-          _finishExport(expCtx, msg, "#f47c7c");
-          // عرض رسالة مفصّلة
-          _showUnsupportedDialog();
+          // Fallback نهائي تلقائي: Frame ZIP — يشتغل على كل الأجهزة
+          toast$("📦 تصدير ZIP تلقائي (جهازك لا يدعم MP4/WebM)...");
+          setSbar("📦 جارٍ التصدير كـ ZIP...", "#c9973a");
+          await _exportFrameZip(expCtx, qp, buffers, verseData, exportAyahs, total);
         }
       }
 
@@ -4342,6 +4385,145 @@
           startDrawLoop();
           await _exportWebM(expCtx, qp, buffers, verseData, exportAyahs, total);
         }
+      }
+
+      // ══════════════════════════════════════════════════════
+      //  تصدير ZIP — يشتغل على كل الأجهزة بدون أي API خاصة
+      //  المخرج: ZIP فيه frames JPEG + ملف صوت WAV
+      //  المستخدم يدمجهم في CapCut / iMovie / أي برنامج
+      // ══════════════════════════════════════════════════════
+      async function _exportFrameZip(expCtx, qp, buffers, verseData, exportAyahs, total) {
+        const FPS = Math.min(qp.fps, 30); // 30fps كافية للـ ZIP
+        const msPerFrame = 1000 / FPS;
+
+        // جمع الـ frames
+        const frameDataURLs = [];
+        let totalFrames = 0;
+        for (const buf of buffers) totalFrames += Math.ceil(buf.duration * FPS);
+
+        xShow(0, total, "جارٍ رسم الـ frames...");
+
+        let drawnFrames = 0;
+        for (let idx = 0; idx < verseData.length; idx++) {
+          if (_expAbort) break;
+          const vd = verseData[idx], buf = buffers[idx];
+          _prepVerse(vd, exportAyahs);
+          window._expChunkAt = [];
+          if (verseChunks.length > 1) {
+            const tw = verseChunks.reduce((s, c) => s + c.words.length, 0);
+            for (let ci = 1; ci < verseChunks.length; ci++)
+              window._expChunkAt.push({
+                f: Math.round((verseChunks[ci].startIdx * buf.duration * FPS) / tw), ci
+              });
+          }
+          xShow(idx + 1, total, S.surah.ar + " — آية " + arN(vd.ayahN));
+          setSbar("🎨 رسم آية " + arN(vd.ayahN) + " (" + (idx + 1) + "/" + total + ")", "#f47c7c");
+
+          const ayahFrames = Math.ceil(buf.duration * FPS);
+          let hlActive = -1;
+          for (let f = 0; f < ayahFrames; f++) {
+            if (_expAbort) break;
+            hlActive = _drawVerseFrame(vd, f, msPerFrame, hlActive);
+            // تحويل frame لـ JPEG
+            const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+            frameDataURLs.push(dataUrl);
+            drawnFrames++;
+            _setProgress(_expElapsedBefore + f / FPS);
+            if (f % 10 === 0) await new Promise(r => setTimeout(r, 0)); // تنفّس
+          }
+          if (hlActive >= 0) {
+            const o = document.getElementById("w" + hlActive);
+            if (o) { o.style.color = o.dataset.base || S.color || "#fff"; o.style.textShadow = ""; }
+          }
+          _expElapsedBefore += buf.duration;
+        }
+        if (_expAbort) { _finishExport(expCtx); return; }
+
+        // بناء WAV من الـ audio buffers
+        xShow(total, total, "جارٍ تجميع الصوت...");
+        setSbar("⏳ تجميع الصوت...", "#c9973a");
+        await new Promise(r => setTimeout(r, 0));
+
+        const SR = 44100;
+        const totalSamp = buffers.reduce((s, b) => s + Math.round(b.duration * SR), 0);
+        const wavLen = 44 + totalSamp * 4;
+        const wav = new ArrayBuffer(wavLen);
+        const dv = new DataView(wav);
+        const ws = (p, s) => { for (let i = 0; i < s.length; i++) dv.setUint8(p + i, s.charCodeAt(i)); };
+        ws(0, "RIFF"); dv.setUint32(4, wavLen - 8, true); ws(8, "WAVE");
+        ws(12, "fmt "); dv.setUint32(16, 16, true); dv.setUint16(20, 3, true);
+        dv.setUint16(22, 1, true); dv.setUint32(24, SR, true);
+        dv.setUint32(28, SR * 4, true); dv.setUint16(32, 4, true); dv.setUint16(34, 32, true);
+        ws(36, "data"); dv.setUint32(40, totalSamp * 4, true);
+        const pcm = new Float32Array(wav, 44);
+        let off = 0;
+        for (const buf of buffers) {
+          const n = Math.round(buf.duration * SR);
+          const c0 = buf.getChannelData(0);
+          const c1 = buf.numberOfChannels > 1 ? buf.getChannelData(1) : c0;
+          for (let i = 0; i < n && off < totalSamp; i++) pcm[off++] = (c0[i] + c1[i]) * 0.5;
+        }
+        const audioBlob = new Blob([wav], { type: "audio/wav" });
+
+        // بناء الـ ZIP
+        xShow(total, total, "جارٍ ضغط الملفات...");
+        setSbar("📦 جارٍ ضغط الملفات...", "#c9973a");
+        await new Promise(r => setTimeout(r, 0));
+
+        if (typeof JSZip === "undefined") {
+          // JSZip لم يُحمَّل — نعطي الصوت + رسالة
+          _downloadBlob(audioBlob, "Islam-Reels-audio.wav");
+          _finishExport(expCtx, "⚠ تم تصدير الصوت فقط (JSZip لم يُحمَّل)", "#c9973a");
+          return;
+        }
+
+        const zip = new JSZip();
+        const folder = zip.folder("Islam-Reels-" + (S.surah?.ar || "quran"));
+
+        // إضافة الـ frames
+        for (let i = 0; i < frameDataURLs.length; i++) {
+          if (i % 30 === 0) {
+            xShow(total, total, "ضغط: " + arN(Math.round(i / frameDataURLs.length * 100)) + "%");
+            await new Promise(r => setTimeout(r, 0));
+          }
+          const b64 = frameDataURLs[i].split(",")[1];
+          const frameNum = String(i + 1).padStart(5, "0");
+          folder.file("frame_" + frameNum + ".jpg", b64, { base64: true });
+        }
+
+        // إضافة ملف الصوت
+        const audioAB = await audioBlob.arrayBuffer();
+        folder.file("audio.wav", audioAB);
+
+        // ملف README
+        const surahName = S.surah?.ar || "القرآن";
+        const readme = `Islam Reels — ${surahName}
+═══════════════════════════════
+عدد الـ frames: ${frameDataURLs.length}
+معدل الإطارات: ${FPS} fps
+الصوت: audio.wav
+
+طريقة الدمج:
+━━━━━━━━━━━
+1. CapCut (موبايل):
+   - افتح مشروع جديد
+   - أضف كل الـ frames بالترتيب
+   - اضبط مدة كل frame على ${(1000/FPS).toFixed(0)}ms
+   - أضف audio.wav كموسيقى خلفية
+
+2. iMovie (iOS/Mac):
+   - اسحب الـ frames لـ iMovie
+   - أضف الصوت كـ background audio
+
+3. أي برنامج مونتاج آخر
+═══════════════════════════════`;
+        folder.file("README.txt", readme);
+
+        const zipBlob = await zip.generateAsync({ type: "blob", compression: "DEFLATE", compressionOptions: { level: 3 } });
+        const mb = (zipBlob.size / 1024 / 1024).toFixed(1);
+        _downloadBlob(zipBlob, "Islam-Reels-" + (S.surah?.ar || "quran") + ".zip");
+        _setProgress(_expTotalDur);
+        _finishExport(expCtx, "✅ تم تصدير ZIP — " + mb + " MB · " + arN(frameDataURLs.length) + " frame", "#5ec285");
       }
 
       // ══════════════════════════════════════════════════════
@@ -5914,42 +6096,32 @@
 
       function setExportFmt(fmt) {
         _exportFmt = fmt;
-        const mp4 = document.getElementById("fmtMp4");
-        const webm = document.getElementById("fmtWebm");
+        const mp4El = document.getElementById("fmtMp4");
+        const webmEl = document.getElementById("fmtWebm");
+        const zipEl = document.getElementById("fmtZip");
         const turboRow = document.getElementById("turboRow");
         const btn = document.getElementById("exportBtn");
-        if (!mp4 || !webm) return;
-        if (fmt === "mp4") {
-          mp4.style.border = "2px solid rgba(201,151,58,.7)";
-          mp4.style.background = "rgba(201,151,58,.08)";
-          mp4.querySelector("div:last-child").style.background = "#c9973a";
-          mp4.querySelector("div:last-child").style.borderColor = "#c9973a";
-          mp4.querySelector("div:last-child").style.boxShadow =
-            "0 0 6px rgba(201,151,58,.6)";
-          webm.style.border = "2px solid rgba(255,255,255,.1)";
-          webm.style.background = "rgba(255,255,255,.03)";
-          webm.querySelector("div:last-child").style.background = "transparent";
-          webm.querySelector("div:last-child").style.borderColor =
-            "rgba(255,255,255,.2)";
-          webm.querySelector("div:last-child").style.boxShadow = "none";
-          turboRow.style.display = "flex";
-          if (btn) btn.textContent = "⬇ تصدير MP4";
-        } else {
-          webm.style.border = "2px solid rgba(201,151,58,.7)";
-          webm.style.background = "rgba(201,151,58,.08)";
-          webm.querySelector("div:last-child").style.background = "#c9973a";
-          webm.querySelector("div:last-child").style.borderColor = "#c9973a";
-          webm.querySelector("div:last-child").style.boxShadow =
-            "0 0 6px rgba(201,151,58,.6)";
-          mp4.style.border = "2px solid rgba(255,255,255,.1)";
-          mp4.style.background = "rgba(255,255,255,.03)";
-          mp4.querySelector("div:last-child").style.background = "transparent";
-          mp4.querySelector("div:last-child").style.borderColor =
-            "rgba(255,255,255,.2)";
-          mp4.querySelector("div:last-child").style.boxShadow = "none";
-          turboRow.style.display = "none";
-          if (btn) btn.textContent = "⬇ تصدير WebM";
+
+        const allFmts = [mp4El, webmEl, zipEl].filter(Boolean);
+        // إعادة كل العناصر للحالة الافتراضية
+        allFmts.forEach(el => {
+          el.style.border = "2px solid rgba(255,255,255,.1)";
+          el.style.background = "rgba(255,255,255,.03)";
+          const dot = el.querySelector("div:last-child");
+          if (dot) { dot.style.background = "transparent"; dot.style.borderColor = "rgba(255,255,255,.2)"; dot.style.boxShadow = "none"; }
+        });
+
+        // تفعيل العنصر المختار
+        const activeEl = fmt === "mp4" ? mp4El : fmt === "webm" ? webmEl : zipEl;
+        if (activeEl) {
+          activeEl.style.border = "2px solid rgba(201,151,58,.7)";
+          activeEl.style.background = "rgba(201,151,58,.08)";
+          const dot = activeEl.querySelector("div:last-child");
+          if (dot) { dot.style.background = "#c9973a"; dot.style.borderColor = "#c9973a"; dot.style.boxShadow = "0 0 6px rgba(201,151,58,.6)"; }
         }
+
+        if (turboRow) turboRow.style.display = fmt === "mp4" ? "flex" : "none";
+        if (btn) btn.textContent = fmt === "mp4" ? "⬇ تصدير MP4" : fmt === "webm" ? "⬇ تصدير WebM" : "📦 تصدير ZIP (كل الأجهزة)";
       }
 
       function toggleTurbo() {
