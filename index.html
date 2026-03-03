@@ -3680,6 +3680,79 @@
       const _isIOS = /iP(hone|od|ad)/.test(navigator.userAgent) ||
         (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
+      /* ══ popup بعد التصدير — فيديو + تنزيل + مشاركة ══ */
+      function showVideoPopup(blob, mime) {
+        const old = document.getElementById('vid-popup');
+        if (old) old.remove();
+        const ext = mime.includes('mp4') ? 'mp4' : 'webm';
+        const surahAr = S.surah?.ar || 'القرآن';
+        const fname = `islam-reels-${surahAr}-${S.vFrom}-${S.vTo}.${ext}`;
+        const url = URL.createObjectURL(blob);
+        window._lastVidBlob = blob;
+        window._lastVidMime = mime;
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+        const isAndroid = /Android/.test(navigator.userAgent);
+        const mb = (blob.size / 1024 / 1024).toFixed(1);
+        const popup = document.createElement('div');
+        popup.id = 'vid-popup';
+        popup.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.93);display:flex;align-items:center;justify-content:center;flex-direction:column;padding:1.2rem;backdrop-filter:blur(18px);overflow-y:auto;';
+        popup.innerHTML = `
+          <div style="text-align:center;max-width:420px;width:100%;font-family:'Cairo',sans-serif;direction:rtl;">
+            <div style="font-size:1.05rem;font-weight:800;color:#c9973a;margin-bottom:.7rem;">🎬 الفيديو جاهز! — ${mb} MB</div>
+            <video controls playsinline webkit-playsinline src="${url}"
+              style="width:100%;max-width:320px;border-radius:14px;background:#000;display:block;margin:0 auto .8rem;max-height:42vh;"></video>
+            <div style="background:rgba(201,151,58,.07);border:1px solid rgba(201,151,58,.2);border-radius:10px;padding:.6rem .75rem;margin-bottom:.7rem;font-size:.7rem;color:rgba(255,255,255,.75);line-height:2;text-align:right;">
+              ${isIOS ? '🍎 <b style="color:#c9973a">iPhone:</b> تنزيل ← افتح الملف ← مشاركة ← حفظ الفيديو'
+                : isAndroid ? '📱 <b style="color:#c9973a">أندرويد:</b> تنزيل ← يُحفظ في التنزيلات'
+                : '💻 <b style="color:#c9973a">كمبيوتر:</b> ستجد الملف في Downloads'}
+            </div>
+            <a href="${url}" download="${fname}"
+              style="display:flex;align-items:center;justify-content:center;gap:.5rem;width:100%;padding:.8rem;border-radius:12px;background:linear-gradient(135deg,#c9973a,#e4b55a);color:#000;font-weight:900;font-size:.9rem;text-decoration:none;margin-bottom:.4rem;">
+              📥 تنزيل (${ext.toUpperCase()}) — ${mb} MB
+            </a>
+            <button id="vid-share-btn" onclick="doShare('${fname}')"
+              style="width:100%;padding:.7rem;border-radius:12px;background:linear-gradient(135deg,#245c38,#3ea066);color:#fff;font-weight:800;font-size:.85rem;border:none;cursor:pointer;font-family:'Cairo',sans-serif;margin-bottom:.4rem;">
+              📤 مشاركة (واتساب / تيليجرام...)
+            </button>
+            <button onclick="document.getElementById('vid-popup').remove()"
+              style="width:100%;padding:.55rem;border-radius:10px;background:rgba(255,255,255,.06);color:rgba(255,255,255,.5);border:1px solid rgba(255,255,255,.1);cursor:pointer;font-family:'Cairo',sans-serif;font-size:.8rem;">
+              ✕ إغلاق
+            </button>
+          </div>`;
+        document.body.appendChild(popup);
+        popup.querySelector('video').play().catch(() => {});
+      }
+
+      async function doShare(fname) {
+        const blob = window._lastVidBlob;
+        const mime = window._lastVidMime || 'video/mp4';
+        if (!blob) { toast$('⚠ لا يوجد فيديو!'); return; }
+        const btn = document.getElementById('vid-share-btn');
+        if (btn) { btn.textContent = '⏳ جاري...'; btn.disabled = true; }
+        if (navigator.share) {
+          try {
+            const file = new File([blob], fname, { type: mime });
+            if (navigator.canShare?.({ files: [file] })) {
+              await navigator.share({ title: 'Islam Reels', files: [file] });
+              if (btn) { btn.textContent = '📤 مشاركة (واتساب / تيليجرام...)'; btn.disabled = false; }
+              return;
+            }
+          } catch (e) {
+            if (e.name === 'AbortError') {
+              if (btn) { btn.textContent = '📤 مشاركة (واتساب / تيليجرام...)'; btn.disabled = false; }
+              return;
+            }
+          }
+        }
+        // fallback: تنزيل مباشر
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = fname;
+        document.body.appendChild(a); a.click();
+        setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 30000);
+        if (btn) { btn.textContent = '✅ تم الحفظ — شاركه من الجاليري'; btn.disabled = false; }
+      }
+
       function _downloadBlob(blob, filename) {
         const url = URL.createObjectURL(blob);
         if (_isIOS) {
@@ -3963,9 +4036,10 @@
           setSbar("🔴 يصدّر " + total + " آية...", "#f47c7c");
           await _exportMP4(expCtx, qp, buffers, verseData, exportAyahs, total);
         } else {
-          toast$("🔴 تصدير WebM...");
-          setSbar("🔴 يسجّل " + total + " آية...", "#f47c7c");
-          await _exportWebM(expCtx, qp, buffers, verseData, exportAyahs, total);
+          // دايماً نحاول MP4 — _exportWebM بتحوّل لـ ffmpeg تلقائياً
+          toast$("🔴 تصدير MP4...");
+          setSbar("🔴 يصدّر " + total + " آية...", "#f47c7c");
+          await _exportWebM(expCtx, qp, buffers, verseData, exportAyahs, total, true);
         }
       }
 
@@ -4029,15 +4103,8 @@
         }
         if (!codecOk) {
           videoEnc.close();
-          toast$("⚠ WebCodecs غير مدعوم — تصدير WebM...");
-          return _exportWebM(
-            expCtx,
-            qp,
-            buffers,
-            verseData,
-            exportAyahs,
-            total,
-          );
+          toast$("⚠ WebCodecs غير مدعوم — تصدير MP4 عبر ffmpeg...");
+          return _exportWebM(expCtx, qp, buffers, verseData, exportAyahs, total, true);
         }
 
         // AudioEncoder
@@ -4157,18 +4224,11 @@
 
         if (_expAbort || vEncErr) {
           if (vEncErr) {
-            toast$("❌ خطأ encoder — تصدير WebM...");
+            toast$("❌ خطأ encoder — تصدير MP4 عبر ffmpeg...");
             _expElapsedBefore = 0;
             isExporting = false;
             startDrawLoop();
-            return _exportWebM(
-              expCtx,
-              qp,
-              buffers,
-              verseData,
-              exportAyahs,
-              total,
-            );
+            return _exportWebM(expCtx, qp, buffers, verseData, exportAyahs, total, true);
           }
           _finishExport(expCtx);
           return;
@@ -4189,19 +4249,16 @@
           const blob = new Blob([muxer.target.buffer], { type: "video/mp4" });
           if (blob.size < 1000) throw new Error("ملف تالف");
           const mb = (blob.size / 1024 / 1024).toFixed(1);
-          _downloadBlob(
-            blob,
-            "Islam-Reels-" + (S.surah?.ar || "قرآن") + ".mp4",
-          );
+          showVideoPopup(blob, "video/mp4");
           _setProgress(_expTotalDur);
           _finishExport(expCtx, "✅ تم حفظ MP4 — " + mb + " MB ✨", "#5ec285");
         } catch (e) {
           console.error("finalize:", e);
-          toast$("⚠ فشل التجميع — تصدير WebM...");
+          toast$("⚠ فشل التجميع — تصدير MP4 عبر ffmpeg...");
           _expElapsedBefore = 0;
           isExporting = false;
           startDrawLoop();
-          await _exportWebM(expCtx, qp, buffers, verseData, exportAyahs, total);
+          await _exportWebM(expCtx, qp, buffers, verseData, exportAyahs, total, true);
         }
       }
 
@@ -4304,7 +4361,7 @@
           const mb = (mp4Blob.size/1024/1024).toFixed(1);
 
           ffmpeg.terminate();
-          _downloadBlob(mp4Blob, 'Islam-Reels-' + (S.surah?.ar||'قرآن') + '.mp4');
+          showVideoPopup(mp4Blob, 'video/mp4');
           _setProgress(_expTotalDur);
           _finishExport(expCtx, `✅ تم التحويل MP4 — ${mb} MB`, '#5ec285');
 
@@ -4333,6 +4390,7 @@
         verseData,
         exportAyahs,
         total,
+        forceMP4 = false,
       ) {
         // الخطوة 1: رسم كل الـ frames وحفظها
         const FPS = qp.fps,
@@ -4446,13 +4504,12 @@
           ...expDest.stream.getAudioTracks(),
         ]);
 
-        /* ── MP4 Fallback لو MediaRecorder مش متاح (iOS/Safari) ──────
-           نستخدم ffmpeg.wasm لتحويل frames JPG + WAV → MP4 حقيقي     */
+        /* ── لو مطلوب MP4 أو MediaRecorder مش متاح → ffmpeg ── */
         const _canWebM = typeof MediaRecorder !== 'undefined' &&
           ["video/webm;codecs=vp9,opus","video/webm;codecs=vp8,opus","video/webm"]
             .some(m => MediaRecorder.isTypeSupported(m));
 
-        if (!_canWebM) {
+        if (forceMP4 || !_canWebM) {
           await _exportMP4viaFFmpeg(expCtx, qp, buffers, frameBlobs, total);
           return;
         }
@@ -4476,42 +4533,12 @@
         exportRecorder.ondataavailable = (e) => {
           if (e.data?.size > 0) exportChunks.push(e.data);
         };
-        exportRecorder.onstop = async () => {
-          const webmBlob = new Blob(exportChunks, { type: "video/webm" });
-          // حاول تحويل WebM → MP4 عبر ffmpeg
-          try {
-            toast$("⏳ جارٍ تحويل إلى MP4...");
-            xShow(total, total, "جارٍ تحويل إلى MP4...");
-            setSbar("🔴 تحويل MP4...", "#c9973a");
-            if (!window._ffmpegReady) {
-              const { FFmpeg } = await import('https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js');
-              const { fetchFile } = await import('https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/esm/index.js');
-              const baseURL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/esm';
-              window._FFmpeg = FFmpeg; window._fetchFile = fetchFile;
-              window._ffmpegBaseURL = baseURL; window._ffmpegReady = true;
-            }
-            const ffmpeg = new window._FFmpeg();
-            ffmpeg.on('progress', ({ progress }) => {
-              setSbar(`🎬 تحويل MP4... ${Math.round(progress*100)}%`, "#c9973a");
-            });
-            await ffmpeg.load({ coreURL: `${window._ffmpegBaseURL}/ffmpeg-core.js`, wasmURL: `${window._ffmpegBaseURL}/ffmpeg-core.wasm` });
-            await ffmpeg.writeFile('input.webm', new Uint8Array(await webmBlob.arrayBuffer()));
-            await ffmpeg.exec(['-i','input.webm','-c:v','libx264','-preset','ultrafast','-crf','23','-c:a','aac','-b:a','128k','-pix_fmt','yuv420p','-movflags','+faststart','-y','output.mp4']);
-            const data = await ffmpeg.readFile('output.mp4');
-            const mp4Blob = new Blob([data.buffer], { type: 'video/mp4' });
-            ffmpeg.terminate();
-            const mb = (mp4Blob.size/1024/1024).toFixed(1);
-            _setProgress(_expTotalDur);
-            _finishExport(expCtx, `✅ تم الحفظ MP4 — ${mb} MB`, "#5ec285");
-            showVideoPopup(mp4Blob, 'video/mp4');
-          } catch (e) {
-            // ffmpeg فشل → احفظ WebM كـ fallback
-            console.warn('ffmpeg convert failed, saving WebM:', e);
-            const mb = (webmBlob.size/1024/1024).toFixed(1);
-            _setProgress(_expTotalDur);
-            _finishExport(expCtx, `✅ تم الحفظ WebM — ${mb} MB`, "#5ec285");
-            showVideoPopup(webmBlob, 'video/webm');
-          }
+        exportRecorder.onstop = () => {
+          const blob = new Blob(exportChunks, { type: "video/webm" });
+          const mb = (blob.size / 1024 / 1024).toFixed(1);
+          showVideoPopup(blob, "video/webm");
+          _setProgress(_expTotalDur);
+          _finishExport(expCtx, "✅ تم الحفظ WebM — " + mb + " MB", "#5ec285");
         };
         exportRecorder.start(100);
 
