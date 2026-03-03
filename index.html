@@ -4035,9 +4035,12 @@
           toast$("⚡ تصدير MP4...");
           setSbar("🔴 يصدّر " + total + " آية...", "#f47c7c");
           await _exportMP4(expCtx, qp, buffers, verseData, exportAyahs, total);
+        } else if (_exportFmt === "webm") {
+          toast$("🔴 تصدير WebM...");
+          setSbar("🔴 يسجّل " + total + " آية...", "#f47c7c");
+          await _exportWebM(expCtx, qp, buffers, verseData, exportAyahs, total, false);
         } else {
-          // دايماً نحاول MP4 — _exportWebM بتحوّل لـ ffmpeg تلقائياً
-          toast$("🔴 تصدير MP4...");
+          toast$("🔴 تصدير MP4 عبر ffmpeg...");
           setSbar("🔴 يصدّر " + total + " آية...", "#f47c7c");
           await _exportWebM(expCtx, qp, buffers, verseData, exportAyahs, total, true);
         }
@@ -4504,7 +4507,7 @@
           ...expDest.stream.getAudioTracks(),
         ]);
 
-        /* ── لو مطلوب MP4 أو MediaRecorder مش متاح → ffmpeg ── */
+        /* ── لو forceMP4 أو MediaRecorder مش متاح → ffmpeg مباشرة ── */
         const _canWebM = typeof MediaRecorder !== 'undefined' &&
           ["video/webm;codecs=vp9,opus","video/webm;codecs=vp8,opus","video/webm"]
             .some(m => MediaRecorder.isTypeSupported(m));
