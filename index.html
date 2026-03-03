@@ -22,51 +22,548 @@
     />
     <title>Islam Reels ✨</title>
     <script>
-    // تحميل JSZip (pure JS - يشتغل على كل الأجهزة)
-    (function() {
-      const s = document.createElement("script");
-      s.src = "https://cdn.jsdelivr.net/npm/jszip@3/dist/jszip.min.js";
-      s.crossOrigin = "anonymous";
-      document.head.appendChild(s);
-    })();
+    // ── JSZip inline — لا يحتاج إنترنت ──
+// ═══════════════════════════════════════════════════════════
+//  MiniZip — ZIP builder بدون dependencies
+//  يدعم: new JSZip(), zip.folder(), zip.file(), zip.generateAsync()
+//  Compression: STORE (لا DEFLATE — أسرع وأبسط على الموبايل)
+// ═══════════════════════════════════════════════════════════
+(function(global) {
+"use strict";
+
+function u16LE(v) { return [(v)&0xff,(v>>8)&0xff]; }
+function u32LE(v) { return [(v)&0xff,(v>>8)&0xff,(v>>16)&0xff,(v>>24)&0xff]; }
+
+// CRC-32 table
+const CRC_TABLE = new Uint32Array(256);
+for (let i = 0; i < 256; i++) {
+  let c = i;
+  for (let j = 0; j < 8; j++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+  CRC_TABLE[i] = c;
+}
+function crc32(data) {
+  let c = 0xFFFFFFFF;
+  for (let i = 0; i < data.length; i++) c = CRC_TABLE[(c ^ data[i]) & 0xff] ^ (c >>> 8);
+  return (c ^ 0xFFFFFFFF) >>> 0;
+}
+
+function strBytes(s) {
+  return new TextEncoder().encode(s);
+}
+
+function toUint8(data) {
+  if (data instanceof Uint8Array) return data;
+  if (data instanceof ArrayBuffer) return new Uint8Array(data);
+  if (typeof data === 'string') {
+    // base64
+    const bin = atob(data);
+    const u = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+    return u;
+  }
+  return new Uint8Array(data);
+}
+
+class ZipEntry {
+  constructor(name, data, isBase64) {
+    this.name = name;
+    this._raw = isBase64 ? data : null;
+    this._data = isBase64 ? null : toUint8(data);
+  }
+  getData() {
+    if (!this._data) this._data = toUint8(this._raw);
+    return this._data;
+  }
+}
+
+class ZipFolder {
+  constructor(prefix) {
+    this._prefix = prefix || '';
+    this._entries = []; // { name, entry }
+  }
+
+  folder(name) {
+    const f = new ZipFolder(this._prefix + name + '/');
+    this._entries.push({ name: name + '/', folder: f });
+    return f;
+  }
+
+  file(name, data, opts) {
+    const isBase64 = opts && opts.base64;
+    const entry = new ZipEntry(this._prefix + name, data, isBase64);
+    this._entries.push({ name: this._prefix + name, entry });
+    return this;
+  }
+
+  _collectEntries() {
+    const all = [];
+    for (const item of this._entries) {
+      if (item.folder) {
+        all.push(...item.folder._collectEntries());
+      } else {
+        all.push(item.entry);
+      }
+    }
+    return all;
+  }
+
+  async generateAsync(opts) {
+    const entries = this._collectEntries();
+    const localHeaders = [];
+    const centralDir = [];
+    let offset = 0;
+
+    for (const entry of entries) {
+      const nameBytes = strBytes(entry.name);
+      const data = entry.getData();
+      const crc = crc32(data);
+      const size = data.length;
+
+      // Local file header
+      const lh = new Uint8Array([
+        0x50,0x4B,0x03,0x04, // signature
+        20,0,                // version needed
+        0,0,                 // general flags
+        0,0,                 // compression: STORE
+        0,0, 0,0,           // mod time, mod date
+        ...u32LE(crc),
+        ...u32LE(size),
+        ...u32LE(size),
+        ...u16LE(nameBytes.length),
+        0,0,                // extra field length
+      ]);
+
+      const localEntry = new Uint8Array(lh.length + nameBytes.length + data.length);
+      localEntry.set(lh, 0);
+      localEntry.set(nameBytes, lh.length);
+      localEntry.set(data, lh.length + nameBytes.length);
+
+      localHeaders.push(localEntry);
+
+      // Central directory entry
+      const cd = new Uint8Array([
+        0x50,0x4B,0x01,0x02, // signature
+        20,0,                // version made by
+        20,0,                // version needed
+        0,0,                 // general flags
+        0,0,                 // compression: STORE
+        0,0, 0,0,           // mod time, mod date
+        ...u32LE(crc),
+        ...u32LE(size),
+        ...u32LE(size),
+        ...u16LE(nameBytes.length),
+        0,0,                // extra field length
+        0,0,                // comment length
+        0,0,                // disk start
+        0,0,                // internal attrs
+        0,0,0,0,            // external attrs
+        ...u32LE(offset),
+      ]);
+      const cdFull = new Uint8Array(cd.length + nameBytes.length);
+      cdFull.set(cd, 0);
+      cdFull.set(nameBytes, cd.length);
+      centralDir.push(cdFull);
+
+      offset += localEntry.length;
+    }
+
+    const centralDirSize = centralDir.reduce((s,c)=>s+c.length, 0);
+    const eocd = new Uint8Array([
+      0x50,0x4B,0x05,0x06, // signature
+      0,0,                 // disk number
+      0,0,                 // central dir disk
+      ...u16LE(entries.length),
+      ...u16LE(entries.length),
+      ...u32LE(centralDirSize),
+      ...u32LE(offset),
+      0,0,                 // comment length
+    ]);
+
+    // Concat everything
+    const totalSize = localHeaders.reduce((s,h)=>s+h.length,0) + centralDirSize + eocd.length;
+    const out = new Uint8Array(totalSize);
+    let pos = 0;
+    for (const h of localHeaders) { out.set(h, pos); pos += h.length; }
+    for (const c of centralDir)   { out.set(c, pos); pos += c.length; }
+    out.set(eocd, pos);
+
+    return new Blob([out], { type: 'application/zip' });
+  }
+}
+
+class JSZip extends ZipFolder {
+  constructor() { super(''); }
+}
+
+global.JSZip = JSZip;
+})(typeof globalThis !== 'undefined' ? globalThis : typeof window !== 'undefined' ? window : this);
+
     </script>
     <script>
-    // تحميل mp4-muxer من أكثر من مصدر مع retry
-    window._mp4MuxerReady = false;
-    window._mp4MuxerCallbacks = [];
-    function _onMp4MuxerReady(cb) {
-      if (window._mp4MuxerReady) cb();
-      else window._mp4MuxerCallbacks.push(cb);
+    // ── mp4-muxer inline — لا يحتاج إنترنت ──
+// ═══════════════════════════════════════════════════════════════
+//  InlineMp4Muxer — MP4 muxer خالص بدون dependencies
+//  متوافق مع واجهة mp4-muxer@5:
+//    new Mp4Muxer.Muxer({ target, video, audio, fastStart })
+//    muxer.addVideoChunk(chunk, meta)
+//    muxer.addAudioChunk(chunk, meta)
+//    muxer.finalize()
+//    muxer.target.buffer
+// ═══════════════════════════════════════════════════════════════
+(function(global) {
+"use strict";
+
+// ── Helpers ──────────────────────────────────────────────────
+function box(name, ...children) {
+  const nameBytes = name.split('').map(c => c.charCodeAt(0));
+  let size = 8;
+  const parts = [];
+  for (const c of children) {
+    if (c instanceof Uint8Array) { size += c.byteLength; parts.push(c); }
+    else if (c instanceof ArrayBuffer) { size += c.byteLength; parts.push(new Uint8Array(c)); }
+    else if (Array.isArray(c)) { const u = new Uint8Array(c); size += u.byteLength; parts.push(u); }
+  }
+  const buf = new Uint8Array(size);
+  const dv = new DataView(buf.buffer);
+  dv.setUint32(0, size);
+  buf[4] = nameBytes[0]; buf[5] = nameBytes[1]; buf[6] = nameBytes[2]; buf[7] = nameBytes[3];
+  let off = 8;
+  for (const p of parts) { buf.set(p, off); off += p.length; }
+  return buf;
+}
+
+function fullbox(name, version, flags, ...children) {
+  const vf = new Uint8Array(4);
+  vf[0] = version;
+  vf[1] = (flags >> 16) & 0xff;
+  vf[2] = (flags >> 8) & 0xff;
+  vf[3] = flags & 0xff;
+  return box(name, vf, ...children);
+}
+
+function u8(v)  { return new Uint8Array([v & 0xff]); }
+function u16(v) { return new Uint8Array([(v>>8)&0xff, v&0xff]); }
+function u32(v) { return new Uint8Array([(v>>24)&0xff,(v>>16)&0xff,(v>>8)&0xff,v&0xff]); }
+function u64(v) {
+  const hi = Math.floor(v / 0x100000000);
+  const lo = v >>> 0;
+  return new Uint8Array([(hi>>24)&0xff,(hi>>16)&0xff,(hi>>8)&0xff,hi&0xff,
+                         (lo>>24)&0xff,(lo>>16)&0xff,(lo>>8)&0xff,lo&0xff]);
+}
+function str(s) { return new Uint8Array(s.split('').map(c=>c.charCodeAt(0))); }
+function concat(...arrays) {
+  const total = arrays.reduce((s,a)=>s+a.byteLength,0);
+  const out = new Uint8Array(total);
+  let off = 0;
+  for (const a of arrays) { out.set(a instanceof Uint8Array ? a : new Uint8Array(a), off); off += a.byteLength; }
+  return out;
+}
+
+// ── ArrayBufferTarget ─────────────────────────────────────────
+class ArrayBufferTarget {
+  constructor() { this.buffer = null; }
+}
+
+// ── Muxer ─────────────────────────────────────────────────────
+class Muxer {
+  constructor(opts) {
+    this.target    = opts.target;
+    this.videoOpts = opts.video;   // { codec, width, height, frameRate }
+    this.audioOpts = opts.audio;   // { codec, sampleRate, numberOfChannels }
+
+    this._videoChunks = [];  // { data, ts, dur, isKey, description }
+    this._audioChunks = [];  // { data, ts, dur }
+    this._videoDesc   = null; // SPS/PPS from first key-frame meta
+    this._audioDesc   = null; // AudioSpecificConfig
+    this._seenVideoDesc = false;
+    this._seenAudioDesc = false;
+  }
+
+  // chunk = EncodedVideoChunk, meta = { decoderConfig }
+  addVideoChunk(chunk, meta) {
+    if (meta?.decoderConfig?.description && !this._seenVideoDesc) {
+      this._videoDesc = new Uint8Array(meta.decoderConfig.description);
+      this._seenVideoDesc = true;
     }
-    async function _loadMp4Muxer() {
-      const SOURCES = [
-        "https://cdn.jsdelivr.net/npm/mp4-muxer@5/build/mp4-muxer.js",
-        "https://unpkg.com/mp4-muxer@5/build/mp4-muxer.js",
-        "https://esm.run/mp4-muxer@5",
-      ];
-      for (const src of SOURCES) {
-        try {
-          await new Promise((resolve, reject) => {
-            const s = document.createElement("script");
-            s.src = src;
-            s.onload = () => resolve();
-            s.onerror = () => reject(new Error("failed: " + src));
-            s.crossOrigin = "anonymous";
-            document.head.appendChild(s);
-          });
-          if (typeof Mp4Muxer !== "undefined") {
-            window._mp4MuxerReady = true;
-            window._mp4MuxerCallbacks.forEach(cb => cb());
-            window._mp4MuxerCallbacks = [];
-            _updateExportSupportUI(); // تحديث الواجهة فوراً
-            return;
-          }
-        } catch(e) { console.warn("mp4-muxer source failed:", src, e); }
+    const data = new Uint8Array(chunk.byteLength);
+    chunk.copyTo(data);
+    this._videoChunks.push({
+      data, isKey: chunk.type === 'key',
+      ts: chunk.timestamp, dur: chunk.duration ?? 0
+    });
+  }
+
+  addAudioChunk(chunk, meta) {
+    if (meta?.decoderConfig?.description && !this._seenAudioDesc) {
+      this._audioDesc = new Uint8Array(meta.decoderConfig.description);
+      this._seenAudioDesc = true;
+    }
+    const data = new Uint8Array(chunk.byteLength);
+    chunk.copyTo(data);
+    this._audioChunks.push({
+      data, ts: chunk.timestamp, dur: chunk.duration ?? 0
+    });
+  }
+
+  finalize() {
+    const buf = this._buildMP4();
+    this.target.buffer = buf.buffer;
+  }
+
+  // ── MP4 build ────────────────────────────────────────────────
+  _buildMP4() {
+    const W = this.videoOpts.width;
+    const H = this.videoOpts.height;
+    const FPS = this.videoOpts.frameRate || 30;
+    const SR  = this.audioOpts?.sampleRate || 44100;
+    const CH  = this.audioOpts?.numberOfChannels || 2;
+    const TIMESCALE_V = 90000;
+    const TIMESCALE_A = SR;
+
+    const vc = this._videoChunks;
+    const ac = this._audioChunks;
+
+    if (vc.length === 0) throw new Error("No video chunks");
+
+    // ── ftyp ──
+    const ftyp = box('ftyp',
+      str('isom'), u32(0x200),
+      str('isom'), str('iso2'), str('avc1'), str('mp41')
+    );
+
+    // ── Video trak ──
+    const vtrak = this._buildVideoTrak(vc, W, H, FPS, TIMESCALE_V);
+
+    // ── Audio trak ──
+    let atrak = new Uint8Array(0);
+    if (ac.length > 0 && this.audioOpts) {
+      atrak = this._buildAudioTrak(ac, SR, CH, TIMESCALE_A);
+    }
+
+    // ── moov ──
+    const totalDurUs = vc[vc.length-1].ts + (vc[vc.length-1].dur || Math.round(1e6/FPS));
+    const totalDurMvhd = Math.round(totalDurUs / 1e6 * 1000);
+
+    const mvhd = fullbox('mvhd', 0, 0,
+      u32(0), u32(0), u32(1000), u32(totalDurMvhd),
+      u32(0x10000), u16(0x100), new Uint8Array(10),
+      new Uint8Array([0,1,0,0, 0,0,0,0, 0,0,0,0, 0,1,0,0, 0,0,0,0, 0,0,0,0, 64,0,0,0]),
+      new Uint8Array(24),
+      u32(0xffffffff)
+    );
+
+    const moov = box('moov', mvhd, vtrak, atrak);
+
+    // mdat: video then audio interleaved (simplified: all video then all audio)
+    const allSamples = [];
+    for (const c of vc) allSamples.push(c.data);
+    for (const c of ac) allSamples.push(c.data);
+    const mdatContent = concat(...allSamples);
+    const mdatHeader = new Uint8Array(8);
+    new DataView(mdatHeader.buffer).setUint32(0, 8 + mdatContent.byteLength);
+    mdatHeader[4]=109;mdatHeader[5]=100;mdatHeader[6]=97;mdatHeader[7]=116; // 'mdat'
+    const mdat = concat(mdatHeader, mdatContent);
+
+    // ── patch stco offsets ──
+    const moovSize = moov.byteLength;
+    const ftypSize = ftyp.byteLength;
+    const mdatOffset = ftypSize + moovSize;
+    this._patchOffsets(moov, mdatOffset, vc, ac);
+
+    return concat(ftyp, moov, mdat);
+  }
+
+  _buildVideoTrak(vc, W, H, FPS, TS) {
+    const DUR_TS = Math.round(vc.reduce((s,c)=>(s + (c.dur||Math.round(1e6/FPS))), 0) / 1e6 * TS);
+
+    // avcC
+    let avcC;
+    if (this._videoDesc) {
+      avcC = box('avcC', this._videoDesc);
+    } else {
+      // fallback minimal avcC (Baseline L3.1)
+      avcC = box('avcC', new Uint8Array([
+        1, 0x42, 0x00, 0x1f, 0xff,
+        0xe1, 0x00, 0x07, 0x27,0x42,0x00,0x1f,0xda,0x0f,0x0a,
+        0x01, 0x00, 0x04, 0x28,0xce,0x09,0xc8
+      ]));
+    }
+
+    const avc1 = box('avc1',
+      new Uint8Array(6), u16(1),
+      new Uint8Array(16),
+      u16(W), u16(H),
+      new Uint8Array([0,48,0,0,0,72,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]),
+      u16(1), new Uint8Array(32), u16(0x18), u16(0xffff),
+      avcC
+    );
+
+    const stsd = fullbox('stsd', 0, 0, u32(1), avc1);
+
+    // stts (time-to-sample)
+    // group consecutive same-duration frames
+    const sttsEntries = [];
+    let i = 0;
+    while (i < vc.length) {
+      const thisDur = Math.round((vc[i].dur || Math.round(1e6/FPS)) / 1e6 * TS);
+      let count = 1;
+      while (i+count < vc.length) {
+        const d = Math.round((vc[i+count].dur || Math.round(1e6/FPS)) / 1e6 * TS);
+        if (d === thisDur) count++;
+        else break;
       }
-      console.warn("mp4-muxer could not be loaded from any CDN");
-      _updateExportSupportUI(); // نحدّث الواجهة حتى لو فشل
+      sttsEntries.push(count, thisDur);
+      i += count;
     }
-    _loadMp4Muxer();
+    const sttsData = new Uint8Array(sttsEntries.length * 4);
+    const sttsDV = new DataView(sttsData.buffer);
+    sttsEntries.forEach((v,i) => sttsDV.setUint32(i*4, v));
+    const stts = fullbox('stts', 0, 0, u32(sttsEntries.length/2), sttsData);
+
+    // stss (sync samples — key frames)
+    const keyIdxs = vc.map((c,i)=>c.isKey ? u32(i+1) : null).filter(Boolean);
+    const stss = fullbox('stss', 0, 0, u32(keyIdxs.length), concat(...keyIdxs));
+
+    // stsz (sample sizes)
+    const szData = new Uint8Array(vc.length * 4);
+    const szDV = new DataView(szData.buffer);
+    vc.forEach((c,i) => szDV.setUint32(i*4, c.data.byteLength));
+    const stsz = fullbox('stsz', 0, 0, u32(0), u32(vc.length), szData);
+
+    // stsc (sample-to-chunk: 1 chunk)
+    const stsc = fullbox('stsc', 0, 0, u32(1), u32(1), u32(1), u32(1));
+
+    // stco (chunk offsets — patched later)
+    this._videoStcoOffset = 0; // will find and patch
+    const stco = fullbox('stco', 0, 0, u32(1), u32(0xDEADBEEF)); // placeholder
+
+    const stbl = box('stbl', stsd, stts, stss, stsz, stsc, stco);
+    const url  = fullbox('url ', 0, 1);
+    const dref = fullbox('dref', 0, 0, u32(1), url);
+    const dinf = box('dinf', dref);
+    const vmhd = fullbox('vmhd', 0, 1, u16(0), new Uint8Array(6));
+    const minf = box('minf', vmhd, dinf, stbl);
+
+    const hdlrV = fullbox('hdlr', 0, 0, u32(0), str('vide'), new Uint8Array(12), str('VideoHandler'), u8(0));
+    const mdhd  = fullbox('mdhd', 0, 0, u32(0), u32(0), u32(TS), u32(DUR_TS), u16(0x55c4), u16(0));
+    const mdia  = box('mdia', mdhd, hdlrV, minf);
+
+    const tkhd = fullbox('tkhd', 0, 3,
+      u32(0), u32(0), u32(1), u32(0), u32(0), u32(DUR_TS),
+      new Uint8Array(8), u16(0), u16(0), u16(0), u16(0x100),
+      new Uint8Array([0,1,0,0, 0,0,0,0, 0,0,0,0, 0,1,0,0, 0,0,0,0, 0,0,0,0, 64,0,0,0]),
+      u32(W<<16), u32(H<<16)
+    );
+    return box('trak', tkhd, mdia);
+  }
+
+  _buildAudioTrak(ac, SR, CH, TS) {
+    const DUR_TS = Math.round(ac.reduce((s,c)=>(s+(c.dur||0)),0)/1e6*TS);
+
+    // AudioSpecificConfig for AAC-LC
+    // objectType=2 (AAC-LC), samplingFreqIdx, channelConfig
+    const srIdx = [96000,88200,64000,48000,44100,32000,24000,22050,16000,12000,11025,8000].indexOf(SR);
+    const asc = new Uint8Array(2);
+    asc[0] = (2 << 3) | ((srIdx >= 0 ? srIdx : 4) >> 1);
+    asc[1] = (((srIdx >= 0 ? srIdx : 4) & 1) << 7) | (CH << 3);
+
+    const esds_data = new Uint8Array([
+      0,0,0,0, // version+flags
+      0x03,0x19, // ES_Descriptor tag=3, len
+      0,2,0,   // ES_ID, flags
+      0x04,0x11, // DecoderConfigDescriptor tag=4, len
+      0x40,     // objectTypeIndication = Audio ISO/IEC 14496-3
+      0x15,0x00,0x00,0x00,0x00,0x00,0x00,0x00, // streamType+bufferSize+maxBitrate+avgBitrate
+      0x05,0x02, // DecoderSpecificInfo tag=5, len=2
+      asc[0],asc[1],
+      0x06,0x01,0x02 // SLConfigDescriptor
+    ]);
+    const esds = box('esds', esds_data);
+
+    const mp4a = box('mp4a',
+      new Uint8Array(6), u16(1),
+      new Uint8Array(8),
+      u16(CH), u16(16), u16(0), u16(0),
+      u16(SR), u16(0),
+      esds
+    );
+
+    const stsd = fullbox('stsd', 0, 0, u32(1), mp4a);
+
+    // stts
+    const sttsEntries = [];
+    let i = 0;
+    while (i < ac.length) {
+      const thisDur = Math.round((ac[i].dur||0)/1e6*TS) || 1024;
+      let count = 1;
+      while (i+count < ac.length) {
+        const d = Math.round((ac[i+count].dur||0)/1e6*TS) || 1024;
+        if (d === thisDur) count++;
+        else break;
+      }
+      sttsEntries.push(count, thisDur);
+      i += count;
+    }
+    const sttsData = new Uint8Array(sttsEntries.length*4);
+    const sttsDV = new DataView(sttsData.buffer);
+    sttsEntries.forEach((v,i)=>sttsDV.setUint32(i*4,v));
+    const stts = fullbox('stts',0,0,u32(sttsEntries.length/2),sttsData);
+
+    const szData = new Uint8Array(ac.length*4);
+    const szDV = new DataView(szData.buffer);
+    ac.forEach((c,i)=>szDV.setUint32(i*4,c.data.byteLength));
+    const stsz = fullbox('stsz',0,0,u32(0),u32(ac.length),szData);
+    const stsc = fullbox('stsc',0,0,u32(1),u32(1),u32(1),u32(1));
+    const stco = fullbox('stco',0,0,u32(1),u32(0xDEADC0DE)); // placeholder
+
+    const stbl = box('stbl',stsd,stts,stsz,stsc,stco);
+    const url  = fullbox('url ',0,1);
+    const dref = fullbox('dref',0,0,u32(1),url);
+    const dinf = box('dinf',dref);
+    const smhd = fullbox('smhd',0,0,u16(0),u16(0));
+    const minf = box('minf',smhd,dinf,stbl);
+
+    const hdlrA = fullbox('hdlr',0,0,u32(0),str('soun'),new Uint8Array(12),str('SoundHandler'),u8(0));
+    const mdhd  = fullbox('mdhd',0,0,u32(0),u32(0),u32(TS),u32(DUR_TS),u16(0x55c4),u16(0));
+    const mdia  = box('mdia',mdhd,hdlrA,minf);
+
+    const tkhd = fullbox('tkhd',0,3,
+      u32(0),u32(0),u32(2),u32(0),u32(0),u32(DUR_TS),
+      new Uint8Array(8),u16(0),u16(0),u16(0),u16(0x100),
+      new Uint8Array([0,1,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,64,0,0,0]),
+      u32(0),u32(0)
+    );
+    return box('trak',tkhd,mdia);
+  }
+
+  // ── Patch stco placeholders with real byte offsets ───────────
+  _patchOffsets(moov, mdatOffset, vc, ac) {
+    const buf = moov.buffer;
+    const dv  = new DataView(buf);
+
+    let videoDataOffset = mdatOffset;
+    let audioDataOffset = mdatOffset + vc.reduce((s,c)=>s+c.data.byteLength,0);
+
+    // scan moov for 0xDEADBEEF (video) and 0xDEADC0DE (audio)
+    for (let i = 0; i < moov.byteLength - 4; i++) {
+      const v = dv.getUint32(i);
+      if (v === 0xDEADBEEF) { dv.setUint32(i, videoDataOffset); }
+      if (v === 0xDEADC0DE) { dv.setUint32(i, audioDataOffset); }
+    }
+  }
+}
+
+// ── Export as Mp4Muxer namespace ────────────────────────────────
+const Mp4Muxer = { Muxer, ArrayBufferTarget };
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = Mp4Muxer;
+} else {
+  global.Mp4Muxer = Mp4Muxer;
+}
+
+})(typeof globalThis !== 'undefined' ? globalThis : typeof window !== 'undefined' ? window : this);
+
 
     // دالة تحديث واجهة التصدير (تُستدعى بعد تحميل mp4-muxer)
     function _updateExportSupportUI() {
