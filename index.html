@@ -3991,6 +3991,10 @@
           sampleRate: 44100,
         });
         _expCtxRef = expCtx;
+        // iOS: AudioContext بيحتاج resume بعد user gesture عشان الصوت يشتغل
+        if (expCtx.state === 'suspended') {
+          await expCtx.resume().catch(() => {});
+        }
 
         const loadResults = await _loadData(expCtx, exportAyahs, sn).catch(
           (e) => {
@@ -4056,7 +4060,12 @@
         } else {
           toast$("🔴 تصدير MP4...");
           setSbar("🔴 يصدّر " + total + " آية...", "#f47c7c");
-          await _exportWebM(expCtx, qp, buffers, verseData, exportAyahs, total, true);
+          // iOS بدون WebCodecs → iOS builder مباشرة، Safari مش بيشغل WebM
+          if (_isIOSDevice) {
+            await _exportIOS(expCtx, qp, buffers, verseData, exportAyahs, total);
+          } else {
+            await _exportWebM(expCtx, qp, buffers, verseData, exportAyahs, total, true);
+          }
         }
       }
 
@@ -4142,22 +4151,31 @@
           bitrate: 192000,
         });
 
-        // بناء audio arrays
+        // بناء audio arrays — مع resample تلقائي لو sampleRate مختلف
         const totalSamp = Math.ceil(_expTotalDur * SR) + SR;
         const aL = new Float32Array(totalSamp),
           aR = new Float32Array(totalSamp);
         let aOff = 0;
         for (const buf of buffers) {
-          const n = Math.min(Math.round(buf.duration * SR), totalSamp - aOff);
-          aL.set(buf.getChannelData(0).subarray(0, n), aOff);
-          aR.set(
-            (buf.numberOfChannels > 1
-              ? buf.getChannelData(1)
-              : buf.getChannelData(0)
-            ).subarray(0, n),
-            aOff,
-          );
-          aOff += n;
+          if (!buf || buf.duration <= 0) continue;
+          const srcCh0 = buf.getChannelData(0);
+          const srcCh1 = buf.numberOfChannels > 1 ? buf.getChannelData(1) : srcCh0;
+          if (buf.sampleRate === SR) {
+            const n = Math.min(srcCh0.length, totalSamp - aOff);
+            aL.set(srcCh0.subarray(0, n), aOff);
+            aR.set(srcCh1.subarray(0, n), aOff);
+            aOff += n;
+          } else {
+            const ratio = buf.sampleRate / SR;
+            const outLen = Math.min(Math.round(buf.duration * SR), totalSamp - aOff);
+            for (let i = 0; i < outLen; i++) {
+              const si = i * ratio, lo = Math.floor(si);
+              const hi = Math.min(lo + 1, srcCh0.length - 1), t = si - lo;
+              aL[aOff + i] = srcCh0[lo] + (srcCh0[hi] - srcCh0[lo]) * t;
+              aR[aOff + i] = srcCh1[lo] + (srcCh1[hi] - srcCh1[lo]) * t;
+            }
+            aOff += outLen;
+          }
         }
 
         let globalFrame = 0,
@@ -4482,15 +4500,30 @@
         });
         audioEnc.configure({ codec: "mp4a.40.2", sampleRate: SR, numberOfChannels: 2, bitrate: 128000 });
 
-        // بناء audio arrays
+        // بناء audio arrays — مع resample تلقائي لو sampleRate مختلف
         const totalSamp = Math.ceil(_expTotalDur * SR) + SR;
         const aL = new Float32Array(totalSamp), aR = new Float32Array(totalSamp);
         let aOff = 0;
         for (const buf of buffers) {
-          const n = Math.min(Math.round(buf.duration * SR), totalSamp - aOff);
-          aL.set(buf.getChannelData(0).subarray(0, n), aOff);
-          aR.set((buf.numberOfChannels > 1 ? buf.getChannelData(1) : buf.getChannelData(0)).subarray(0, n), aOff);
-          aOff += n;
+          if (!buf || buf.duration <= 0) continue;
+          const srcCh0 = buf.getChannelData(0);
+          const srcCh1 = buf.numberOfChannels > 1 ? buf.getChannelData(1) : srcCh0;
+          if (buf.sampleRate === SR) {
+            const n = Math.min(srcCh0.length, totalSamp - aOff);
+            aL.set(srcCh0.subarray(0, n), aOff);
+            aR.set(srcCh1.subarray(0, n), aOff);
+            aOff += n;
+          } else {
+            const ratio = buf.sampleRate / SR;
+            const outLen = Math.min(Math.round(buf.duration * SR), totalSamp - aOff);
+            for (let i = 0; i < outLen; i++) {
+              const si = i * ratio, lo = Math.floor(si);
+              const hi = Math.min(lo + 1, srcCh0.length - 1), t = si - lo;
+              aL[aOff + i] = srcCh0[lo] + (srcCh0[hi] - srcCh0[lo]) * t;
+              aR[aOff + i] = srcCh1[lo] + (srcCh1[hi] - srcCh1[lo]) * t;
+            }
+            aOff += outLen;
+          }
         }
 
         let globalFrame = 0, audioSent = 0;
