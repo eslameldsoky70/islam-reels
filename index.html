@@ -4217,10 +4217,14 @@
 
             // video frame
             const ts = globalFrame * frameDurUs;
-            const vf = new VideoFrame(canvas, {
-              timestamp: ts,
-              duration: frameDurUs,
-            });
+            let vf;
+            try {
+              vf = new VideoFrame(canvas, { timestamp: ts, duration: frameDurUs });
+            } catch(_e) {
+              const _bmp = await createImageBitmap(await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.92)));
+              vf = new VideoFrame(_bmp, { timestamp: ts, duration: frameDurUs });
+              _bmp.close();
+            }
             videoEnc.encode(vf, { keyFrame: globalFrame % (FPS * 2) === 0 });
             vf.close();
             globalFrame++;
@@ -4427,6 +4431,10 @@
       async function _exportIOS(expCtx, qp, buffers, verseData, exportAyahs, total) {
         const W = qp.w, H = qp.h, FPS = qp.fps, SR = 44100;
         const frameDurUs = Math.round(1e6 / FPS);
+        // iOS: نعمل export canvas منفصل بدون alpha:false لأن VideoFrame بيرفضه
+        const expCanvas = document.createElement('canvas');
+        expCanvas.width = W; expCanvas.height = H;
+        const expCtx2d = expCanvas.getContext('2d');
 
         // تحقق من mp4-muxer
         if (typeof Mp4Muxer === "undefined") {
@@ -4527,20 +4535,19 @@
               audioSent += aLen;
             }
 
-            // video — نستخدم ImageBitmap بدل VideoFrame مباشرة من canvas
+            // video — iOS: ننسخ للـ expCanvas ونعمل منه VideoFrame
             const ts = globalFrame * frameDurUs;
+            expCtx2d.drawImage(canvas, 0, 0, W, H);
+            let vf;
             try {
-              const vf = new VideoFrame(canvas, { timestamp: ts, duration: frameDurUs });
-              videoEnc.encode(vf, { keyFrame: globalFrame % (FPS * 2) === 0 });
-              vf.close();
-            } catch(e) {
-              // iOS fallback: toBlob → ImageBitmap → VideoFrame
-              const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.92));
-              const bmp = await createImageBitmap(blob);
-              const vf = new VideoFrame(bmp, { timestamp: ts, duration: frameDurUs });
-              videoEnc.encode(vf, { keyFrame: globalFrame % (FPS * 2) === 0 });
-              vf.close(); bmp.close();
+              vf = new VideoFrame(expCanvas, { timestamp: ts, duration: frameDurUs });
+            } catch(_e) {
+              const _bmp = await createImageBitmap(expCanvas);
+              vf = new VideoFrame(_bmp, { timestamp: ts, duration: frameDurUs });
+              _bmp.close();
             }
+            videoEnc.encode(vf, { keyFrame: globalFrame % (FPS * 2) === 0 });
+            vf.close();
             globalFrame++;
             _setProgress(_expElapsedBefore + f / FPS);
 
