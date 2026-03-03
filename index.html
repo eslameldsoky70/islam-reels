@@ -2622,6 +2622,13 @@
                 </div>
               </div>
             </div>
+            <!-- شريط حالة الدعم -->
+            <div id="deviceSupportBar" style="
+              font-size:10px;color:#6e8878;text-align:center;
+              margin-bottom:6px;padding:4px 8px;
+              background:rgba(255,255,255,.03);border-radius:6px;
+              border:1px solid rgba(255,255,255,.06);
+            ">جارٍ فحص الدعم...</div>
             <!-- زرار التصدير -->
             <button
               id="exportBtn"
@@ -3580,15 +3587,48 @@
         }
       }
 
-      // كشف iOS
-      const _isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+      // ═══════════════════════════════════
+      //  كشف المتصفح والجهاز
+      // ═══════════════════════════════════
+      const _ua = navigator.userAgent;
+      const _isIOS = /iPad|iPhone|iPod/.test(_ua) ||
         (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      const _isAndroid = /Android/.test(_ua);
+      const _isMobile = _isIOS || _isAndroid;
+      const _isSafari = /Safari/.test(_ua) && !/Chrome/.test(_ua);
+      const _isFirefox = /Firefox/.test(_ua);
+      // iOS version
+      const _iosVer = (() => {
+        const m = _ua.match(/OS (\d+)_(\d+)/);
+        return m ? parseInt(m[1]) : 0;
+      })();
 
+      // ═══════════════════════════════════
+      //  كشف الدعم الفعلي للـ APIs
+      // ═══════════════════════════════════
+      const _canWebCodecs = typeof VideoEncoder !== "undefined" &&
+        typeof AudioEncoder !== "undefined" &&
+        typeof VideoFrame !== "undefined" &&
+        typeof AudioData !== "undefined";
+      const _canMuxer = typeof Mp4Muxer !== "undefined";
+      const _canMP4 = _canWebCodecs && _canMuxer;
+      const _canMediaRecorder = typeof MediaRecorder !== "undefined";
+      const _canWebM = _canMediaRecorder && !_isIOS &&
+        (MediaRecorder.isTypeSupported?.("video/webm") ||
+         MediaRecorder.isTypeSupported?.("video/webm;codecs=vp8,opus"));
+      const _canCaptureStream = typeof HTMLCanvasElement !== "undefined" &&
+        typeof HTMLCanvasElement.prototype.captureStream === "function";
+
+      // ═══════════════════════════════════
+      //  تنزيل الـ blob بطريقة تناسب كل جهاز
+      // ═══════════════════════════════════
       function _downloadBlob(blob, filename) {
         const url = URL.createObjectURL(blob);
         if (_isIOS) {
-          // iOS Safari لا يدعم a.download — نفتح في تاب جديد ونعرض زر الحفظ
-          _showIOSSaveDialog(url, blob, filename);
+          _showMobileSaveDialog(url, filename, "ios");
+        } else if (_isAndroid && _isSafari) {
+          // Android Samsung Browser / بعض المتصفحات لا تدعم download attr
+          _showMobileSaveDialog(url, filename, "android");
         } else {
           const a = document.createElement("a");
           a.href = url;
@@ -3600,36 +3640,68 @@
         }
       }
 
-      function _showIOSSaveDialog(url, blob, filename) {
-        // فتح الفيديو مباشرة في Safari لحفظه
-        const isMP4 = filename.endsWith('.mp4') || blob.type === 'video/mp4';
+      function _showMobileSaveDialog(url, filename, platform) {
+        const isIOS = platform === "ios";
         const overlay = document.createElement('div');
+        overlay.id = '_saveOverlay';
         overlay.style.cssText = `
-          position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.88);
-          display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;
-          font-family:Cairo,sans-serif;direction:rtl;padding:24px;
+          position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.92);
+          display:flex;flex-direction:column;align-items:center;justify-content:center;
+          gap:14px;font-family:Cairo,sans-serif;direction:rtl;padding:28px;
         `;
+        const instructions = isIOS
+          ? `اضغط <b style="color:#fff">فتح الفيديو</b> ثم اضغط مطوّلاً على الفيديو واختر <b style="color:#fff">"حفظ الفيديو"</b>`
+          : `اضغط <b style="color:#fff">فتح الفيديو</b> ثم اضغط مطوّلاً واختر <b style="color:#fff">"تنزيل"</b>`;
         overlay.innerHTML = `
-          <div style="font-size:32px">📱</div>
+          <div style="font-size:36px">${isIOS ? "🍎" : "📱"}</div>
           <div style="color:#e4b55a;font-size:16px;font-weight:700;text-align:center">
-            حفظ الفيديو على iOS
+            ${isIOS ? "حفظ الفيديو على iOS" : "حفظ الفيديو"}
           </div>
-          <div style="color:#b5c4bc;font-size:13px;text-align:center;line-height:1.8;max-width:280px">
-            اضغط <b style="color:#fff">"فتح في Safari"</b> ثم اضغط مطوّلاً على الفيديو
-            واختر <b style="color:#fff">"حفظ الفيديو"</b>
+          <div style="color:#b5c4bc;font-size:13px;text-align:center;line-height:1.9;max-width:290px">
+            ${instructions}
           </div>
-          <a href="${url}" target="_blank" style="
-            background:#c9973a;color:#000;font-weight:700;font-size:14px;
-            padding:12px 28px;border-radius:100px;text-decoration:none;
-            font-family:Cairo,sans-serif;
-          ">فتح الفيديو ▶</a>
-          <button onclick="this.closest('div[style]').remove();URL.revokeObjectURL('${url}')" style="
+          <a href="${url}" target="_blank" rel="noopener" style="
+            background:linear-gradient(135deg,#6b4e18,#c9973a);color:#fff;
+            font-weight:700;font-size:14px;padding:13px 32px;border-radius:100px;
+            text-decoration:none;font-family:Cairo,sans-serif;
+          ">▶ فتح الفيديو</a>
+          <button onclick="document.getElementById('_saveOverlay')?.remove();URL.revokeObjectURL('${url}')" style="
             background:transparent;border:1px solid rgba(255,255,255,.2);color:#6e8878;
             font-size:12px;padding:8px 20px;border-radius:100px;cursor:pointer;
             font-family:Cairo,sans-serif;
           ">إغلاق</button>
         `;
         document.body.appendChild(overlay);
+      }
+
+      function _showUnsupportedDialog() {
+        const over = document.createElement("div");
+        over.style.cssText = `
+          position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.92);
+          display:flex;flex-direction:column;align-items:center;justify-content:center;
+          gap:14px;font-family:Cairo,sans-serif;direction:rtl;padding:28px;
+        `;
+        const browser = _isFirefox ? "Firefox" : _isSafari ? "Safari" : "Chrome";
+        const tip = _isIOS
+          ? "يحتاج iOS 16 أو أحدث مع Safari"
+          : _isFirefox
+            ? "Firefox لا يدعم تصدير MP4/WebM من Canvas. استخدم Chrome أو Edge."
+            : `جرّب آخر إصدار من ${browser}`;
+        over.innerHTML = `
+          <div style="font-size:36px">⚠️</div>
+          <div style="color:#f47c7c;font-size:16px;font-weight:700;text-align:center">
+            التصدير غير مدعوم
+          </div>
+          <div style="color:#b5c4bc;font-size:13px;text-align:center;line-height:1.9;max-width:290px">
+            ${tip}
+          </div>
+          <button onclick="this.closest('div').remove()" style="
+            background:rgba(201,151,58,.15);border:1px solid rgba(201,151,58,.4);
+            color:#e4b55a;font-size:13px;padding:10px 24px;border-radius:100px;
+            cursor:pointer;font-family:Cairo,sans-serif;
+          ">حسناً</button>
+        `;
+        document.body.appendChild(over);
       }
 
       function stopExport() {
@@ -3813,30 +3885,29 @@
         isExporting = true;
         updateExportBtn(true);
 
-        // اختيار المسار
-        const canMP4 =
-          typeof VideoEncoder !== "undefined" &&
-          typeof AudioEncoder !== "undefined" &&
-          typeof Mp4Muxer !== "undefined";
+        // ═══════════════════════════════════════════════════
+        //  اختيار مسار التصدير الأفضل للجهاز تلقائياً
+        //  الأولوية: MP4 WebCodecs > WebM > رسالة خطأ
+        // ═══════════════════════════════════════════════════
+        const useMP4 = _canMP4 && (_exportFmt === "mp4" || _isIOS || !_canWebM);
+        const useWebM = !useMP4 && _canWebM && !_isIOS;
 
-        // iOS: WebM غير مدعوم — نجبر MP4 WebCodecs
-        const canWebM = !_isIOS && typeof MediaRecorder !== "undefined" &&
-          (MediaRecorder.isTypeSupported?.("video/webm") || MediaRecorder.isTypeSupported?.("video/webm;codecs=vp8,opus"));
-
-        if ((_exportFmt === "mp4" || _isIOS) && _turboMode && canMP4) {
-          toast$("⚡ تصدير MP4...");
+        if (useMP4) {
+          toast$(_isMobile ? "📱 تصدير MP4..." : "⚡ تصدير MP4...");
           setSbar("🔴 يصدّر " + total + " آية...", "#f47c7c");
           await _exportMP4(expCtx, qp, buffers, verseData, exportAyahs, total);
-        } else if (canWebM) {
+        } else if (useWebM) {
           toast$("🔴 تصدير WebM...");
           setSbar("🔴 يسجّل " + total + " آية...", "#f47c7c");
           await _exportWebM(expCtx, qp, buffers, verseData, exportAyahs, total);
-        } else if (canMP4) {
-          toast$("⚡ تصدير MP4...");
-          setSbar("🔴 يصدّر " + total + " آية...", "#f47c7c");
-          await _exportMP4(expCtx, qp, buffers, verseData, exportAyahs, total);
         } else {
-          _finishExport(expCtx, "❌ التصدير غير مدعوم في هذا المتصفح", "#f47c7c");
+          // لا يوجد دعم لأي صيغة
+          const msg = _isIOS && _iosVer > 0 && _iosVer < 16
+            ? "❌ يحتاج iOS 16 أو أحدث للتصدير"
+            : "❌ هذا المتصفح لا يدعم تصدير الفيديو. جرّب Chrome أو Safari.";
+          _finishExport(expCtx, msg, "#f47c7c");
+          // عرض رسالة مفصّلة
+          _showUnsupportedDialog();
         }
       }
 
@@ -3875,44 +3946,106 @@
           },
         });
 
-        // نجرب codecs
+        // نجرب codecs — قائمة أوسع تشمل أجهزة أكثر
+        // avc1.640033 = H.264 High Profile L5.1 (PC/Mac)
+        // avc1.640028 = H.264 High Profile L4.0 (Android عالي)
+        // avc1.4d0029 = H.264 Main Profile L4.1 (Android متوسط)
+        // avc1.4d0028 = H.264 Main Profile L4.0
+        // avc1.42001f = H.264 Baseline L3.1 (أقصى توافق)
+        // avc1.420032 = H.264 Baseline L5.0
+        const H264_CODECS = [
+          "avc1.640033",
+          "avc1.640028",
+          "avc1.4d0029",
+          "avc1.4d0028",
+          "avc1.42003e",
+          "avc1.42001f",
+          "avc1.420032",
+        ];
+        // على الأجهزة الضعيفة: لا نستخدم bitrate عالي جداً
+        const safeBitrate = _isMobile
+          ? Math.min(qp.bitrate, 8_000_000)
+          : qp.bitrate;
+        // على الأجهزة الضعيفة: لا نتجاوز 1080p
+        const safeW = _isMobile ? Math.min(W, 1080) : W;
+        const safeH = _isMobile ? Math.min(H, 1920) : H;
+        // FPS آمن للجوّال
+        const safeFPS = _isMobile ? Math.min(FPS, 30) : FPS;
+
         let codecOk = false;
-        for (const codec of ["avc1.640033", "avc1.4d0029", "avc1.42001f"]) {
+        let chosenCodec = "";
+        for (const codec of H264_CODECS) {
           try {
             const s = await VideoEncoder.isConfigSupported({
               codec,
-              width: W,
-              height: H,
-              bitrate: qp.bitrate,
-              framerate: FPS,
+              width: safeW,
+              height: safeH,
+              bitrate: safeBitrate,
+              framerate: safeFPS,
             });
             if (!s.supported) continue;
             videoEnc.configure({
               codec,
-              width: W,
-              height: H,
-              bitrate: qp.bitrate,
-              framerate: FPS,
+              width: safeW,
+              height: safeH,
+              bitrate: safeBitrate,
+              framerate: safeFPS,
+              hardwareAcceleration: "prefer-hardware",
             });
             codecOk = true;
+            chosenCodec = codec;
             break;
           } catch (e) {}
         }
+
+        // لو فشلنا نجرّب بدون hardware acceleration
+        if (!codecOk) {
+          for (const codec of H264_CODECS) {
+            try {
+              const s = await VideoEncoder.isConfigSupported({
+                codec,
+                width: safeW,
+                height: safeH,
+                bitrate: safeBitrate,
+                framerate: safeFPS,
+                hardwareAcceleration: "prefer-software",
+              });
+              if (!s.supported) continue;
+              videoEnc.configure({
+                codec,
+                width: safeW,
+                height: safeH,
+                bitrate: safeBitrate,
+                framerate: safeFPS,
+                hardwareAcceleration: "prefer-software",
+              });
+              codecOk = true;
+              chosenCodec = codec + " (SW)";
+              break;
+            } catch (e) {}
+          }
+        }
+
         if (!codecOk) {
           videoEnc.close();
           if (_isIOS) {
-            _finishExport(expCtx, "❌ التصدير غير مدعوم في هذا الإصدار من iOS. جرّب Safari أحدث.", "#f47c7c");
+            _finishExport(expCtx, "❌ يحتاج iOS 16 أو أحدث للتصدير", "#f47c7c");
             return;
           }
-          toast$("⚠ WebCodecs غير مدعوم — تصدير WebM...");
-          return _exportWebM(
-            expCtx,
-            qp,
-            buffers,
-            verseData,
-            exportAyahs,
-            total,
-          );
+          if (_canWebM) {
+            toast$("⚠ WebCodecs غير مدعوم — تصدير WebM...");
+            return _exportWebM(expCtx, qp, buffers, verseData, exportAyahs, total);
+          }
+          _finishExport(expCtx, "❌ هذا المتصفح لا يدعم تصدير الفيديو", "#f47c7c");
+          return;
+        }
+
+        // تحديث الـ dimensions لو تغيّرت للأجهزة المحمولة
+        if (safeW !== W || safeH !== H || safeFPS !== FPS) {
+          canvas.width = safeW;
+          canvas.height = safeH;
+          _gradCache = null;
+          _mtCache.clear();
         }
 
         // AudioEncoder
@@ -3920,12 +4053,37 @@
           output: (chunk, meta) => muxer.addAudioChunk(chunk, meta),
           error: (e) => console.error("AEnc:", e),
         });
-        audioEnc.configure({
-          codec: "mp4a.40.2",
-          sampleRate: SR,
-          numberOfChannels: 2,
-          bitrate: 192000,
-        });
+        // AudioEncoder — نجرّب stereo أولاً ثم mono للأجهزة الضعيفة
+        let audioEncOk = false;
+        for (const [ch, br] of [[2, 128000], [1, 64000]]) {
+          try {
+            const as = await AudioEncoder.isConfigSupported({
+              codec: "mp4a.40.2",
+              sampleRate: SR,
+              numberOfChannels: ch,
+              bitrate: br,
+            });
+            if (!as.supported) continue;
+            audioEnc.configure({
+              codec: "mp4a.40.2",
+              sampleRate: SR,
+              numberOfChannels: ch,
+              bitrate: br,
+            });
+            audioEncOk = true;
+            break;
+          } catch(e) {}
+        }
+        if (!audioEncOk) {
+          audioEnc.close();
+          videoEnc.close();
+          if (_canWebM) {
+            toast$("⚠ فشل AudioEncoder — تصدير WebM...");
+            return _exportWebM(expCtx, qp, buffers, verseData, exportAyahs, total);
+          }
+          _finishExport(expCtx, "❌ فشل إعداد الصوت", "#f47c7c");
+          return;
+        }
 
         // بناء audio arrays
         const totalSamp = Math.ceil(_expTotalDur * SR) + SR;
@@ -4194,7 +4352,19 @@
           await audioBlob.arrayBuffer(),
         );
 
-        // captureStream(0) + requestFrame
+        // captureStream(0) + requestFrame — مع كشف الدعم
+        if (!_canCaptureStream) {
+          // لا يوجد captureStream — fallback لـ MP4 إن أمكن
+          if (_canMP4) {
+            toast$("⚡ تحويل لـ MP4 Turbo...");
+            _expElapsedBefore = 0;
+            isExporting = false;
+            startDrawLoop();
+            return _exportMP4(expCtx, qp, buffers, verseData, exportAyahs, total);
+          }
+          _finishExport(expCtx, "❌ captureStream غير مدعوم في هذا المتصفح", "#f47c7c");
+          return;
+        }
         const videoStream = canvas.captureStream(0);
         const videoTrack = videoStream.getVideoTracks()[0];
         const expDest = expCtx.createMediaStreamDestination();
@@ -5707,24 +5877,58 @@
           }
         }
 
-        // على iOS: نخفي WebM ونجبر MP4+Turbo
-        if (_isIOS) {
-          _turboMode = true;
-          _exportFmt = "mp4";
-          const fmtWebm = document.getElementById("fmtWebm");
-          if (fmtWebm) fmtWebm.style.display = "none";
-          setExportFmt("mp4");
-          const sw2 = document.getElementById("turboSw");
-          if (sw2) {
-            sw2.style.background = "linear-gradient(135deg,#245c38,#3ea066)";
-            sw2.querySelector("div").style.right = "3px";
-            sw2.style.pointerEvents = "none";
-            sw2.style.opacity = "0.7";
+        // على الأجهزة المحمولة: تهيئة ذكية للواجهة
+        // تحديث شريط حالة الدعم
+        const dsBar = document.getElementById("deviceSupportBar");
+        if (dsBar) {
+          if (_canMP4) {
+            dsBar.textContent = "✅ MP4 WebCodecs مدعوم" + (_isMobile ? " • 📱 جوّال" : "");
+            dsBar.style.color = "#5ec285";
+          } else if (_canWebM) {
+            dsBar.textContent = "🔶 WebM فقط — " + (_isFirefox ? "Firefox" : "متصفحك");
+            dsBar.style.color = "#c9973a";
+          } else {
+            dsBar.textContent = "❌ التصدير غير مدعوم في هذا المتصفح";
+            dsBar.style.color = "#f47c7c";
           }
-          const turboDesc = document.getElementById("turboDesc");
-          if (turboDesc) turboDesc.textContent = "WebCodecs MP4 — مطلوب على iOS";
-          const warn2 = document.getElementById("turboWarn");
-          if (warn2) warn2.style.display = "none";
+        }
+
+        if (_isMobile) {
+          // إخفاء WebM إذا لم يكن مدعوماً
+          if (!_canWebM) {
+            const fmtWebm = document.getElementById("fmtWebm");
+            if (fmtWebm) fmtWebm.style.display = "none";
+            setExportFmt("mp4");
+          }
+          // Turbo دائماً ON على المحمول إذا كان متاحاً
+          if (_canMP4) {
+            _turboMode = true;
+            _exportFmt = "mp4";
+            const sw2 = document.getElementById("turboSw");
+            if (sw2) {
+              sw2.style.background = "linear-gradient(135deg,#245c38,#3ea066)";
+              sw2.querySelector("div").style.right = "3px";
+              if (_isIOS) {
+                sw2.style.pointerEvents = "none";
+                sw2.style.opacity = "0.75";
+              }
+            }
+            const turboDesc = document.getElementById("turboDesc");
+            if (turboDesc) turboDesc.textContent = _isIOS
+              ? "WebCodecs MP4 — مطلوب على iOS"
+              : "WebCodecs MP4 — موصى به للجوّال";
+            const warn2 = document.getElementById("turboWarn");
+            if (warn2) warn2.style.display = "none";
+          } else if (!_canWebM) {
+            // لا يوجد دعم لأي صيغة
+            const exportBtn = document.getElementById("exportBtn");
+            if (exportBtn) {
+              exportBtn.textContent = "⚠ التصدير غير مدعوم في هذا المتصفح";
+              exportBtn.style.background = "#333";
+              exportBtn.style.color = "#f47c7c";
+              exportBtn.onclick = () => _showUnsupportedDialog();
+            }
+          }
         }
       });
 
