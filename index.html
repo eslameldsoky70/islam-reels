@@ -3826,24 +3826,29 @@
           gap:14px;font-family:Cairo,sans-serif;direction:rtl;padding:28px;
         `;
         const browser = _isFirefox ? "Firefox" : _isSafari ? "Safari" : "Chrome";
-        const tip = _isIOS
-          ? "يحتاج iOS 16 أو أحدث مع Safari"
-          : _isFirefox
+        const tip = _isFirefox
             ? "Firefox لا يدعم تصدير MP4/WebM من Canvas. استخدم Chrome أو Edge."
-            : `جرّب آخر إصدار من ${browser}`;
+            : _isMobile
+              ? "جرّب تصدير ZIP — يشتغل على كل الأجهزة بدون قيود."
+              : `جرّب آخر إصدار من ${browser}`;
         over.innerHTML = `
           <div style="font-size:36px">⚠️</div>
           <div style="color:#f47c7c;font-size:16px;font-weight:700;text-align:center">
-            التصدير غير مدعوم
+            فشل تصدير MP4/WebM
           </div>
           <div style="color:#b5c4bc;font-size:13px;text-align:center;line-height:1.9;max-width:290px">
             ${tip}
           </div>
+          <button onclick="this.closest('div').remove();setExportFmt('zip');startExport();" style="
+            background:linear-gradient(135deg,#6b4e18,#c9973a);border:none;
+            color:#fff;font-size:13px;padding:11px 24px;border-radius:100px;
+            cursor:pointer;font-family:Cairo,sans-serif;font-weight:700;
+          ">📦 تصدير ZIP بدلاً</button>
           <button onclick="this.closest('div').remove()" style="
-            background:rgba(201,151,58,.15);border:1px solid rgba(201,151,58,.4);
-            color:#e4b55a;font-size:13px;padding:10px 24px;border-radius:100px;
-            cursor:pointer;font-family:Cairo,sans-serif;
-          ">حسناً</button>
+            background:transparent;border:1px solid rgba(255,255,255,.15);color:#6e8878;
+            font-size:12px;padding:8px 20px;border-radius:100px;cursor:pointer;
+            font-family:Cairo,sans-serif;
+          ">إغلاق</button>
         `;
         document.body.appendChild(over);
       }
@@ -4078,12 +4083,23 @@
           SR = 44100;
         const frameDurUs = Math.round(1e6 / FPS);
 
-        const muxer = new Mp4Muxer.Muxer({
-          target: new Mp4Muxer.ArrayBufferTarget(),
-          video: { codec: "avc", width: W, height: H, frameRate: FPS },
-          audio: { codec: "aac", sampleRate: SR, numberOfChannels: 2 },
-          fastStart: "in-memory",
-        });
+        // Safari بيدعم "in-memory" من mp4-muxer v5+
+        // نجرّب بـ fastStart ثم بدونه لو فشل
+        let muxer;
+        try {
+          muxer = new Mp4Muxer.Muxer({
+            target: new Mp4Muxer.ArrayBufferTarget(),
+            video: { codec: "avc", width: safeW || W, height: safeH || H, frameRate: safeFPS || FPS },
+            audio: { codec: "aac", sampleRate: SR, numberOfChannels: 2 },
+            fastStart: "in-memory",
+          });
+        } catch(muxErr) {
+          muxer = new Mp4Muxer.Muxer({
+            target: new Mp4Muxer.ArrayBufferTarget(),
+            video: { codec: "avc", width: safeW || W, height: safeH || H, frameRate: safeFPS || FPS },
+            audio: { codec: "aac", sampleRate: SR, numberOfChannels: 2 },
+          });
+        }
 
         // VideoEncoder مع queue pressure control
         let vEncErr = null;
@@ -4121,72 +4137,45 @@
         // FPS آمن للجوّال
         const safeFPS = _isMobile ? Math.min(FPS, 30) : FPS;
 
+        // ─────────────────────────────────────────────────────
+        // Safari/iOS: hardwareAcceleration بيسبب throw حتى لو
+        // isConfigSupported رجع true — لازم نجرّب بدونها أولاً
+        // ─────────────────────────────────────────────────────
+        const HW_MODES = _isIOS || _isSafari
+          ? [undefined]                                    // Safari: بدون HW param خالص
+          : ["prefer-hardware", "prefer-software", undefined]; // باقي المتصفحات
+
         let codecOk = false;
         let chosenCodec = "";
-        for (const codec of H264_CODECS) {
-          try {
-            const s = await VideoEncoder.isConfigSupported({
-              codec,
-              width: safeW,
-              height: safeH,
-              bitrate: safeBitrate,
-              framerate: safeFPS,
-            });
-            if (!s.supported) continue;
-            videoEnc.configure({
-              codec,
-              width: safeW,
-              height: safeH,
-              bitrate: safeBitrate,
-              framerate: safeFPS,
-              hardwareAcceleration: "prefer-hardware",
-            });
-            codecOk = true;
-            chosenCodec = codec;
-            break;
-          } catch (e) {}
-        }
 
-        // لو فشلنا نجرّب بدون hardware acceleration
-        if (!codecOk) {
+        outer:
+        for (const hwMode of HW_MODES) {
           for (const codec of H264_CODECS) {
             try {
-              const s = await VideoEncoder.isConfigSupported({
-                codec,
-                width: safeW,
-                height: safeH,
-                bitrate: safeBitrate,
-                framerate: safeFPS,
-                hardwareAcceleration: "prefer-software",
-              });
+              const cfg = { codec, width: safeW, height: safeH, bitrate: safeBitrate, framerate: safeFPS };
+              if (hwMode !== undefined) cfg.hardwareAcceleration = hwMode;
+
+              const s = await VideoEncoder.isConfigSupported(cfg);
               if (!s.supported) continue;
-              videoEnc.configure({
-                codec,
-                width: safeW,
-                height: safeH,
-                bitrate: safeBitrate,
-                framerate: safeFPS,
-                hardwareAcceleration: "prefer-software",
-              });
+
+              videoEnc.configure(cfg);
               codecOk = true;
-              chosenCodec = codec + " (SW)";
-              break;
-            } catch (e) {}
+              chosenCodec = codec + (hwMode ? " (" + hwMode + ")" : "");
+              break outer;
+            } catch (e) {
+              // Safari بيـ throw على بعض الـ configs — نكمّل
+            }
           }
         }
 
         if (!codecOk) {
           videoEnc.close();
-          if (_isIOS) {
-            _finishExport(expCtx, "❌ يحتاج iOS 16 أو أحدث للتصدير", "#f47c7c");
-            return;
-          }
-          if (_canWebM()) {
-            toast$("⚠ WebCodecs غير مدعوم — تصدير WebM...");
-            return _exportWebM(expCtx, qp, buffers, verseData, exportAyahs, total);
-          }
-          _finishExport(expCtx, "❌ هذا المتصفح لا يدعم تصدير الفيديو", "#f47c7c");
-          return;
+          // Fallback: ZIP بدل رسالة خطأ
+          toast$("📦 WebCodecs فشل — تصدير ZIP...");
+          _expElapsedBefore = 0;
+          isExporting = false;
+          startDrawLoop();
+          return _exportFrameZip(expCtx, qp, buffers, verseData, exportAyahs, total);
         }
 
         // تحديث الـ dimensions لو تغيّرت للأجهزة المحمولة
@@ -4202,36 +4191,36 @@
           output: (chunk, meta) => muxer.addAudioChunk(chunk, meta),
           error: (e) => console.error("AEnc:", e),
         });
-        // AudioEncoder — نجرّب stereo أولاً ثم mono للأجهزة الضعيفة
+        // AudioEncoder — Safari بيدعم mp4a.40.2 مباشرة بدون isConfigSupported
         let audioEncOk = false;
-        for (const [ch, br] of [[2, 128000], [1, 64000]]) {
+        const AUDIO_CONFIGS = [
+          { codec: "mp4a.40.2", sampleRate: SR, numberOfChannels: 2, bitrate: 128000 },
+          { codec: "mp4a.40.2", sampleRate: SR, numberOfChannels: 1, bitrate: 64000 },
+          // Safari أحياناً بيتعامل مع aac مباشرة
+          { codec: "aac", sampleRate: SR, numberOfChannels: 2, bitrate: 128000 },
+        ];
+        for (const aCfg of AUDIO_CONFIGS) {
           try {
-            const as = await AudioEncoder.isConfigSupported({
-              codec: "mp4a.40.2",
-              sampleRate: SR,
-              numberOfChannels: ch,
-              bitrate: br,
-            });
-            if (!as.supported) continue;
-            audioEnc.configure({
-              codec: "mp4a.40.2",
-              sampleRate: SR,
-              numberOfChannels: ch,
-              bitrate: br,
-            });
+            // isConfigSupported بيـ throw على Safari أحياناً — نتجاوزها
+            try {
+              const as = await AudioEncoder.isConfigSupported(aCfg);
+              if (as && !as.supported) continue;
+            } catch(_) {}
+            audioEnc.configure(aCfg);
             audioEncOk = true;
             break;
-          } catch(e) {}
+          } catch(e) {
+            console.warn("AudioEncoder config failed:", aCfg.codec, e.message);
+          }
         }
         if (!audioEncOk) {
           audioEnc.close();
           videoEnc.close();
-          if (_canWebM()) {
-            toast$("⚠ فشل AudioEncoder — تصدير WebM...");
-            return _exportWebM(expCtx, qp, buffers, verseData, exportAyahs, total);
-          }
-          _finishExport(expCtx, "❌ فشل إعداد الصوت", "#f47c7c");
-          return;
+          toast$("📦 فشل AudioEncoder — تصدير ZIP...");
+          _expElapsedBefore = 0;
+          isExporting = false;
+          startDrawLoop();
+          return _exportFrameZip(expCtx, qp, buffers, verseData, exportAyahs, total);
         }
 
         // بناء audio arrays
@@ -4307,14 +4296,25 @@
               audioSent += aLen;
             }
 
-            // video frame
+            // video frame — Safari بيحتاج ImageBitmap أحياناً بدل canvas مباشرة
             const ts = globalFrame * frameDurUs;
-            const vf = new VideoFrame(canvas, {
-              timestamp: ts,
-              duration: frameDurUs,
-            });
-            videoEnc.encode(vf, { keyFrame: globalFrame % (FPS * 2) === 0 });
-            vf.close();
+            try {
+              const vf = new VideoFrame(canvas, { timestamp: ts, duration: frameDurUs });
+              videoEnc.encode(vf, { keyFrame: globalFrame % (FPS * 2) === 0 });
+              vf.close();
+            } catch(vfErr) {
+              // Safari fallback: نستخدم ImageBitmap
+              try {
+                const bmp = await createImageBitmap(canvas);
+                const vf2 = new VideoFrame(bmp, { timestamp: ts, duration: frameDurUs });
+                videoEnc.encode(vf2, { keyFrame: globalFrame % (FPS * 2) === 0 });
+                vf2.close();
+                bmp.close();
+              } catch(vfErr2) {
+                vEncErr = vfErr2;
+                console.error("VideoFrame failed:", vfErr2);
+              }
+            }
             globalFrame++;
 
             _setProgress(_expElapsedBefore + f / FPS);
@@ -4339,18 +4339,18 @@
 
         if (_expAbort || vEncErr) {
           if (vEncErr) {
+            if (_isIOS || !_canWebM()) {
+              toast$("📦 خطأ encoder — تصدير ZIP...");
+              _expElapsedBefore = 0;
+              isExporting = false;
+              startDrawLoop();
+              return _exportFrameZip(expCtx, qp, buffers, verseData, exportAyahs, total);
+            }
             toast$("❌ خطأ encoder — تصدير WebM...");
             _expElapsedBefore = 0;
             isExporting = false;
             startDrawLoop();
-            return _exportWebM(
-              expCtx,
-              qp,
-              buffers,
-              verseData,
-              exportAyahs,
-              total,
-            );
+            return _exportWebM(expCtx, qp, buffers, verseData, exportAyahs, total);
           }
           _finishExport(expCtx);
           return;
@@ -4379,11 +4379,19 @@
           _finishExport(expCtx, "✅ تم حفظ MP4 — " + mb + " MB ✨", "#5ec285");
         } catch (e) {
           console.error("finalize:", e);
-          toast$("⚠ فشل التجميع — تصدير WebM...");
-          _expElapsedBefore = 0;
-          isExporting = false;
-          startDrawLoop();
-          await _exportWebM(expCtx, qp, buffers, verseData, exportAyahs, total);
+          if (_isIOS || !_canWebM()) {
+            toast$("📦 فشل التجميع — تصدير ZIP...");
+            _expElapsedBefore = 0;
+            isExporting = false;
+            startDrawLoop();
+            await _exportFrameZip(expCtx, qp, buffers, verseData, exportAyahs, total);
+          } else {
+            toast$("⚠ فشل التجميع — تصدير WebM...");
+            _expElapsedBefore = 0;
+            isExporting = false;
+            startDrawLoop();
+            await _exportWebM(expCtx, qp, buffers, verseData, exportAyahs, total);
+          }
         }
       }
 
