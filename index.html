@@ -3993,6 +3993,13 @@
         if (!S.surah) return toast$("⚠ اختر سورة أولاً");
         audio.pause();
 
+        // iOS FIX: AudioContext + resume لازم يتعملوا فوراً داخل user gesture
+        // قبل أي await أو DOM manipulation
+        const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
+        const expCtx = new AudioCtxClass({ sampleRate: 44100 });
+        _expCtxRef = expCtx;
+        const _resumeP = expCtx.resume().catch(() => {});
+
         const exportAyahs = apSelected.size
           ? [...apSelected].sort((a, b) => a - b)
           : Array.from({ length: S.vTo - S.vFrom + 1 }, (_, i) => S.vFrom + i);
@@ -4002,12 +4009,9 @@
         xShow(0, total, "جارٍ تحضير الآيات...");
         setSbar("⏳ تحميل...", "#c9973a");
 
-        const expCtx = new (window.AudioContext || window.webkitAudioContext)({
-          sampleRate: 44100,
-        });
-        _expCtxRef = expCtx;
-        // iOS: AudioContext بيحتاج resume بعد user gesture عشان الصوت يشتغل
-        if (expCtx.state === 'suspended') {
+        await _resumeP;
+        if (expCtx.state !== 'running') {
+          await new Promise(r => setTimeout(r, 400));
           await expCtx.resume().catch(() => {});
         }
 
