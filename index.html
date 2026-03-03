@@ -3867,52 +3867,67 @@
           await fetchWordTiming(sn, exportAyahs[0]).catch(() => {});
         const total = exportAyahs.length;
         let loaded = 0;
-        return Promise.all(
-          exportAyahs.map(async (ayahN) => {
-            const urls = ayahUrls(S.sh, sn, ayahN);
-            let buf = null;
-            for (const url of urls) {
+
+        // iOS Safari: نحمّل بشكل متسلسل عشان decodeAudioData بيتعلق مع Promise.all
+        const _isIOSSafari = /iP(hone|od|ad)/.test(navigator.userAgent) ||
+          (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+        const loadOne = async (ayahN) => {
+          // تأكد AudioContext شغّال قبل decodeAudioData
+          if (expCtx.state === 'suspended') {
+            await expCtx.resume().catch(() => {});
+            await new Promise(r => setTimeout(r, 100));
+          }
+
+          const urls = ayahUrls(S.sh, sn, ayahN);
+          let buf = null;
+          for (const url of urls) {
+            for (let attempt = 0; attempt < 3; attempt++) {
               try {
                 const r = await fetch(url, { mode: "cors" });
-                if (!r.ok) continue;
-                buf = await expCtx.decodeAudioData(await r.arrayBuffer());
+                if (!r.ok) break;
+                const ab = await r.arrayBuffer();
+                buf = await expCtx.decodeAudioData(ab.slice(0));
                 break;
-              } catch (e) {}
+              } catch (e) {
+                console.warn("loadData attempt " + (attempt+1) + " ayah " + ayahN + ":", e.message);
+                if (attempt < 2) await new Promise(r => setTimeout(r, 600 * (attempt + 1)));
+              }
             }
-            if (!buf)
-              throw Object.assign(new Error("فشل تحميل آية " + ayahN), {
-                ayahN,
-              });
-            const [arRes, segs, qdcW] = await Promise.all([
-              fetch(
-                "https://api.alquran.cloud/v1/ayah/" + sn + ":" + ayahN + "/ar",
-              ).then((r) => r.json()),
-              fetchWordTiming(sn, ayahN),
-              S.sh && S.sh.qdcId
-                ? fetchQdcWords(sn, ayahN)
-                : Promise.resolve(null),
-            ]);
-            const arText =
-              sn === 1
-                ? arRes.data?.text || ""
-                : stripBasmala(arRes.data?.text || "");
-            loaded++;
-            xShow(
-              loaded,
-              total,
-              "تحميل " + S.surah.ar + " — آية " + arN(ayahN),
-            );
-            setSbar("⏳ تحميل (" + loaded + "/" + total + ")...", "#c9973a");
-            return {
-              ayahN,
-              buf,
-              arText,
-              wordList: qdcW?.length ? qdcW : null,
-              ref: "﴿ " + S.surah.ar + " : " + arN(ayahN) + " ﴾",
-              segs,
-            };
-          }),
-        );
+            if (buf) break;
+          }
+
+          if (!buf)
+            throw Object.assign(new Error("فشل تحميل آية " + ayahN), { ayahN });
+
+          const [arRes, segs, qdcW] = await Promise.all([
+            fetch("https://api.alquran.cloud/v1/ayah/" + sn + ":" + ayahN + "/ar").then((r) => r.json()),
+            fetchWordTiming(sn, ayahN),
+            S.sh && S.sh.qdcId ? fetchQdcWords(sn, ayahN) : Promise.resolve(null),
+          ]);
+          const arText = sn === 1 ? arRes.data?.text || "" : stripBasmala(arRes.data?.text || "");
+          loaded++;
+          xShow(loaded, total, "تحميل " + S.surah.ar + " — آية " + arN(ayahN));
+          setSbar("⏳ تحميل (" + loaded + "/" + total + ")...", "#c9973a");
+          return {
+            ayahN, buf, arText,
+            wordList: qdcW?.length ? qdcW : null,
+            ref: "﴿ " + S.surah.ar + " : " + arN(ayahN) + " ﴾",
+            segs,
+          };
+        };
+
+        if (_isIOSSafari) {
+          // iOS: متسلسل — آية آية عشان Safari مش بيحب التحميل المتوازي
+          const results = [];
+          for (const ayahN of exportAyahs) {
+            results.push(await loadOne(ayahN));
+          }
+          return results;
+        } else {
+          // Desktop/Android: متوازي — أسرع
+          return Promise.all(exportAyahs.map(loadOne));
+        }
       }
 
       function _prepVerse(vd, exportAyahs) {
