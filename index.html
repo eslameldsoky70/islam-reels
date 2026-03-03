@@ -4798,6 +4798,20 @@
         }
       }
 
+      /* iOS يعيد تعليق الـ AudioContext بعد lock/unlock الشاشة
+         نستأنفه تلقائياً عند عودة الصفحة للواجهة              */
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible' && audioCtx && audioCtx.state === 'suspended') {
+          audioCtx.resume().catch(() => {});
+        }
+      });
+
+      /* iOS 17+: استمع لأي touch لفتح قناة الصوت مبكراً */
+      document.addEventListener('touchstart', function _iosFirstTouch() {
+        _unlockAudio();
+        document.removeEventListener('touchstart', _iosFirstTouch);
+      }, { once: true, passive: true });
+
       const $ = (id) => document.getElementById(id);
       const arN = (n) => String(n).replace(/\d/g, (d) => "٠١٢٣٤٥٦٧٨٩"[d]);
       const fmt = (s) =>
@@ -4874,15 +4888,46 @@
         if (autoPlay) pendingPlay = true;
       }
 
+      /* ══ iOS AudioContext Unlock ══════════════════════════════════
+         iOS يحتاج: AudioContext يُستأنف داخل كل user gesture مباشرة
+         بدونه الصوت يبقى صامتاً حتى لو audio.play() نجح            */
+      let _audioUnlocked = false;
+
+      async function _unlockAudio() {
+        if (!audioCtx) initAudioContext();
+        if (audioCtx && audioCtx.state === 'suspended') {
+          try { await audioCtx.resume(); } catch(e) {}
+        }
+        // iOS: شغّل buffer صامت لفتح قناة الصوت لأول مرة
+        if (!_audioUnlocked && audioCtx) {
+          try {
+            const buf = audioCtx.createBuffer(1, 1, 22050);
+            const src = audioCtx.createBufferSource();
+            src.buffer = buf;
+            src.connect(audioCtx.destination);
+            src.start(0);
+            _audioUnlocked = true;
+          } catch(e) {}
+        }
+      }
+
       function doPlay() {
-        const p = audio.play();
-        if (p?.catch)
-          p.catch((e) => {
-            if (e.name !== "AbortError") {
-              setSbar("❌ " + e.message, "#f47c7c");
-              toast$("❌ تعذّر التشغيل");
-            }
-          });
+        const _doActualPlay = () => {
+          const p = audio.play();
+          if (p?.catch)
+            p.catch((e) => {
+              if (e.name !== "AbortError") {
+                setSbar("❌ " + e.message, "#f47c7c");
+                toast$("❌ تعذّر التشغيل");
+              }
+            });
+        };
+        // استأنف الـ AudioContext أولاً — ضروري على iOS الحديث
+        if (audioCtx && audioCtx.state === 'suspended') {
+          audioCtx.resume().then(_doActualPlay).catch(_doActualPlay);
+        } else {
+          _doActualPlay();
+        }
       }
 
       audio.addEventListener("canplay", () => {
@@ -4991,6 +5036,8 @@
           audio.pause();
           return;
         }
+        // iOS: افتح قناة الصوت داخل الـ gesture مباشرة
+        _unlockAudio();
         if (S.active === 0 && !curUrl) {
           if (surahHasLeadingBasmala(S.surah.n)) S.active = -1;
         }
@@ -4999,6 +5046,7 @@
       }
 
       function playAll() {
+        _unlockAudio();
         if (S.vFrom === 1 && surahHasLeadingBasmala(S.surah.n)) S.active = -1;
         else S.active = 0;
         curUrl = "";
@@ -5007,6 +5055,7 @@
 
       function prevV() {
         if (S.active > 0) {
+          _unlockAudio();
           S.active--;
           curUrl = "";
           loadVerse();
@@ -5018,6 +5067,7 @@
       function nextV() {
         const total = getPlayQueue().length || curSl().length;
         if (S.active < total - 1) {
+          _unlockAudio();
           S.active++;
           curUrl = "";
           loadVerse();
