@@ -4031,7 +4031,21 @@
           typeof AudioEncoder !== "undefined" &&
           typeof Mp4Muxer !== "undefined";
 
-        if (_exportFmt === "mp4" && _turboMode && canMP4) {
+        const _isIOSDevice = /iP(hone|od|ad)/.test(navigator.userAgent) ||
+          (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+        if (_isIOSDevice) {
+          // iOS: captureStream + MediaRecorder مش شغالين → نستخدم WebCodecs أو iOS builder
+          if (canMP4) {
+            toast$("⚡ تصدير MP4 (iOS)...");
+            setSbar("🔴 يصدّر " + total + " آية...", "#f47c7c");
+            await _exportMP4(expCtx, qp, buffers, verseData, exportAyahs, total);
+          } else {
+            toast$("🎬 تصدير MP4 (iOS)...");
+            setSbar("🔴 يصدّر " + total + " آية...", "#f47c7c");
+            await _exportIOS(expCtx, qp, buffers, verseData, exportAyahs, total);
+          }
+        } else if (_exportFmt === "mp4" && _turboMode && canMP4) {
           toast$("⚡ تصدير MP4...");
           setSbar("🔴 يصدّر " + total + " آية...", "#f47c7c");
           await _exportMP4(expCtx, qp, buffers, verseData, exportAyahs, total);
@@ -4106,6 +4120,12 @@
         }
         if (!codecOk) {
           videoEnc.close();
+          const _iosCheck = /iP(hone|od|ad)/.test(navigator.userAgent) ||
+            (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+          if (_iosCheck) {
+            toast$("⚠ WebCodecs غير مدعوم — iOS builder...");
+            return _exportIOS(expCtx, qp, buffers, verseData, exportAyahs, total);
+          }
           toast$("⚠ WebCodecs غير مدعوم — تصدير MP4 عبر ffmpeg...");
           return _exportWebM(expCtx, qp, buffers, verseData, exportAyahs, total, true);
         }
@@ -4227,10 +4247,16 @@
 
         if (_expAbort || vEncErr) {
           if (vEncErr) {
-            toast$("❌ خطأ encoder — تصدير MP4 عبر ffmpeg...");
+            const _iosCheck = /iP(hone|od|ad)/.test(navigator.userAgent) ||
+              (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
             _expElapsedBefore = 0;
             isExporting = false;
             startDrawLoop();
+            if (_iosCheck) {
+              toast$("❌ خطأ encoder — iOS builder...");
+              return _exportIOS(expCtx, qp, buffers, verseData, exportAyahs, total);
+            }
+            toast$("❌ خطأ encoder — تصدير MP4 عبر ffmpeg...");
             return _exportWebM(expCtx, qp, buffers, verseData, exportAyahs, total, true);
           }
           _finishExport(expCtx);
@@ -4257,11 +4283,18 @@
           _finishExport(expCtx, "✅ تم حفظ MP4 — " + mb + " MB ✨", "#5ec285");
         } catch (e) {
           console.error("finalize:", e);
-          toast$("⚠ فشل التجميع — تصدير MP4 عبر ffmpeg...");
           _expElapsedBefore = 0;
           isExporting = false;
           startDrawLoop();
-          await _exportWebM(expCtx, qp, buffers, verseData, exportAyahs, total, true);
+          const _iosCheck = /iP(hone|od|ad)/.test(navigator.userAgent) ||
+            (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+          if (_iosCheck) {
+            toast$("⚠ فشل التجميع — iOS builder...");
+            await _exportIOS(expCtx, qp, buffers, verseData, exportAyahs, total);
+          } else {
+            toast$("⚠ فشل التجميع — تصدير MP4 عبر ffmpeg...");
+            await _exportWebM(expCtx, qp, buffers, verseData, exportAyahs, total, true);
+          }
         }
       }
 
@@ -4386,6 +4419,170 @@
       // ══════════════════════════════════════════════════════
       //  WebM عبر captureStream(0) + requestFrame
       // ══════════════════════════════════════════════════════
+      // ══════════════════════════════════════════════════════
+      //  iOS MP4 Builder — بدون captureStream أو MediaRecorder أو ffmpeg
+      //  يعمل على iOS Safari 17.4+ عبر WebCodecs + mp4-muxer
+      //  يعمل على iOS أقدم عبر mp4-muxer مع Software encoder
+      // ══════════════════════════════════════════════════════
+      async function _exportIOS(expCtx, qp, buffers, verseData, exportAyahs, total) {
+        const W = qp.w, H = qp.h, FPS = qp.fps, SR = 44100;
+        const frameDurUs = Math.round(1e6 / FPS);
+
+        // تحقق من mp4-muxer
+        if (typeof Mp4Muxer === "undefined") {
+          toast$("⚠ mp4-muxer غير متاح — جرب لاحقاً");
+          _finishExport(expCtx, "❌ mp4-muxer غير محمّل", "#f47c7c");
+          return;
+        }
+
+        const muxer = new Mp4Muxer.Muxer({
+          target: new Mp4Muxer.ArrayBufferTarget(),
+          video: { codec: "avc", width: W, height: H, frameRate: FPS },
+          audio: { codec: "aac", sampleRate: SR, numberOfChannels: 2 },
+          fastStart: "in-memory",
+        });
+
+        // VideoEncoder
+        let vEncErr = null;
+        const videoEnc = new VideoEncoder({
+          output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
+          error: (e) => { vEncErr = e; console.error("iOS VEnc:", e); },
+        });
+
+        let codecOk = false;
+        for (const codec of ["avc1.42001e", "avc1.4d0029", "avc1.640033"]) {
+          try {
+            const s = await VideoEncoder.isConfigSupported({ codec, width: W, height: H, bitrate: qp.bitrate, framerate: FPS });
+            if (!s.supported) continue;
+            videoEnc.configure({ codec, width: W, height: H, bitrate: qp.bitrate, framerate: FPS });
+            codecOk = true;
+            break;
+          } catch(e) {}
+        }
+
+        if (!codecOk) {
+          videoEnc.close();
+          toast$("❌ WebCodecs غير مدعوم على هذا الجهاز");
+          _finishExport(expCtx, "❌ جهازك لا يدعم التصدير", "#f47c7c");
+          return;
+        }
+
+        // AudioEncoder
+        const audioEnc = new AudioEncoder({
+          output: (chunk, meta) => muxer.addAudioChunk(chunk, meta),
+          error: (e) => console.error("iOS AEnc:", e),
+        });
+        audioEnc.configure({ codec: "mp4a.40.2", sampleRate: SR, numberOfChannels: 2, bitrate: 128000 });
+
+        // بناء audio arrays
+        const totalSamp = Math.ceil(_expTotalDur * SR) + SR;
+        const aL = new Float32Array(totalSamp), aR = new Float32Array(totalSamp);
+        let aOff = 0;
+        for (const buf of buffers) {
+          const n = Math.min(Math.round(buf.duration * SR), totalSamp - aOff);
+          aL.set(buf.getChannelData(0).subarray(0, n), aOff);
+          aR.set((buf.numberOfChannels > 1 ? buf.getChannelData(1) : buf.getChannelData(0)).subarray(0, n), aOff);
+          aOff += n;
+        }
+
+        let globalFrame = 0, audioSent = 0;
+        const sampPerFrame = Math.round(SR / FPS);
+        const msPerFrame = 1000 / FPS;
+
+        for (let idx = 0; idx < verseData.length; idx++) {
+          if (_expAbort || vEncErr) break;
+          const vd = verseData[idx], buf = buffers[idx];
+
+          _prepVerse(vd, exportAyahs);
+          window._expChunkAt = [];
+          if (verseChunks.length > 1) {
+            const tw = verseChunks.reduce((s, c) => s + c.words.length, 0);
+            for (let ci = 1; ci < verseChunks.length; ci++)
+              window._expChunkAt.push({
+                f: Math.round((verseChunks[ci].startIdx * buf.duration * FPS) / tw), ci,
+              });
+          }
+          xShow(idx + 1, total, S.surah.ar + " — آية " + arN(vd.ayahN));
+          setSbar("🔴 آية " + arN(vd.ayahN) + " (" + (idx+1) + "/" + total + ")", "#f47c7c");
+
+          const ayahFrames = Math.ceil(buf.duration * FPS);
+          let hlActive = -1;
+
+          for (let f = 0; f < ayahFrames; f++) {
+            if (_expAbort || vEncErr) break;
+            hlActive = _drawVerseFrame(vd, f, msPerFrame, hlActive);
+
+            // audio
+            if (audioSent < totalSamp) {
+              const aLen = Math.min(sampPerFrame, totalSamp - audioSent);
+              const planar = new Float32Array(aLen * 2);
+              planar.set(aL.subarray(audioSent, audioSent + aLen), 0);
+              planar.set(aR.subarray(audioSent, audioSent + aLen), aLen);
+              audioEnc.encode(new AudioData({
+                format: "f32-planar", sampleRate: SR,
+                numberOfFrames: aLen, numberOfChannels: 2,
+                timestamp: Math.round((audioSent / SR) * 1e6),
+                data: planar,
+              }));
+              audioSent += aLen;
+            }
+
+            // video — نستخدم ImageBitmap بدل VideoFrame مباشرة من canvas
+            const ts = globalFrame * frameDurUs;
+            try {
+              const vf = new VideoFrame(canvas, { timestamp: ts, duration: frameDurUs });
+              videoEnc.encode(vf, { keyFrame: globalFrame % (FPS * 2) === 0 });
+              vf.close();
+            } catch(e) {
+              // iOS fallback: toBlob → ImageBitmap → VideoFrame
+              const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.92));
+              const bmp = await createImageBitmap(blob);
+              const vf = new VideoFrame(bmp, { timestamp: ts, duration: frameDurUs });
+              videoEnc.encode(vf, { keyFrame: globalFrame % (FPS * 2) === 0 });
+              vf.close(); bmp.close();
+            }
+            globalFrame++;
+            _setProgress(_expElapsedBefore + f / FPS);
+
+            while (videoEnc.encodeQueueSize > 10) await new Promise(r => setTimeout(r, 5));
+            if (f % 5 === 0) await new Promise(r => setTimeout(r, 0));
+          }
+
+          if (hlActive >= 0) {
+            const o = document.getElementById("w" + hlActive);
+            if (o) { o.style.color = o.dataset.base || S.color || "#fff"; o.style.textShadow = ""; }
+          }
+          _expElapsedBefore += buf.duration;
+        }
+
+        if (_expAbort || vEncErr) {
+          if (vEncErr) toast$("❌ خطأ encoder: " + vEncErr.message);
+          _finishExport(expCtx);
+          return;
+        }
+
+        xShow(total, total, "جارٍ تجميع MP4...");
+        setSbar("⏳ جارٍ تجميع MP4...", "#c9973a");
+
+        try {
+          while (videoEnc.encodeQueueSize > 0) await new Promise(r => setTimeout(r, 10));
+          await videoEnc.flush();
+          await audioEnc.flush();
+          muxer.finalize();
+
+          const blob = new Blob([muxer.target.buffer], { type: "video/mp4" });
+          if (blob.size < 1000) throw new Error("ملف تالف");
+          const mb = (blob.size / 1024 / 1024).toFixed(1);
+          showVideoPopup(blob, "video/mp4");
+          _setProgress(_expTotalDur);
+          _finishExport(expCtx, "✅ تم حفظ MP4 — " + mb + " MB ✨", "#5ec285");
+        } catch(e) {
+          console.error("iOS finalize:", e);
+          toast$("❌ فشل التجميع: " + e.message);
+          _finishExport(expCtx, "❌ فشل التصدير", "#f47c7c");
+        }
+      }
+
       async function _exportWebM(
         expCtx,
         qp,
@@ -4393,7 +4590,6 @@
         verseData,
         exportAyahs,
         total,
-        forceMP4 = false,
       ) {
         // الخطوة 1: رسم كل الـ frames وحفظها
         const FPS = qp.fps,
@@ -4507,12 +4703,13 @@
           ...expDest.stream.getAudioTracks(),
         ]);
 
-        /* ── forceMP4=true أو مفيش MediaRecorder → ffmpeg مباشرة ── */
+        /* ── MP4 Fallback لو MediaRecorder مش متاح (iOS/Safari) ──────
+           نستخدم ffmpeg.wasm لتحويل frames JPG + WAV → MP4 حقيقي     */
         const _canWebM = typeof MediaRecorder !== 'undefined' &&
           ["video/webm;codecs=vp9,opus","video/webm;codecs=vp8,opus","video/webm"]
             .some(m => MediaRecorder.isTypeSupported(m));
 
-        if (forceMP4 || !_canWebM) {
+        if (!_canWebM) {
           await _exportMP4viaFFmpeg(expCtx, qp, buffers, frameBlobs, total);
           return;
         }
