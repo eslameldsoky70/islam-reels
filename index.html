@@ -4039,16 +4039,10 @@
           (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
         if (_isIOSDevice) {
-          // iOS: captureStream + MediaRecorder مش شغالين → نستخدم WebCodecs أو iOS builder
-          if (canMP4) {
-            toast$("⚡ تصدير MP4 (iOS)...");
-            setSbar("🔴 يصدّر " + total + " آية...", "#f47c7c");
-            await _exportMP4(expCtx, qp, buffers, verseData, exportAyahs, total);
-          } else {
-            toast$("🎬 تصدير MP4 (iOS)...");
-            setSbar("🔴 يصدّر " + total + " آية...", "#f47c7c");
-            await _exportIOS(expCtx, qp, buffers, verseData, exportAyahs, total);
-          }
+          // iOS: دائماً _exportIOS المحسّن (bitrate + codec baseline + VideoFrame fallbacks)
+          toast$("🎬 تصدير MP4 (iOS)...");
+          setSbar("🔴 يصدّر " + total + " آية...", "#f47c7c");
+          await _exportIOS(expCtx, qp, buffers, verseData, exportAyahs, total);
         } else if (_exportFmt === "mp4" && _turboMode && canMP4) {
           toast$("⚡ تصدير MP4...");
           setSbar("🔴 يصدّر " + total + " آية...", "#f47c7c");
@@ -4449,17 +4443,25 @@
       async function _exportIOS(expCtx, qp, buffers, verseData, exportAyahs, total) {
         const W = qp.w, H = qp.h, FPS = qp.fps, SR = 44100;
         const frameDurUs = Math.round(1e6 / FPS);
-        // iOS: نعمل export canvas منفصل بدون alpha:false لأن VideoFrame بيرفضه
+
+        // iOS: canvas منفصل — بدون alpha:false وبدون willReadFrequently
         const expCanvas = document.createElement('canvas');
         expCanvas.width = W; expCanvas.height = H;
-        const expCtx2d = expCanvas.getContext('2d');
+        const expCtx2d = expCanvas.getContext('2d', { alpha: true });
 
-        // تحقق من mp4-muxer
+        // تحقق من mp4-muxer — لو مش محمّل نستنى ثانية
         if (typeof Mp4Muxer === "undefined") {
-          toast$("⚠ mp4-muxer غير متاح — جرب لاحقاً");
-          _finishExport(expCtx, "❌ mp4-muxer غير محمّل", "#f47c7c");
-          return;
+          toast$("⏳ جارٍ تحميل mp4-muxer...");
+          await new Promise(r => setTimeout(r, 2000));
+          if (typeof Mp4Muxer === "undefined") {
+            toast$("⚠ mp4-muxer غير متاح — جرب لاحقاً");
+            _finishExport(expCtx, "❌ mp4-muxer غير محمّل", "#f47c7c");
+            return;
+          }
         }
+
+        // iOS Safari: نحدّ الـ bitrate بـ 4Mbps — أعلى من كده بيفشل
+        const iosBitrate = Math.min(qp.bitrate, 4_000_000);
 
         const muxer = new Mp4Muxer.Muxer({
           target: new Mp4Muxer.ArrayBufferTarget(),
@@ -4468,37 +4470,48 @@
           fastStart: "in-memory",
         });
 
-        // VideoEncoder
+        // VideoEncoder — iOS بيدعم baseline profile فقط
         let vEncErr = null;
         const videoEnc = new VideoEncoder({
           output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
           error: (e) => { vEncErr = e; console.error("iOS VEnc:", e); },
         });
 
+        // codecs مرتّبة من الأبسط للأعلى — iOS بيدعم baseline (42E01E) أكيد
         let codecOk = false;
-        for (const codec of ["avc1.42001e", "avc1.4d0029", "avc1.640033"]) {
+        const iosCodecs = ["avc1.42E01E", "avc1.42001e", "avc1.420034", "avc1.4d0028"];
+        for (const codec of iosCodecs) {
           try {
-            const s = await VideoEncoder.isConfigSupported({ codec, width: W, height: H, bitrate: qp.bitrate, framerate: FPS });
+            const cfg = { codec, width: W, height: H, bitrate: iosBitrate, framerate: FPS };
+            const s = await VideoEncoder.isConfigSupported(cfg);
             if (!s.supported) continue;
-            videoEnc.configure({ codec, width: W, height: H, bitrate: qp.bitrate, framerate: FPS });
+            videoEnc.configure(cfg);
             codecOk = true;
+            console.log("iOS codec OK:", codec, "bitrate:", iosBitrate);
             break;
-          } catch(e) {}
+          } catch(e) {
+            console.warn("iOS codec failed:", codec, e.message);
+          }
         }
 
         if (!codecOk) {
           videoEnc.close();
-          toast$("❌ WebCodecs غير مدعوم على هذا الجهاز");
+          toast$("❌ WebCodecs غير مدعوم — يحتاج iOS 17+");
           _finishExport(expCtx, "❌ جهازك لا يدعم التصدير", "#f47c7c");
           return;
         }
 
         // AudioEncoder
+        let aEncErr = null;
         const audioEnc = new AudioEncoder({
           output: (chunk, meta) => muxer.addAudioChunk(chunk, meta),
-          error: (e) => console.error("iOS AEnc:", e),
+          error: (e) => { aEncErr = e; console.error("iOS AEnc:", e); },
         });
-        audioEnc.configure({ codec: "mp4a.40.2", sampleRate: SR, numberOfChannels: 2, bitrate: 128000 });
+        try {
+          audioEnc.configure({ codec: "mp4a.40.2", sampleRate: SR, numberOfChannels: 2, bitrate: 128000 });
+        } catch(e) {
+          console.warn("AudioEncoder configure:", e.message);
+        }
 
         // بناء audio arrays — مع resample تلقائي لو sampleRate مختلف
         const totalSamp = Math.ceil(_expTotalDur * SR) + SR;
@@ -4553,39 +4566,62 @@
             if (_expAbort || vEncErr) break;
             hlActive = _drawVerseFrame(vd, f, msPerFrame, hlActive);
 
-            // audio
-            if (audioSent < totalSamp) {
+            // audio chunk
+            if (audioSent < totalSamp && !aEncErr) {
               const aLen = Math.min(sampPerFrame, totalSamp - audioSent);
               const planar = new Float32Array(aLen * 2);
               planar.set(aL.subarray(audioSent, audioSent + aLen), 0);
               planar.set(aR.subarray(audioSent, audioSent + aLen), aLen);
-              audioEnc.encode(new AudioData({
-                format: "f32-planar", sampleRate: SR,
-                numberOfFrames: aLen, numberOfChannels: 2,
-                timestamp: Math.round((audioSent / SR) * 1e6),
-                data: planar,
-              }));
+              try {
+                audioEnc.encode(new AudioData({
+                  format: "f32-planar", sampleRate: SR,
+                  numberOfFrames: aLen, numberOfChannels: 2,
+                  timestamp: Math.round((audioSent / SR) * 1e6),
+                  data: planar,
+                }));
+              } catch(ae) { console.warn("AudioData:", ae.message); }
               audioSent += aLen;
             }
 
-            // video — iOS: ننسخ للـ expCanvas ونعمل منه VideoFrame
+            // video frame — iOS: 3 محاولات
             const ts = globalFrame * frameDurUs;
+            expCtx2d.clearRect(0, 0, W, H);
             expCtx2d.drawImage(canvas, 0, 0, W, H);
-            let vf;
+            let vf = null;
+            // محاولة 1: VideoFrame من canvas مباشرة
             try {
               vf = new VideoFrame(expCanvas, { timestamp: ts, duration: frameDurUs });
-            } catch(_e) {
-              const _bmp = await createImageBitmap(expCanvas);
-              vf = new VideoFrame(_bmp, { timestamp: ts, duration: frameDurUs });
-              _bmp.close();
+            } catch(_e1) {
+              // محاولة 2: عبر ImageBitmap
+              try {
+                const bmp = await createImageBitmap(expCanvas);
+                vf = new VideoFrame(bmp, { timestamp: ts, duration: frameDurUs });
+                bmp.close();
+              } catch(_e2) {
+                // محاولة 3: عبر toBlob
+                try {
+                  const imgBlob = await new Promise(r => expCanvas.toBlob(r, 'image/jpeg', 0.92));
+                  const bmp2 = await createImageBitmap(imgBlob);
+                  vf = new VideoFrame(bmp2, { timestamp: ts, duration: frameDurUs });
+                  bmp2.close();
+                } catch(_e3) {
+                  vEncErr = _e3;
+                  console.error("VideoFrame all 3 methods failed:", _e3);
+                  break;
+                }
+              }
             }
-            videoEnc.encode(vf, { keyFrame: globalFrame % (FPS * 2) === 0 });
-            vf.close();
+
+            if (vf) {
+              videoEnc.encode(vf, { keyFrame: globalFrame % (FPS * 2) === 0 });
+              vf.close();
+            }
             globalFrame++;
             _setProgress(_expElapsedBefore + f / FPS);
 
-            while (videoEnc.encodeQueueSize > 10) await new Promise(r => setTimeout(r, 5));
-            if (f % 5 === 0) await new Promise(r => setTimeout(r, 0));
+            // queue pressure — iOS بطيء، نبقى أكثر حرصاً
+            while (videoEnc.encodeQueueSize > 8) await new Promise(r => setTimeout(r, 10));
+            if (f % 3 === 0) await new Promise(r => setTimeout(r, 0));
           }
 
           if (hlActive >= 0) {
@@ -4595,9 +4631,10 @@
           _expElapsedBefore += buf.duration;
         }
 
-        if (_expAbort || vEncErr) {
-          if (vEncErr) toast$("❌ خطأ encoder: " + vEncErr.message);
-          _finishExport(expCtx);
+        if (_expAbort) { _finishExport(expCtx); return; }
+        if (vEncErr) {
+          toast$("❌ خطأ encoder: " + (vEncErr.message || String(vEncErr)));
+          _finishExport(expCtx, "❌ فشل التصدير", "#f47c7c");
           return;
         }
 
@@ -4605,13 +4642,21 @@
         setSbar("⏳ جارٍ تجميع MP4...", "#c9973a");
 
         try {
-          while (videoEnc.encodeQueueSize > 0) await new Promise(r => setTimeout(r, 10));
+          // انتظر queue يخلص — iOS بيحتاج وقت أطول
+          const t0 = Date.now();
+          while (videoEnc.encodeQueueSize > 0 && Date.now() - t0 < 30000) {
+            await new Promise(r => setTimeout(r, 20));
+          }
           await videoEnc.flush();
-          await audioEnc.flush();
+          await new Promise(r => setTimeout(r, 300)); // iOS بيحتاج buffer time بعد flush
+          if (!aEncErr) {
+            await audioEnc.flush();
+            await new Promise(r => setTimeout(r, 150));
+          }
           muxer.finalize();
 
           const blob = new Blob([muxer.target.buffer], { type: "video/mp4" });
-          if (blob.size < 1000) throw new Error("ملف تالف");
+          if (blob.size < 5000) throw new Error("ملف تالف — حجم: " + blob.size + " bytes");
           const mb = (blob.size / 1024 / 1024).toFixed(1);
           showVideoPopup(blob, "video/mp4");
           _setProgress(_expTotalDur);
