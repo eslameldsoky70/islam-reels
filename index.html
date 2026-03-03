@@ -2721,7 +2721,7 @@
             <!-- زرار التصدير -->
             <button
               id="exportBtn"
-              onclick="startExport()"
+              onclick="window._expACtx=new(window.AudioContext||window.webkitAudioContext)({sampleRate:44100});window._expACtx.resume();startExport()"
               style="
                 width: 100%;
                 padding: 10px;
@@ -3887,7 +3887,17 @@
                 const r = await fetch(url, { mode: "cors" });
                 if (!r.ok) break;
                 const ab = await r.arrayBuffer();
-                buf = await expCtx.decodeAudioData(ab.slice(0));
+                // iOS FIX: لو expCtx مش running، نجرب context جديد
+                if (expCtx.state === 'running') {
+                  buf = await expCtx.decodeAudioData(ab.slice(0));
+                } else {
+                  // expCtx suspended أو closed → نعمل context مؤقت
+                  const tmpCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 44100 });
+                  await tmpCtx.resume().catch(() => {});
+                  await new Promise(r => setTimeout(r, 100));
+                  buf = await tmpCtx.decodeAudioData(ab.slice(0));
+                  await tmpCtx.close().catch(() => {});
+                }
                 break;
               } catch (e) {
                 console.warn("loadData attempt " + (attempt+1) + " ayah " + ayahN + ":", e.message);
@@ -3993,10 +4003,12 @@
         if (!S.surah) return toast$("⚠ اختر سورة أولاً");
         audio.pause();
 
-        // iOS FIX: AudioContext + resume لازم يتعملوا فوراً داخل user gesture
-        // قبل أي await أو DOM manipulation
-        const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
-        const expCtx = new AudioCtxClass({ sampleRate: 44100 });
+        // iOS FIX: نستخدم الـ AudioContext اللي اتعمل synchronous في onclick
+        // عشان iOS Safari بيرفض AudioContext لو اتعمل داخل async function
+        const expCtx = (window._expACtx && window._expACtx.state !== 'closed')
+          ? window._expACtx
+          : new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 44100 });
+        window._expACtx = expCtx;
         _expCtxRef = expCtx;
         const _resumeP = expCtx.resume().catch(() => {});
 
