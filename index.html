@@ -21,6 +21,10 @@
       href="/icons/icon-192.png"
     />
     <title>Islam Reels ✨</title>
+    <!-- COOP/COEP لتفعيل SharedArrayBuffer (مطلوب لـ ffmpeg.wasm) -->
+    <!-- ملاحظة: يحتاج السيرفر يرسل هذين الـ headers أيضاً:
+         Cross-Origin-Opener-Policy: same-origin
+         Cross-Origin-Embedder-Policy: require-corp           -->
     <!-- ═══ INLINE LIBRARIES (no internet needed) ═══ -->
     <script>
     /* ── mp4-muxer inline loader ─────────────────────────────────────
@@ -4202,6 +4206,124 @@
       }
 
       // ══════════════════════════════════════════════════════
+      //  MP4 Fallback — ffmpeg.wasm (للأجهزة غير المدعومة)
+      //  يعمل على Safari / iOS / أي متصفح بدون MediaRecorder
+      // ══════════════════════════════════════════════════════
+      async function _exportMP4viaFFmpeg(expCtx, qp, buffers, frameBlobs, total) {
+        /* ─ الخطوة 1: تحميل ffmpeg.wasm بشكل lazy ─ */
+        toast$("⏳ جارٍ تحميل محوّل الفيديو...");
+        xShow(total, total, "جارٍ تحميل ffmpeg.wasm...");
+        setSbar("⏳ تحميل ffmpeg...", "#c9973a");
+
+        try {
+          if (!window._ffmpegReady) {
+            // نحمّل الـ ESM version من CDN
+            const { FFmpeg } = await import('https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js');
+            const { fetchFile, toBlobURL } = await import('https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/esm/index.js');
+            const baseURL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/esm';
+            window._FFmpeg    = FFmpeg;
+            window._fetchFile = fetchFile;
+            window._ffmpegBaseURL = baseURL;
+            window._ffmpegReady = true;
+          }
+
+          const ffmpeg = new window._FFmpeg();
+
+          // تحديث progress من ffmpeg
+          ffmpeg.on('progress', ({ progress }) => {
+            _setProgress(progress * _expTotalDur);
+            const pct = Math.round(progress * 100);
+            setSbar(`🎬 تحويل MP4... ${pct}%`, "#c9973a");
+          });
+          ffmpeg.on('log', ({ message }) => console.log('[ffmpeg]', message));
+
+          // تحميل الـ core
+          xShow(total, total, "جارٍ تهيئة ffmpeg...");
+          await ffmpeg.load({
+            coreURL:   await window._fetchFile(`${window._ffmpegBaseURL}/ffmpeg-core.js`).then(f=>URL.createObjectURL(new Blob([f],{type:'text/javascript'}))).catch(()=>`${window._ffmpegBaseURL}/ffmpeg-core.js`),
+            wasmURL:   `${window._ffmpegBaseURL}/ffmpeg-core.wasm`,
+          });
+
+          if (_expAbort) { ffmpeg.terminate(); _finishExport(expCtx); return; }
+
+          /* ─ الخطوة 2: كتابة الـ frames ─ */
+          toast$("🎞 جارٍ تجهيز الـ frames...");
+          xShow(total, total, "جارٍ تجهيز الـ frames...");
+          for (let i = 0; i < frameBlobs.length; i++) {
+            if (_expAbort) { ffmpeg.terminate(); _finishExport(expCtx); return; }
+            const name = `f${String(i).padStart(6,'0')}.jpg`;
+            await ffmpeg.writeFile(name, new Uint8Array(await frameBlobs[i].arrayBuffer()));
+            if (i % 30 === 0) {
+              setSbar(`🖼 frames ${i+1}/${frameBlobs.length}`, "#c9973a");
+              await new Promise(r => setTimeout(r, 0));
+            }
+          }
+
+          /* ─ الخطوة 3: بناء WAV وكتابته ─ */
+          const SR = 44100;
+          const totalSamp = buffers.reduce((s,b)=>s+Math.round(b.duration*SR),0);
+          const wavLen = 44 + totalSamp * 4;
+          const wav = new ArrayBuffer(wavLen);
+          const dv  = new DataView(wav);
+          const ws  = (p,s)=>{ for(let i=0;i<s.length;i++) dv.setUint8(p+i,s.charCodeAt(i)); };
+          ws(0,"RIFF"); dv.setUint32(4,wavLen-8,true); ws(8,"WAVE");
+          ws(12,"fmt "); dv.setUint32(16,16,true); dv.setUint16(20,3,true);
+          dv.setUint16(22,1,true); dv.setUint32(24,SR,true); dv.setUint32(28,SR*4,true);
+          dv.setUint16(32,4,true); dv.setUint16(34,32,true);
+          ws(36,"data"); dv.setUint32(40,totalSamp*4,true);
+          const pcm = new Float32Array(wav,44); let off=0;
+          for(const buf of buffers){
+            const n=Math.round(buf.duration*SR);
+            const c0=buf.getChannelData(0), c1=buf.numberOfChannels>1?buf.getChannelData(1):c0;
+            for(let i=0;i<n&&off<totalSamp;i++) pcm[off++]=(c0[i]+c1[i])*0.5;
+          }
+          await ffmpeg.writeFile('audio.wav', new Uint8Array(wav));
+
+          /* ─ الخطوة 4: تشغيل ffmpeg ─ */
+          toast$("🔴 جارٍ تحويل إلى MP4...");
+          xShow(total, total, "جارٍ تحويل إلى MP4...");
+          setSbar("🔴 جارٍ تحويل MP4...", "#f47c7c");
+
+          await ffmpeg.exec([
+            '-framerate', String(qp.fps),
+            '-i', 'f%06d.jpg',
+            '-i', 'audio.wav',
+            '-c:v', 'libx264',
+            '-preset', 'ultrafast',
+            '-crf', '23',
+            '-c:a', 'aac',
+            '-b:a', '128k',
+            '-pix_fmt', 'yuv420p',
+            '-movflags', '+faststart',
+            '-y', 'output.mp4'
+          ]);
+
+          /* ─ الخطوة 5: تحميل الناتج ─ */
+          const data = await ffmpeg.readFile('output.mp4');
+          const mp4Blob = new Blob([data.buffer], { type: 'video/mp4' });
+          const mb = (mp4Blob.size/1024/1024).toFixed(1);
+
+          ffmpeg.terminate();
+          _downloadBlob(mp4Blob, 'Islam-Reels-' + (S.surah?.ar||'قرآن') + '.mp4');
+          _setProgress(_expTotalDur);
+          _finishExport(expCtx, `✅ تم التحويل MP4 — ${mb} MB`, '#5ec285');
+
+        } catch(err) {
+          console.error('ffmpeg.wasm error:', err);
+          toast$('⚠ فشل ffmpeg — جارٍ تصدير ZIP كاحتياط...');
+          // fallback نهائي: ZIP
+          const zipFiles = frameBlobs.map((b,i)=>({
+            name: `frame_${String(i).padStart(5,'0')}.jpg`, blob: b
+          }));
+          const zipBlob = await window.SimpleZip.build(zipFiles);
+          const mb = (zipBlob.size/1024/1024).toFixed(1);
+          _downloadBlob(zipBlob, 'Islam-Reels-frames-'+(S.surah?.ar||'قرآن')+'.zip');
+          _setProgress(_expTotalDur);
+          _finishExport(expCtx, `⚠ تم تصدير ZIP — ${mb} MB`, '#c9973a');
+        }
+      }
+
+      // ══════════════════════════════════════════════════════
       //  WebM عبر captureStream(0) + requestFrame
       // ══════════════════════════════════════════════════════
       async function _exportWebM(
@@ -4324,24 +4446,14 @@
           ...expDest.stream.getAudioTracks(),
         ]);
 
-        /* ── ZIP fallback لو MediaRecorder مش متاح (iOS/Safari قديم) ── */
+        /* ── MP4 Fallback لو MediaRecorder مش متاح (iOS/Safari) ──────
+           نستخدم ffmpeg.wasm لتحويل frames JPG + WAV → MP4 حقيقي     */
         const _canWebM = typeof MediaRecorder !== 'undefined' &&
           ["video/webm;codecs=vp9,opus","video/webm;codecs=vp8,opus","video/webm"]
             .some(m => MediaRecorder.isTypeSupported(m));
 
         if (!_canWebM) {
-          toast$("📦 MediaRecorder غير متاح — تصدير ZIP frames...");
-          xShow(total, total, "جارٍ تجميع ZIP...");
-          setSbar("📦 جارٍ تصدير ZIP...", "#c9973a");
-          const zipFiles = frameBlobs.map((b, i) => ({
-            name: `frame_${String(i).padStart(5,'0')}.jpg`,
-            blob: b
-          }));
-          const zipBlob = await window.SimpleZip.build(zipFiles);
-          const mb = (zipBlob.size/1024/1024).toFixed(1);
-          _downloadBlob(zipBlob, "Islam-Reels-frames-" + (S.surah?.ar||"قرآن") + ".zip");
-          _setProgress(_expTotalDur);
-          _finishExport(expCtx, "✅ تم تصدير ZIP — " + mb + " MB (افتح بتطبيق دمج فيديو)", "#c9973a");
+          await _exportMP4viaFFmpeg(expCtx, qp, buffers, frameBlobs, total);
           return;
         }
 
