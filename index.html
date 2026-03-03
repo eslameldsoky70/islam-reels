@@ -21,7 +21,102 @@
       href="/icons/icon-192.png"
     />
     <title>Islam Reels ✨</title>
-    <script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5/build/mp4-muxer.js"></script>
+    <script>
+    // تحميل mp4-muxer من أكثر من مصدر مع retry
+    window._mp4MuxerReady = false;
+    window._mp4MuxerCallbacks = [];
+    function _onMp4MuxerReady(cb) {
+      if (window._mp4MuxerReady) cb();
+      else window._mp4MuxerCallbacks.push(cb);
+    }
+    async function _loadMp4Muxer() {
+      const SOURCES = [
+        "https://cdn.jsdelivr.net/npm/mp4-muxer@5/build/mp4-muxer.js",
+        "https://unpkg.com/mp4-muxer@5/build/mp4-muxer.js",
+        "https://esm.run/mp4-muxer@5",
+      ];
+      for (const src of SOURCES) {
+        try {
+          await new Promise((resolve, reject) => {
+            const s = document.createElement("script");
+            s.src = src;
+            s.onload = () => resolve();
+            s.onerror = () => reject(new Error("failed: " + src));
+            s.crossOrigin = "anonymous";
+            document.head.appendChild(s);
+          });
+          if (typeof Mp4Muxer !== "undefined") {
+            window._mp4MuxerReady = true;
+            window._mp4MuxerCallbacks.forEach(cb => cb());
+            window._mp4MuxerCallbacks = [];
+            _updateExportSupportUI(); // تحديث الواجهة فوراً
+            return;
+          }
+        } catch(e) { console.warn("mp4-muxer source failed:", src, e); }
+      }
+      console.warn("mp4-muxer could not be loaded from any CDN");
+      _updateExportSupportUI(); // نحدّث الواجهة حتى لو فشل
+    }
+    _loadMp4Muxer();
+
+    // دالة تحديث واجهة التصدير (تُستدعى بعد تحميل mp4-muxer)
+    function _updateExportSupportUI() {
+      // انتظر DOM جاهز
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", _updateExportSupportUI);
+        return;
+      }
+      const isIOS_ = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+        (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+      const hasMuxer = typeof Mp4Muxer !== "undefined";
+      const hasWC = typeof VideoEncoder !== "undefined" && typeof AudioEncoder !== "undefined";
+      const hasMP4 = hasMuxer && hasWC;
+      const hasWebM = !isIOS_ && typeof MediaRecorder !== "undefined" &&
+        (MediaRecorder.isTypeSupported?.("video/webm") ||
+         MediaRecorder.isTypeSupported?.("video/webm;codecs=vp8,opus") || false);
+
+      const bar = document.getElementById("deviceSupportBar");
+      if (bar) {
+        if (hasMP4) {
+          bar.textContent = "✅ MP4 WebCodecs جاهز للتصدير";
+          bar.style.color = "#5ec285";
+        } else if (!hasMuxer && hasWC) {
+          bar.textContent = "⏳ جارٍ تحميل مكتبة MP4...";
+          bar.style.color = "#c9973a";
+        } else if (hasWebM) {
+          bar.textContent = "🔶 WebM متاح فقط على هذا المتصفح";
+          bar.style.color = "#c9973a";
+        } else {
+          bar.textContent = "❌ التصدير غير مدعوم — جرّب Safari أو Chrome";
+          bar.style.color = "#f47c7c";
+        }
+      }
+
+      const warn = document.getElementById("turboWarn");
+      const sw = document.getElementById("turboSw");
+      if (!hasMuxer) {
+        if (warn) warn.style.display = "block";
+        if (sw) {
+          sw.style.background = "#18301e";
+          const knob = sw.querySelector("div");
+          if (knob) knob.style.right = "18px";
+        }
+      } else {
+        if (warn) warn.style.display = "none";
+      }
+
+      // تحديث نص زر التصدير
+      const btn = document.getElementById("exportBtn");
+      if (btn && btn.textContent.includes("غير مدعوم")) {
+        if (hasMP4 || hasWebM) {
+          btn.textContent = hasMP4 ? "⬇ تصدير MP4" : "⬇ تصدير WebM";
+          btn.style.background = "linear-gradient(135deg,#6b4e18,#c9973a)";
+          btn.style.color = "#fff";
+          btn.onclick = () => startExport && startExport();
+        }
+      }
+    }
+    </script>
     <link
       href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@300;400;600;700;900&family=Scheherazade+New:wght@400;700&family=Noto+Naskh+Arabic:wght@400;700&family=Lateef:wght@400;700&family=Reem+Kufi:wght@400;700&family=Harmattan:wght@400;700&display=swap"
       rel="stylesheet"
@@ -3606,18 +3701,29 @@
       // ═══════════════════════════════════
       //  كشف الدعم الفعلي للـ APIs
       // ═══════════════════════════════════
-      const _canWebCodecs = typeof VideoEncoder !== "undefined" &&
-        typeof AudioEncoder !== "undefined" &&
-        typeof VideoFrame !== "undefined" &&
-        typeof AudioData !== "undefined";
-      const _canMuxer = typeof Mp4Muxer !== "undefined";
-      const _canMP4 = _canWebCodecs && _canMuxer;
-      const _canMediaRecorder = typeof MediaRecorder !== "undefined";
-      const _canWebM = _canMediaRecorder && !_isIOS &&
-        (MediaRecorder.isTypeSupported?.("video/webm") ||
-         MediaRecorder.isTypeSupported?.("video/webm;codecs=vp8,opus"));
-      const _canCaptureStream = typeof HTMLCanvasElement !== "undefined" &&
-        typeof HTMLCanvasElement.prototype.captureStream === "function";
+      // ═══════════════════════════════════════════════════
+      //  كشف الدعم — getters ديناميكية تُحسب وقت الاستدعاء
+      //  (مهم: _canMuxer() يتغيّر بعد تحميل mp4-muxer)
+      // ═══════════════════════════════════════════════════
+      function _canWebCodecs() {
+        return typeof VideoEncoder !== "undefined" &&
+          typeof AudioEncoder !== "undefined" &&
+          typeof VideoFrame !== "undefined" &&
+          typeof AudioData !== "undefined";
+      }
+      function _canMuxer() { return typeof Mp4Muxer !== "undefined"; }
+      function _canMP4() { return _canWebCodecs() && _canMuxer(); }
+      function _canMediaRecorder() { return typeof MediaRecorder !== "undefined"; }
+      function _canWebM() {
+        if (!_canMediaRecorder() || _isIOS) return false;
+        return MediaRecorder.isTypeSupported?.("video/webm") ||
+               MediaRecorder.isTypeSupported?.("video/webm;codecs=vp8,opus") ||
+               false;
+      }
+      function _canCaptureStream() {
+        return typeof HTMLCanvasElement !== "undefined" &&
+          typeof HTMLCanvasElement.prototype.captureStream === "function";
+      }
 
       // ═══════════════════════════════════
       //  تنزيل الـ blob بطريقة تناسب كل جهاز
@@ -3889,8 +3995,8 @@
         //  اختيار مسار التصدير الأفضل للجهاز تلقائياً
         //  الأولوية: MP4 WebCodecs > WebM > رسالة خطأ
         // ═══════════════════════════════════════════════════
-        const useMP4 = _canMP4 && (_exportFmt === "mp4" || _isIOS || !_canWebM);
-        const useWebM = !useMP4 && _canWebM && !_isIOS;
+        const useMP4 = _canMP4() && (_exportFmt === "mp4" || _isIOS || !_canWebM());
+        const useWebM = !useMP4 && _canWebM() && !_isIOS;
 
         if (useMP4) {
           toast$(_isMobile ? "📱 تصدير MP4..." : "⚡ تصدير MP4...");
@@ -4032,7 +4138,7 @@
             _finishExport(expCtx, "❌ يحتاج iOS 16 أو أحدث للتصدير", "#f47c7c");
             return;
           }
-          if (_canWebM) {
+          if (_canWebM()) {
             toast$("⚠ WebCodecs غير مدعوم — تصدير WebM...");
             return _exportWebM(expCtx, qp, buffers, verseData, exportAyahs, total);
           }
@@ -4077,7 +4183,7 @@
         if (!audioEncOk) {
           audioEnc.close();
           videoEnc.close();
-          if (_canWebM) {
+          if (_canWebM()) {
             toast$("⚠ فشل AudioEncoder — تصدير WebM...");
             return _exportWebM(expCtx, qp, buffers, verseData, exportAyahs, total);
           }
@@ -4353,9 +4459,9 @@
         );
 
         // captureStream(0) + requestFrame — مع كشف الدعم
-        if (!_canCaptureStream) {
+        if (!_canCaptureStream()) {
           // لا يوجد captureStream — fallback لـ MP4 إن أمكن
-          if (_canMP4) {
+          if (_canMP4()) {
             toast$("⚡ تحويل لـ MP4 Turbo...");
             _expElapsedBefore = 0;
             isExporting = false;
@@ -5879,29 +5985,17 @@
 
         // على الأجهزة المحمولة: تهيئة ذكية للواجهة
         // تحديث شريط حالة الدعم
-        const dsBar = document.getElementById("deviceSupportBar");
-        if (dsBar) {
-          if (_canMP4) {
-            dsBar.textContent = "✅ MP4 WebCodecs مدعوم" + (_isMobile ? " • 📱 جوّال" : "");
-            dsBar.style.color = "#5ec285";
-          } else if (_canWebM) {
-            dsBar.textContent = "🔶 WebM فقط — " + (_isFirefox ? "Firefox" : "متصفحك");
-            dsBar.style.color = "#c9973a";
-          } else {
-            dsBar.textContent = "❌ التصدير غير مدعوم في هذا المتصفح";
-            dsBar.style.color = "#f47c7c";
-          }
-        }
+        _updateExportSupportUI();
 
         if (_isMobile) {
           // إخفاء WebM إذا لم يكن مدعوماً
-          if (!_canWebM) {
+          if (!_canWebM()) {
             const fmtWebm = document.getElementById("fmtWebm");
             if (fmtWebm) fmtWebm.style.display = "none";
             setExportFmt("mp4");
           }
           // Turbo دائماً ON على المحمول إذا كان متاحاً
-          if (_canMP4) {
+          if (_canMP4()) {
             _turboMode = true;
             _exportFmt = "mp4";
             const sw2 = document.getElementById("turboSw");
@@ -5919,7 +6013,7 @@
               : "WebCodecs MP4 — موصى به للجوّال";
             const warn2 = document.getElementById("turboWarn");
             if (warn2) warn2.style.display = "none";
-          } else if (!_canWebM) {
+          } else if (!_canWebM()) {
             // لا يوجد دعم لأي صيغة
             const exportBtn = document.getElementById("exportBtn");
             if (exportBtn) {
