@@ -70,7 +70,6 @@
 
     // دالة تحديث واجهة التصدير (تُستدعى بعد تحميل mp4-muxer)
     function _updateExportSupportUI() {
-      // انتظر DOM جاهز
       if (document.readyState === "loading") {
         document.addEventListener("DOMContentLoaded", _updateExportSupportUI);
         return;
@@ -83,50 +82,61 @@
       const hasWebM = !isIOS_ && typeof MediaRecorder !== "undefined" &&
         (MediaRecorder.isTypeSupported?.("video/webm") ||
          MediaRecorder.isTypeSupported?.("video/webm;codecs=vp8,opus") || false);
-      const hasZip = typeof JSZip !== "undefined";
 
       const bar = document.getElementById("deviceSupportBar");
-      if (bar) {
-        if (hasMP4) {
-          bar.textContent = "✅ MP4 WebCodecs جاهز للتصدير";
-          bar.style.color = "#5ec285";
-        } else if (!hasMuxer && hasWC) {
-          bar.textContent = "⏳ جارٍ تحميل مكتبة MP4...";
-          bar.style.color = "#c9973a";
-        } else if (hasWebM) {
-          bar.textContent = "🔶 WebM متاح فقط — أو اختر ZIP";
-          bar.style.color = "#c9973a";
-        } else {
-          bar.textContent = "📦 سيتم التصدير كـ ZIP (frames + صوت) تلقائياً";
-          bar.style.color = "#e4b55a";
-          // تلقائياً: اختر ZIP في الواجهة
-          if (typeof setExportFmt === "function") setExportFmt("zip");
-        }
-      }
-
-      const warn = document.getElementById("turboWarn");
-      const sw = document.getElementById("turboSw");
-      if (!hasMuxer) {
-        if (warn) warn.style.display = "block";
-        if (sw) {
-          sw.style.background = "#18301e";
-          const knob = sw.querySelector("div");
-          if (knob) knob.style.right = "18px";
-        }
-      } else {
-        if (warn) warn.style.display = "none";
-      }
-
-      // تحديث نص زر التصدير
       const btn = document.getElementById("exportBtn");
-      if (btn && btn.textContent.includes("غير مدعوم")) {
-        if (hasMP4 || hasWebM) {
-          btn.textContent = hasMP4 ? "⬇ تصدير MP4" : "⬇ تصدير WebM";
+      const turboRow = document.getElementById("turboRow");
+      const fmtMp4 = document.getElementById("fmtMp4");
+      const fmtWebm = document.getElementById("fmtWebm");
+      const fmtZip = document.getElementById("fmtZip");
+
+      if (hasMP4) {
+        // ✅ MP4 WebCodecs متاح
+        if (bar) { bar.textContent = "✅ MP4 جاهز للتصدير"; bar.style.color = "#5ec285"; }
+        if (fmtMp4) fmtMp4.style.display = "";
+        if (fmtWebm) fmtWebm.style.display = hasWebM ? "" : "none";
+        if (turboRow) turboRow.style.display = "flex";
+        if (btn) {
+          btn.textContent = "⬇ تصدير MP4";
           btn.style.background = "linear-gradient(135deg,#6b4e18,#c9973a)";
           btn.style.color = "#fff";
-          btn.onclick = () => startExport && startExport();
+          btn.disabled = false;
+          btn.onclick = null;
+        }
+      } else if (!hasMuxer && hasWC) {
+        // ⏳ WebCodecs موجود لكن mp4-muxer لسه بيتحمّل
+        if (bar) { bar.textContent = "⏳ جارٍ تحميل مكتبة MP4..."; bar.style.color = "#c9973a"; }
+      } else if (hasWebM) {
+        // 🔶 WebM فقط (Chrome/Edge بدون mp4-muxer)
+        if (bar) { bar.textContent = "🔶 WebM متاح — أو اختر ZIP"; bar.style.color = "#c9973a"; }
+        if (fmtMp4) fmtMp4.style.display = "none";
+        if (turboRow) turboRow.style.display = "none";
+        if (typeof setExportFmt === "function") setExportFmt("webm");
+      } else {
+        // 📦 لا WebCodecs ولا WebM — ZIP هو الحل
+        if (bar) {
+          bar.textContent = "📦 جهازك يدعم التصدير كـ ZIP";
+          bar.style.color = "#e4b55a";
+        }
+        // إخفاء MP4 وWebM، إظهار ZIP فقط وتحديده
+        if (fmtMp4) fmtMp4.style.display = "none";
+        if (fmtWebm) fmtWebm.style.display = "none";
+        if (fmtZip) fmtZip.style.display = "";
+        if (turboRow) turboRow.style.display = "none";
+        if (typeof setExportFmt === "function") setExportFmt("zip");
+        // تحديث الزر
+        if (btn) {
+          btn.textContent = "📦 تصدير ZIP (frames + صوت)";
+          btn.style.background = "linear-gradient(135deg,#6b4e18,#c9973a)";
+          btn.style.color = "#fff";
+          btn.disabled = false;
+          btn.onclick = null;
         }
       }
+
+      // Turbo warn
+      const warn = document.getElementById("turboWarn");
+      if (warn) warn.style.display = (!hasMuxer && hasWC) ? "block" : "none";
     }
     </script>
     <link
@@ -4658,8 +4668,12 @@
             startDrawLoop();
             return _exportMP4(expCtx, qp, buffers, verseData, exportAyahs, total);
           }
-          _finishExport(expCtx, "❌ captureStream غير مدعوم في هذا المتصفح", "#f47c7c");
-          return;
+          // ZIP fallback
+          toast$("📦 WebM غير متاح — تصدير ZIP...");
+          _expElapsedBefore = 0;
+          isExporting = false;
+          startDrawLoop();
+          return _exportFrameZip(expCtx, qp, buffers, verseData, exportAyahs, total);
         }
         const videoStream = canvas.captureStream(0);
         const videoTrack = videoStream.getVideoTracks()[0];
@@ -6194,14 +6208,8 @@
             const warn2 = document.getElementById("turboWarn");
             if (warn2) warn2.style.display = "none";
           } else if (!_canWebM()) {
-            // لا يوجد دعم لأي صيغة
-            const exportBtn = document.getElementById("exportBtn");
-            if (exportBtn) {
-              exportBtn.textContent = "⚠ التصدير غير مدعوم في هذا المتصفح";
-              exportBtn.style.background = "#333";
-              exportBtn.style.color = "#f47c7c";
-              exportBtn.onclick = () => _showUnsupportedDialog();
-            }
+            // لا WebCodecs ولا WebM — _updateExportSupportUI بتتكفل بالـ ZIP
+            _updateExportSupportUI();
           }
         }
       });
