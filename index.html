@@ -3679,37 +3679,84 @@
       function _downloadBlob(blob, filename) {
         const url = URL.createObjectURL(blob);
         if (_isIOS) {
-          /* iOS: a.download لا يعمل — نفتح popup يوجّه المستخدم */
+          /* iOS: a.download لا يعمل — نفتح popup مع زر حفظ */
           const ov = document.createElement('div');
+          ov.id = '_iosOv';
           ov.style.cssText =
-            'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.82);' +
+            'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.85);' +
             'display:flex;align-items:center;justify-content:center;padding:20px;';
+
+          /* زر حفظ — يحاول Web Share API أولاً (يفتح sheet الحفظ في الصور) */
+          const canShare = !!(navigator.canShare && navigator.canShare({ files: [new File([blob], filename, { type: blob.type })] }));
+
+          const shareBtn = canShare ? `
+            <button id="_iosSaveBtn"
+              style="display:flex;align-items:center;justify-content:center;gap:8px;
+                     width:100%;background:linear-gradient(135deg,#245c38,#3ea066);
+                     color:#fff;border:none;padding:13px 20px;border-radius:12px;
+                     font-size:15px;font-weight:700;cursor:pointer;font-family:'Cairo',sans-serif;
+                     margin-bottom:10px;">
+              <span style="font-size:20px;">⬇️</span> حفظ الفيديو في الصور
+            </button>` : `
+            <a href="${url}" download="${filename}"
+              style="display:flex;align-items:center;justify-content:center;gap:8px;
+                     width:100%;background:linear-gradient(135deg,#245c38,#3ea066);
+                     color:#fff;text-decoration:none;padding:13px 20px;border-radius:12px;
+                     font-size:15px;font-weight:700;font-family:'Cairo',sans-serif;
+                     margin-bottom:10px;">
+              <span style="font-size:20px;">⬇️</span> حفظ الفيديو
+            </a>`;
+
           ov.innerHTML = `
-            <div style="background:#112016;border:1px solid rgba(201,151,58,.5);border-radius:16px;
-                        padding:24px 20px;max-width:320px;text-align:center;font-family:'Cairo',sans-serif;
-                        color:#f0ebe1;direction:rtl;">
-              <div style="font-size:28px;margin-bottom:12px;">📹</div>
-              <div style="color:#e4b55a;font-size:15px;font-weight:700;margin-bottom:10px;">حفظ الفيديو على iOS</div>
-              <div style="font-size:12px;color:#b5c4bc;line-height:1.8;margin-bottom:16px;">
-                اضغط <b style="color:#e4b55a">فتح</b> ثم<br>
-                اضغط مطولاً على الفيديو ← <b style="color:#e4b55a">حفظ الفيديو</b>
+            <div style="background:#112016;border:1px solid rgba(201,151,58,.5);border-radius:18px;
+                        padding:24px 18px;max-width:320px;width:100%;text-align:center;
+                        font-family:'Cairo',sans-serif;color:#f0ebe1;direction:rtl;">
+              <div style="font-size:32px;margin-bottom:10px;">🎬</div>
+              <div style="color:#e4b55a;font-size:15px;font-weight:700;margin-bottom:6px;">الفيديو جاهز!</div>
+              <div style="font-size:11px;color:#6e8878;margin-bottom:18px;">
+                ${canShare
+                  ? 'اضغط الزر لفتح خيارات الحفظ'
+                  : 'اضغط الزر ← اضغط مطولاً على الفيديو ← <b style="color:#e4b55a">حفظ الفيديو</b>'}
               </div>
+              ${shareBtn}
               <a href="${url}" target="_blank"
-                 style="display:inline-block;background:linear-gradient(135deg,#245c38,#3ea066);
-                        color:#fff;text-decoration:none;padding:10px 28px;border-radius:100px;
-                        font-size:14px;font-weight:700;margin-bottom:12px;">
-                فتح ↗
+                 style="display:flex;align-items:center;justify-content:center;gap:6px;
+                        width:100%;background:rgba(201,151,58,.12);color:#e4b55a;
+                        text-decoration:none;padding:10px 20px;border-radius:12px;
+                        font-size:13px;font-weight:600;font-family:'Cairo',sans-serif;
+                        border:1px solid rgba(201,151,58,.3);margin-bottom:10px;">
+                <span>↗</span> فتح في المتصفح
               </a>
-              <br>
-              <button onclick="this.closest('div[style]').remove();URL.revokeObjectURL('${url}');"
-                      style="background:transparent;border:1px solid rgba(255,255,255,.2);
-                             color:#6e8878;padding:6px 18px;border-radius:100px;
-                             font-size:12px;cursor:pointer;margin-top:6px;">
+              <button id="_iosCloseBtn"
+                      style="background:transparent;border:1px solid rgba(255,255,255,.15);
+                             color:#6e8878;padding:8px 22px;border-radius:100px;
+                             font-size:12px;cursor:pointer;font-family:'Cairo',sans-serif;">
                 إغلاق
               </button>
             </div>`;
+
           document.body.appendChild(ov);
-          setTimeout(() => URL.revokeObjectURL(url), 120000);
+
+          /* ربط أحداث الأزرار */
+          const closeBtn = ov.querySelector('#_iosCloseBtn');
+          if (closeBtn) closeBtn.onclick = () => { ov.remove(); URL.revokeObjectURL(url); };
+
+          if (canShare) {
+            const saveBtn = ov.querySelector('#_iosSaveBtn');
+            if (saveBtn) saveBtn.onclick = async () => {
+              try {
+                const file = new File([blob], filename, { type: blob.type });
+                await navigator.share({ files: [file], title: 'Islam Reels' });
+              } catch(e) {
+                if (e.name !== 'AbortError') {
+                  /* fallback: افتح في tab جديد */
+                  window.open(url, '_blank');
+                }
+              }
+            };
+          }
+
+          setTimeout(() => URL.revokeObjectURL(url), 180000);
         } else {
           const a = document.createElement("a");
           a.href = url;
