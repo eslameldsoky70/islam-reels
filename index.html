@@ -2771,7 +2771,8 @@
               margin-bottom:6px;padding:4px 8px;
               background:rgba(255,255,255,.03);border-radius:6px;
               border:1px solid rgba(255,255,255,.06);
-            ">جارٍ فحص الدعم...</div>
+              cursor:pointer;
+            " onclick="showExportDebug()">جارٍ فحص الدعم... (اضغط للتفاصيل)</div>
             <!-- زرار التصدير -->
             <button
               id="exportBtn"
@@ -3826,6 +3827,53 @@
           ">إغلاق</button>
         `;
         document.body.appendChild(overlay);
+      }
+
+      async function showExportDebug() {
+        const lines = [];
+        lines.push("═══ iOS/Safari Debug ═══");
+        lines.push("UA: " + navigator.userAgent.substring(0, 80));
+        lines.push("iOS: " + (_isIOS ? "نعم" : "لا") + " | ver: " + _iosVer);
+        lines.push("Safari: " + _isSafari + " | Mobile: " + _isMobile);
+        lines.push("─── WebCodecs ───");
+        lines.push("VideoEncoder: " + (typeof VideoEncoder !== "undefined" ? "✅" : "❌"));
+        lines.push("AudioEncoder: " + (typeof AudioEncoder !== "undefined" ? "✅" : "❌"));
+        lines.push("VideoFrame: " + (typeof VideoFrame !== "undefined" ? "✅" : "❌"));
+        lines.push("AudioData: " + (typeof AudioData !== "undefined" ? "✅" : "❌"));
+        lines.push("─── Libraries ───");
+        lines.push("Mp4Muxer: " + (typeof Mp4Muxer !== "undefined" ? "✅" : "❌ لم يُحمَّل"));
+        lines.push("JSZip: " + (typeof JSZip !== "undefined" ? "✅" : "❌ لم يُحمَّل"));
+        lines.push("─── Media APIs ───");
+        lines.push("MediaRecorder: " + (typeof MediaRecorder !== "undefined" ? "✅" : "❌"));
+        lines.push("captureStream: " + (typeof HTMLCanvasElement?.prototype?.captureStream === "function" ? "✅" : "❌"));
+        lines.push("─── Codec Test ───");
+        if (typeof VideoEncoder !== "undefined") {
+          const testCodecs = ["avc1.42001f", "avc1.4d0029", "avc1.640033"];
+          for (const c of testCodecs) {
+            try {
+              const r = await VideoEncoder.isConfigSupported({ codec: c, width: 1080, height: 1920, bitrate: 4000000, framerate: 30 });
+              lines.push(c + ": " + (r.supported ? "✅" : "❌"));
+            } catch(e) { lines.push(c + ": ❌ " + e.message.substring(0,30)); }
+          }
+        } else {
+          lines.push("VideoEncoder غير موجود");
+        }
+        lines.push("─── Result ───");
+        lines.push("_canMP4(): " + _canMP4());
+        lines.push("_canWebM(): " + _canWebM());
+        lines.push("_exportFmt: " + _exportFmt);
+
+        const over = document.createElement("div");
+        over.style.cssText = "position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.95);display:flex;flex-direction:column;align-items:stretch;padding:20px;font-family:monospace;direction:ltr;overflow-y:auto;";
+        over.innerHTML = `
+          <div style="color:#e4b55a;font-size:13px;margin-bottom:12px;font-weight:700;text-align:center">Export Debug Info</div>
+          <pre style="color:#b5c4bc;font-size:11px;line-height:1.8;white-space:pre-wrap;flex:1">${lines.join("\n")}</pre>
+          <div style="display:flex;gap:8px;margin-top:16px;">
+            <button onclick="navigator.clipboard?.writeText(this.closest('div').previousElementSibling.previousElementSibling.textContent).then(()=>alert('Copied!'))" style="flex:1;background:rgba(201,151,58,.2);border:1px solid rgba(201,151,58,.4);color:#e4b55a;padding:10px;border-radius:8px;cursor:pointer;font-size:12px;">نسخ</button>
+            <button onclick="this.closest('div[style]').remove()" style="flex:1;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);color:#b5c4bc;padding:10px;border-radius:8px;cursor:pointer;font-size:12px;">إغلاق</button>
+          </div>
+        `;
+        document.body.appendChild(over);
       }
 
       function _showUnsupportedDialog() {
