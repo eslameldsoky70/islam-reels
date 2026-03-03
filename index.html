@@ -794,24 +794,130 @@
         transition: 0.3s;
         pointer-events: none;
       }
-      .toast.show { transform: translateX(-50%) translateY(0); }
-      .xov{position:fixed;inset:0;background:rgba(0,0,0,.85);backdrop-filter:blur(10px);z-index:10000;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .35s}
-      .xov.show{opacity:1;pointer-events:all}
-      .xbox{background:linear-gradient(145deg,#0a1a0e,#0f2415);border:1px solid rgba(201,151,58,.35);border-radius:24px;padding:32px 28px 24px;width:270px;text-align:center;box-shadow:0 30px 80px rgba(0,0,0,.9)}
-      .xring{position:relative;width:150px;height:150px;margin:0 auto 18px}
-      .xring svg{width:150px;height:150px;transform:rotate(-90deg)}
-      .xring-bg{fill:none;stroke:#18301e;stroke-width:10}
-      .xring-fg{fill:none;stroke:url(#xgrad);stroke-width:10;stroke-linecap:round;stroke-dasharray:283;stroke-dashoffset:283;transition:stroke-dashoffset .25s ease}
-      .xring-inner{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px}
-      .xring-pct{font-family:'Cairo',sans-serif;font-size:30px;font-weight:900;color:#e4b55a;line-height:1}
-      .xring-eta{font-family:'Cairo',sans-serif;font-size:12px;color:#8aaa94;line-height:1}
-      .x-ttl{font-family:'Cairo',sans-serif;font-size:15px;font-weight:700;color:#e4b55a;margin-bottom:4px}
-      .x-sub{font-size:11px;color:#6e8878;margin-bottom:16px;min-height:16px}
-      .x-cnt{font-size:12px;color:#8aaa94;margin-bottom:18px}
-      .x-stop{padding:9px 28px;border-radius:100px;background:linear-gradient(135deg,#5c2424,#a03030);border:none;color:#fff;font-family:'Cairo',sans-serif;font-size:13px;font-weight:600;cursor:pointer}
-      .x-stop:hover{opacity:.8}
-      .xsp{display:inline-block;width:11px;height:11px;border:2px solid rgba(201,151,58,.3);border-top-color:#e4b55a;border-radius:50%;animation:xspin .7s linear infinite;vertical-align:middle;margin-left:5px}
-      @keyframes xspin{to{transform:rotate(360deg)}}
+      .toast.show {
+        transform: translateX(-50%) translateY(0);
+      }
+      .xov {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.85);
+        backdrop-filter: blur(10px);
+        z-index: 10000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.35s;
+      }
+      .xov.show {
+        opacity: 1;
+        pointer-events: all;
+      }
+      .xbox {
+        background: linear-gradient(145deg, #0a1a0e, #0f2415);
+        border: 1px solid rgba(201, 151, 58, 0.35);
+        border-radius: 24px;
+        padding: 32px 28px 24px;
+        width: 270px;
+        text-align: center;
+        box-shadow: 0 30px 80px rgba(0, 0, 0, 0.9);
+      }
+      .xring {
+        position: relative;
+        width: 150px;
+        height: 150px;
+        margin: 0 auto 18px;
+      }
+      .xring svg {
+        width: 150px;
+        height: 150px;
+        transform: rotate(-90deg);
+      }
+      .xring-bg {
+        fill: none;
+        stroke: #18301e;
+        stroke-width: 10;
+      }
+      .xring-fg {
+        fill: none;
+        stroke: url(#xgrad);
+        stroke-width: 10;
+        stroke-linecap: round;
+        stroke-dasharray: 283;
+        stroke-dashoffset: 283;
+        transition: stroke-dashoffset 0.25s ease;
+      }
+      .xring-inner {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 3px;
+      }
+      .xring-pct {
+        font-family: "Cairo", sans-serif;
+        font-size: 30px;
+        font-weight: 900;
+        color: #e4b55a;
+        line-height: 1;
+      }
+      .xring-eta {
+        font-family: "Cairo", sans-serif;
+        font-size: 12px;
+        color: #8aaa94;
+        line-height: 1;
+      }
+      .x-ttl {
+        font-family: "Cairo", sans-serif;
+        font-size: 15px;
+        font-weight: 700;
+        color: #e4b55a;
+        margin-bottom: 4px;
+      }
+      .x-sub {
+        font-size: 11px;
+        color: #6e8878;
+        margin-bottom: 16px;
+        min-height: 16px;
+      }
+      .x-cnt {
+        font-size: 12px;
+        color: #8aaa94;
+        margin-bottom: 18px;
+      }
+      .x-stop {
+        padding: 9px 28px;
+        border-radius: 100px;
+        background: linear-gradient(135deg, #5c2424, #a03030);
+        border: none;
+        color: #fff;
+        font-family: "Cairo", sans-serif;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .x-stop:hover {
+        opacity: 0.8;
+      }
+      .xsp {
+        display: inline-block;
+        width: 11px;
+        height: 11px;
+        border: 2px solid rgba(201, 151, 58, 0.3);
+        border-top-color: #e4b55a;
+        border-radius: 50%;
+        animation: xspin 0.7s linear infinite;
+        vertical-align: middle;
+        margin-left: 5px;
+      }
+      @keyframes xspin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
       ::-webkit-scrollbar {
         width: 3px;
       }
@@ -854,8 +960,9 @@
 
       /* ══ SYNC PANEL STYLES ══ */
       .sync-panel {
-        position: fixed; inset: 0;
-        background: rgba(0,0,0,.88);
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.88);
         backdrop-filter: blur(12px);
         z-index: 5000;
         display: none;
@@ -863,106 +970,236 @@
         justify-content: center;
         padding: 12px;
       }
-      .sync-panel.show { display: flex; }
+      .sync-panel.show {
+        display: flex;
+      }
       .sync-box {
-        background: linear-gradient(145deg,#071a0a,#0c1810);
-        border: 1px solid rgba(201,151,58,.3);
+        background: linear-gradient(145deg, #071a0a, #0c1810);
+        border: 1px solid rgba(201, 151, 58, 0.3);
         border-radius: 18px;
         width: 100%;
         max-width: 480px;
         max-height: 90vh;
         overflow-y: auto;
         padding: 18px 16px 14px;
-        box-shadow: 0 30px 80px rgba(0,0,0,.9);
+        box-shadow: 0 30px 80px rgba(0, 0, 0, 0.9);
       }
       .sync-hdr {
-        display: flex; align-items: center; justify-content: space-between;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
         margin-bottom: 14px;
       }
       .sync-ttl {
-        font-size: 14px; font-weight: 700; color: #e4b55a;
-        display: flex; align-items: center; gap: 7px;
+        font-size: 14px;
+        font-weight: 700;
+        color: #e4b55a;
+        display: flex;
+        align-items: center;
+        gap: 7px;
       }
       .sync-close {
-        width: 28px; height: 28px; border-radius: 50%;
-        background: rgba(255,255,255,.07); border: none;
-        color: rgba(255,255,255,.6); cursor: pointer; font-size: 14px;
-        display: flex; align-items: center; justify-content: center;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.07);
+        border: none;
+        color: rgba(255, 255, 255, 0.6);
+        cursor: pointer;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
       }
       .sync-tabs {
-        display: flex; gap: 4px; margin-bottom: 12px;
-        border-bottom: 1px solid rgba(255,255,255,.06); padding-bottom: 8px;
+        display: flex;
+        gap: 4px;
+        margin-bottom: 12px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        padding-bottom: 8px;
       }
       .sync-tab {
-        padding: 5px 12px; border-radius: 100px;
-        font-size: 11px; cursor: pointer;
-        border: 1px solid rgba(255,255,255,.07);
-        background: transparent; color: #6e8878; transition: .2s;
-        font-family: 'Cairo',sans-serif;
+        padding: 5px 12px;
+        border-radius: 100px;
+        font-size: 11px;
+        cursor: pointer;
+        border: 1px solid rgba(255, 255, 255, 0.07);
+        background: transparent;
+        color: #6e8878;
+        transition: 0.2s;
+        font-family: "Cairo", sans-serif;
       }
       .sync-tab.on {
-        border-color: rgba(201,151,58,.5);
-        background: rgba(201,151,58,.1); color: #e4b55a;
+        border-color: rgba(201, 151, 58, 0.5);
+        background: rgba(201, 151, 58, 0.1);
+        color: #e4b55a;
       }
-      .sync-tc { display: none; }
-      .sync-tc.on { display: block; }
+      .sync-tc {
+        display: none;
+      }
+      .sync-tc.on {
+        display: block;
+      }
 
       /* offset table */
-      .oft { width:100%; border-collapse:collapse; font-size:12px; }
-      .oft th { padding:5px 6px; color:rgba(255,255,255,.35); font-size:10px;
-        letter-spacing:1px; border-bottom:1px solid rgba(255,255,255,.07); text-align:right; }
-      .oft td { padding:5px 6px; border-bottom:1px solid rgba(255,255,255,.04); vertical-align:middle; }
-      .oft input[type=number] {
-        width:58px; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.1);
-        border-radius:6px; color:#fff; font-family:'Cairo',sans-serif;
-        font-size:11px; padding:4px 6px; outline:none; text-align:center;
+      .oft {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12px;
       }
-      .oft-ar { font-family:'Scheherazade New',serif; font-size:13px;
-        color:#e4b55a; max-width:140px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; direction:rtl; }
+      .oft th {
+        padding: 5px 6px;
+        color: rgba(255, 255, 255, 0.35);
+        font-size: 10px;
+        letter-spacing: 1px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+        text-align: right;
+      }
+      .oft td {
+        padding: 5px 6px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+        vertical-align: middle;
+      }
+      .oft input[type="number"] {
+        width: 58px;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 6px;
+        color: #fff;
+        font-family: "Cairo", sans-serif;
+        font-size: 11px;
+        padding: 4px 6px;
+        outline: none;
+        text-align: center;
+      }
+      .oft-ar {
+        font-family: "Scheherazade New", serif;
+        font-size: 13px;
+        color: #e4b55a;
+        max-width: 140px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        direction: rtl;
+      }
       .syn-btn {
-        width:100%; padding:9px; border-radius:8px; border:none;
-        font-family:'Cairo',sans-serif; font-size:13px; font-weight:700;
-        cursor:pointer; transition:.2s; margin-bottom:6px;
-        display:flex; align-items:center; justify-content:center; gap:5px;
+        width: 100%;
+        padding: 9px;
+        border-radius: 8px;
+        border: none;
+        font-family: "Cairo", sans-serif;
+        font-size: 13px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: 0.2s;
+        margin-bottom: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 5px;
       }
-      .syn-gold { background:linear-gradient(135deg,#6b4e18,#c9973a); color:#fff; }
-      .syn-grn  { background:linear-gradient(135deg,#245c38,#3ea066); color:#fff; }
-      .syn-red  { background:linear-gradient(135deg,#5c1a1a,#a03030); color:#fff; }
-      .syn-ghost{ background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.1); color:rgba(255,255,255,.6); }
-      .syn-btn:disabled { opacity:.4; cursor:not-allowed; }
+      .syn-gold {
+        background: linear-gradient(135deg, #6b4e18, #c9973a);
+        color: #fff;
+      }
+      .syn-grn {
+        background: linear-gradient(135deg, #245c38, #3ea066);
+        color: #fff;
+      }
+      .syn-red {
+        background: linear-gradient(135deg, #5c1a1a, #a03030);
+        color: #fff;
+      }
+      .syn-ghost {
+        background: rgba(255, 255, 255, 0.07);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: rgba(255, 255, 255, 0.6);
+      }
+      .syn-btn:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
 
       /* live sync */
       .ls-verse-card {
-        background: rgba(201,151,58,.06);
-        border: 1px solid rgba(201,151,58,.2);
+        background: rgba(201, 151, 58, 0.06);
+        border: 1px solid rgba(201, 151, 58, 0.2);
         border-radius: 10px;
         padding: 10px 12px;
         margin-bottom: 10px;
         text-align: center;
       }
-      .ls-verse-ar { font-family:'Scheherazade New',serif; font-size:15px; color:#e4b55a; line-height:1.8; direction:rtl; }
-      .ls-verse-ref { font-size:10px; color:rgba(255,255,255,.35); margin-top:4px; }
-      .ls-prog { display:flex; align-items:center; gap:5px; margin-bottom:8px; font-size:11px; color:#6e8878; }
-      .ls-result-tbl { width:100%; border-collapse:collapse; font-size:11px; margin-top:6px; }
-      .ls-result-tbl th { padding:4px 5px; color:rgba(255,255,255,.3); font-size:9px; letter-spacing:1px;
-        border-bottom:1px solid rgba(255,255,255,.07); text-align:right; }
-      .ls-result-tbl td { padding:4px 5px; border-bottom:1px solid rgba(255,255,255,.04); vertical-align:middle; }
-      .ls-mark-flash { animation: lsFlash .25s ease; }
-      @keyframes lsFlash { 0%{transform:scale(1)} 50%{transform:scale(.94)} 100%{transform:scale(1)} }
+      .ls-verse-ar {
+        font-family: "Scheherazade New", serif;
+        font-size: 15px;
+        color: #e4b55a;
+        line-height: 1.8;
+        direction: rtl;
+      }
+      .ls-verse-ref {
+        font-size: 10px;
+        color: rgba(255, 255, 255, 0.35);
+        margin-top: 4px;
+      }
+      .ls-prog {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        margin-bottom: 8px;
+        font-size: 11px;
+        color: #6e8878;
+      }
+      .ls-result-tbl {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 11px;
+        margin-top: 6px;
+      }
+      .ls-result-tbl th {
+        padding: 4px 5px;
+        color: rgba(255, 255, 255, 0.3);
+        font-size: 9px;
+        letter-spacing: 1px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+        text-align: right;
+      }
+      .ls-result-tbl td {
+        padding: 4px 5px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+        vertical-align: middle;
+      }
+      .ls-mark-flash {
+        animation: lsFlash 0.25s ease;
+      }
+      @keyframes lsFlash {
+        0% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(0.94);
+        }
+        100% {
+          transform: scale(1);
+        }
+      }
 
       /* sync open button */
       #syncOpenBtn {
         padding: 7px 13px;
-        background: rgba(201,151,58,.12);
-        border: 1px solid rgba(201,151,58,.3);
+        background: rgba(201, 151, 58, 0.12);
+        border: 1px solid rgba(201, 151, 58, 0.3);
         border-radius: 7px;
         color: #e4b55a;
-        font-family: 'Cairo',sans-serif;
-        font-size: 12px; font-weight: 700;
-        cursor: pointer; transition: .2s;
+        font-family: "Cairo", sans-serif;
+        font-size: 12px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: 0.2s;
         white-space: nowrap;
       }
-      #syncOpenBtn:hover { background: rgba(201,151,58,.22); }
+      #syncOpenBtn:hover {
+        background: rgba(201, 151, 58, 0.22);
+      }
 
       .wave-bar {
         width: 3px;
@@ -1784,8 +2021,12 @@
               </div>
               <span class="prog-t" id="tD" style="text-align: left">0:00</span>
             </div>
-            <div style="display:none;justify-content:center;margin-top:7px;">
-              <button id="syncOpenBtn" onclick="openSyncPanel()">⏱ ضبط المزامنة</button>
+            <div
+              style="display: none; justify-content: center; margin-top: 7px"
+            >
+              <button id="syncOpenBtn" onclick="openSyncPanel()">
+                ⏱ ضبط المزامنة
+              </button>
             </div>
           </div>
         </div>
@@ -2001,99 +2242,384 @@
             />
           </div>
           <div class="sec">
-            <span class="lbl">جودة التصدير</span>
+            <span class="lbl">🎬 جودة الفيديو والتصدير</span>
+
+            <!-- Preset Picker -->
+            <div style="position: relative; margin-bottom: 8px">
+              <div
+                id="presetSelected"
+                onclick="togglePresetMenu()"
+                style="
+                  display: flex;
+                  align-items: center;
+                  justify-content: space-between;
+                  padding: 10px 12px;
+                  border-radius: 10px;
+                  cursor: pointer;
+                  border: 1.5px solid rgba(201, 151, 58, 0.6);
+                  background: rgba(201, 151, 58, 0.08);
+                "
+              >
+                <div style="display: flex; align-items: center; gap: 7px">
+                  <span id="presetIcon" style="font-size: 16px">🎬</span>
+                  <div>
+                    <div
+                      id="presetName"
+                      style="font-size: 12px; font-weight: 700; color: #e4b55a"
+                    >
+                      شورتس قياسي
+                    </div>
+                    <div id="presetTag" style="font-size: 10px; color: #6e8878">
+                      1080p · 30fps
+                    </div>
+                  </div>
+                </div>
+                <span
+                  id="presetArrow"
+                  style="color: #c9973a; font-size: 12px; transition: 0.2s"
+                  >▼</span
+                >
+              </div>
+
+              <!-- Dropdown -->
+              <div
+                id="presetMenu"
+                style="
+                  display: none;
+                  position: absolute;
+                  top: calc(100% + 4px);
+                  left: 0;
+                  right: 0;
+                  z-index: 999;
+                  background: #0d1f13;
+                  border: 1.5px solid rgba(201, 151, 58, 0.3);
+                  border-radius: 10px;
+                  overflow: hidden;
+                  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+                "
+              ></div>
+            </div>
+
+            <!-- Preset description -->
             <div
+              id="presetDesc"
               style="
-                display: grid;
-                grid-template-columns: 1fr 1fr 1fr;
-                gap: 5px;
+                font-size: 10px;
+                color: #7a9a82;
+                margin-bottom: 8px;
+                padding: 0 2px;
+              "
+            ></div>
+
+            <!-- Custom controls -->
+            <div
+              id="customPresetRow"
+              style="
+                display: none;
+                background: rgba(255, 255, 255, 0.03);
+                border: 1px solid rgba(255, 255, 255, 0.07);
+                border-radius: 9px;
+                padding: 10px;
                 margin-bottom: 8px;
               "
             >
               <div
-                id="qBtn-hd"
-                onclick="setQuality('hd')"
                 style="
-                  padding: 7px 4px;
-                  border-radius: 7px;
-                  border: 1px solid rgba(201, 151, 58, 0.45);
-                  background: rgba(201, 151, 58, 0.1);
-                  cursor: pointer;
-                  text-align: center;
+                  display: grid;
+                  grid-template-columns: 1fr 1fr;
+                  gap: 7px;
+                  margin-bottom: 7px;
                 "
               >
-                <div style="font-size: 11px; font-weight: 700; color: #e4b55a">
-                  HD
+                <div>
+                  <div
+                    style="font-size: 10px; color: #6e8878; margin-bottom: 3px"
+                  >
+                    العرض (px)
+                  </div>
+                  <input
+                    id="cpW"
+                    type="number"
+                    value="1080"
+                    min="360"
+                    max="3840"
+                    onchange="updateCustomPreset()"
+                    style="
+                      width: 100%;
+                      background: #112016;
+                      border: 1px solid rgba(255, 255, 255, 0.1);
+                      border-radius: 6px;
+                      padding: 5px 8px;
+                      color: #e4b55a;
+                      font-size: 12px;
+                      box-sizing: border-box;
+                    "
+                  />
                 </div>
-                <div style="font-size: 9px; color: #6e8878">1080p · 8M</div>
+                <div>
+                  <div
+                    style="font-size: 10px; color: #6e8878; margin-bottom: 3px"
+                  >
+                    الارتفاع (px)
+                  </div>
+                  <input
+                    id="cpH"
+                    type="number"
+                    value="1920"
+                    min="640"
+                    max="4096"
+                    onchange="updateCustomPreset()"
+                    style="
+                      width: 100%;
+                      background: #112016;
+                      border: 1px solid rgba(255, 255, 255, 0.1);
+                      border-radius: 6px;
+                      padding: 5px 8px;
+                      color: #e4b55a;
+                      font-size: 12px;
+                      box-sizing: border-box;
+                    "
+                  />
+                </div>
               </div>
               <div
-                id="qBtn-fhd"
-                onclick="setQuality('fhd')"
-                style="
-                  padding: 7px 4px;
-                  border-radius: 7px;
-                  border: 1px solid rgba(255, 255, 255, 0.07);
-                  background: #112016;
-                  cursor: pointer;
-                  text-align: center;
-                "
+                style="display: grid; grid-template-columns: 1fr 1fr; gap: 7px"
               >
-                <div style="font-size: 11px; font-weight: 700; color: #b5c4bc">
-                  FHD
+                <div>
+                  <div
+                    style="font-size: 10px; color: #6e8878; margin-bottom: 3px"
+                  >
+                    FPS (إطارات/ثانية)
+                  </div>
+                  <select
+                    id="cpFps"
+                    onchange="updateCustomPreset()"
+                    style="
+                      width: 100%;
+                      background: #112016;
+                      border: 1px solid rgba(255, 255, 255, 0.1);
+                      border-radius: 6px;
+                      padding: 5px 8px;
+                      color: #e4b55a;
+                      font-size: 12px;
+                      box-sizing: border-box;
+                    "
+                  >
+                    <option value="24">24 (سينمائي)</option>
+                    <option value="30" selected>30 (قياسي)</option>
+                    <option value="60">60 (عالي)</option>
+                  </select>
                 </div>
-                <div style="font-size: 9px; color: #6e8878">1440p · 20M</div>
-              </div>
-              <div
-                id="qBtn-4k"
-                onclick="setQuality('4k')"
-                style="
-                  padding: 7px 4px;
-                  border-radius: 7px;
-                  border: 1px solid rgba(255, 255, 255, 0.07);
-                  background: #112016;
-                  cursor: pointer;
-                  text-align: center;
-                "
-              >
-                <div style="font-size: 11px; font-weight: 700; color: #b5c4bc">
-                  4K
+                <div>
+                  <div
+                    style="font-size: 10px; color: #6e8878; margin-bottom: 3px"
+                  >
+                    الجودة (Mbps)
+                  </div>
+                  <select
+                    id="cpBr"
+                    onchange="updateCustomPreset()"
+                    style="
+                      width: 100%;
+                      background: #112016;
+                      border: 1px solid rgba(255, 255, 255, 0.1);
+                      border-radius: 6px;
+                      padding: 5px 8px;
+                      color: #e4b55a;
+                      font-size: 12px;
+                      box-sizing: border-box;
+                    "
+                  >
+                    <option value="4">4 Mbps (اقتصادي)</option>
+                    <option value="8" selected>8 Mbps (عالية)</option>
+                    <option value="16">16 Mbps (ممتازة)</option>
+                    <option value="40">40 Mbps (احترافية)</option>
+                  </select>
                 </div>
-                <div style="font-size: 9px; color: #6e8878">2160p · 40M</div>
               </div>
             </div>
           </div>
           <div class="sec">
             <span class="lbl">صيغة التصدير</span>
             <!-- خيارات الصيغة -->
-            <div style="display:flex;gap:7px;margin-bottom:9px;">
+            <div style="display: flex; gap: 7px; margin-bottom: 9px">
               <!-- MP4 -->
-              <div id="fmtMp4" onclick="setExportFmt('mp4')" style="flex:1;border:2px solid rgba(201,151,58,.7);border-radius:10px;padding:9px 7px;text-align:center;cursor:pointer;background:rgba(201,151,58,.08);transition:.2s;">
-                <div style="display:flex;align-items:center;justify-content:center;gap:5px;margin-bottom:3px;">
-                  <span style="font-size:13px;font-weight:700;color:#e4b55a;">MP4</span>
-                  <span style="background:#c9973a;color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:20px;">موصى به</span>
+              <div
+                id="fmtMp4"
+                onclick="setExportFmt('mp4')"
+                style="
+                  flex: 1;
+                  border: 2px solid rgba(201, 151, 58, 0.7);
+                  border-radius: 10px;
+                  padding: 9px 7px;
+                  text-align: center;
+                  cursor: pointer;
+                  background: rgba(201, 151, 58, 0.08);
+                  transition: 0.2s;
+                "
+              >
+                <div
+                  style="
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 5px;
+                    margin-bottom: 3px;
+                  "
+                >
+                  <span
+                    style="font-size: 13px; font-weight: 700; color: #e4b55a"
+                    >MP4</span
+                  >
+                  <span
+                    style="
+                      background: #c9973a;
+                      color: #fff;
+                      font-size: 9px;
+                      font-weight: 700;
+                      padding: 1px 5px;
+                      border-radius: 20px;
+                    "
+                    >موصى به</span
+                  >
                 </div>
-                <div style="font-size:10px;color:#6e8878;">H.264 + AAC</div>
-                <div style="margin-top:4px;width:14px;height:14px;border-radius:50%;border:2px solid #c9973a;background:#c9973a;margin:4px auto 0;box-shadow:0 0 6px rgba(201,151,58,.6);"></div>
+                <div style="font-size: 10px; color: #6e8878">H.264 + AAC</div>
+                <div
+                  style="
+                    margin-top: 4px;
+                    width: 14px;
+                    height: 14px;
+                    border-radius: 50%;
+                    border: 2px solid #c9973a;
+                    background: #c9973a;
+                    margin: 4px auto 0;
+                    box-shadow: 0 0 6px rgba(201, 151, 58, 0.6);
+                  "
+                ></div>
               </div>
               <!-- WebM -->
-              <div id="fmtWebm" onclick="setExportFmt('webm')" style="flex:1;border:2px solid rgba(255,255,255,.1);border-radius:10px;padding:9px 7px;text-align:center;cursor:pointer;background:rgba(255,255,255,.03);transition:.2s;">
-                <div style="font-size:13px;font-weight:700;color:#b5c4bc;margin-bottom:3px;">WebM</div>
-                <div style="font-size:10px;color:#6e8878;">VP8 / VP9</div>
-                <div style="margin-top:4px;width:14px;height:14px;border-radius:50%;border:2px solid rgba(255,255,255,.2);background:transparent;margin:4px auto 0;"></div>
+              <div
+                id="fmtWebm"
+                onclick="setExportFmt('webm')"
+                style="
+                  flex: 1;
+                  border: 2px solid rgba(255, 255, 255, 0.1);
+                  border-radius: 10px;
+                  padding: 9px 7px;
+                  text-align: center;
+                  cursor: pointer;
+                  background: rgba(255, 255, 255, 0.03);
+                  transition: 0.2s;
+                "
+              >
+                <div
+                  style="
+                    font-size: 13px;
+                    font-weight: 700;
+                    color: #b5c4bc;
+                    margin-bottom: 3px;
+                  "
+                >
+                  WebM
+                </div>
+                <div style="font-size: 10px; color: #6e8878">VP8 / VP9</div>
+                <div
+                  style="
+                    margin-top: 4px;
+                    width: 14px;
+                    height: 14px;
+                    border-radius: 50%;
+                    border: 2px solid rgba(255, 255, 255, 0.2);
+                    background: transparent;
+                    margin: 4px auto 0;
+                  "
+                ></div>
               </div>
             </div>
             <!-- Turbo MP4 toggle -->
-            <div id="turboRow" style="display:flex;align-items:center;gap:9px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:9px;padding:9px 10px;margin-bottom:9px;">
-              <div id="turboSw" onclick="toggleTurbo()" style="width:36px;height:20px;border-radius:20px;background:linear-gradient(135deg,#245c38,#3ea066);cursor:pointer;position:relative;flex-shrink:0;transition:.2s;">
-                <div style="position:absolute;top:3px;right:3px;width:14px;height:14px;border-radius:50%;background:#fff;transition:.2s;"></div>
+            <div
+              id="turboRow"
+              style="
+                display: flex;
+                align-items: center;
+                gap: 9px;
+                background: rgba(255, 255, 255, 0.03);
+                border: 1px solid rgba(255, 255, 255, 0.07);
+                border-radius: 9px;
+                padding: 9px 10px;
+                margin-bottom: 9px;
+              "
+            >
+              <div
+                id="turboSw"
+                onclick="toggleTurbo()"
+                style="
+                  width: 36px;
+                  height: 20px;
+                  border-radius: 20px;
+                  background: linear-gradient(135deg, #245c38, #3ea066);
+                  cursor: pointer;
+                  position: relative;
+                  flex-shrink: 0;
+                  transition: 0.2s;
+                "
+              >
+                <div
+                  style="
+                    position: absolute;
+                    top: 3px;
+                    right: 3px;
+                    width: 14px;
+                    height: 14px;
+                    border-radius: 50%;
+                    background: #fff;
+                    transition: 0.2s;
+                  "
+                ></div>
               </div>
-              <div style="flex:1;">
-                <div style="font-size:12px;font-weight:700;color:#e4b55a;display:flex;align-items:center;gap:5px;">
-                  Turbo MP4 <span style="background:rgba(62,160,102,.2);color:#3ea066;font-size:9px;padding:1px 5px;border-radius:10px;font-weight:700;">WebCodecs</span> <span style="color:#e4b55a;">⚡</span>
+              <div style="flex: 1">
+                <div
+                  style="
+                    font-size: 12px;
+                    font-weight: 700;
+                    color: #e4b55a;
+                    display: flex;
+                    align-items: center;
+                    gap: 5px;
+                  "
+                >
+                  Turbo MP4
+                  <span
+                    style="
+                      background: rgba(62, 160, 102, 0.2);
+                      color: #3ea066;
+                      font-size: 9px;
+                      padding: 1px 5px;
+                      border-radius: 10px;
+                      font-weight: 700;
+                    "
+                    >WebCodecs</span
+                  >
+                  <span style="color: #e4b55a">⚡</span>
                 </div>
-                <div style="font-size:10px;color:#6e8878;margin-top:2px;" id="turboDesc">أسرع على الأجهزة المدعومة. سيتم الرجوع تلقائياً لـ WebM عند عدم الدعم.</div>
-                <div id="turboWarn" style="display:none;font-size:10px;color:#c9973a;margin-top:2px;">⚠ mp4-muxer لم يُحمَّل بعد...</div>
+                <div
+                  style="font-size: 10px; color: #6e8878; margin-top: 2px"
+                  id="turboDesc"
+                >
+                  أسرع على الأجهزة المدعومة. سيتم الرجوع تلقائياً لـ WebM عند
+                  عدم الدعم.
+                </div>
+                <div
+                  id="turboWarn"
+                  style="
+                    display: none;
+                    font-size: 10px;
+                    color: #c9973a;
+                    margin-top: 2px;
+                  "
+                >
+                  ⚠ mp4-muxer لم يُحمَّل بعد...
+                </div>
               </div>
             </div>
             <!-- زرار التصدير -->
@@ -2107,10 +2633,10 @@
                 border: none;
                 border-radius: 8px;
                 color: #fff;
-                font-family: 'Cairo', sans-serif;
+                font-family: &quot;Cairo&quot;, sans-serif;
                 font-weight: 700;
                 cursor: pointer;
-                font-size:13px;
+                font-size: 13px;
                 transition: 0.3s;
               "
             >
@@ -2165,27 +2691,81 @@
           <button class="sync-close" onclick="closeSyncPanel()">✕</button>
         </div>
         <div class="sync-tabs">
-          <button class="sync-tab on" onclick="switchSyncTab('offset')">تأخير الآيات</button>
-          <button class="sync-tab" onclick="switchSyncTab('manual')">يدوي (Space)</button>
-          <button class="sync-tab" onclick="switchSyncTab('live')">مزامنة مباشرة</button>
+          <button class="sync-tab on" onclick="switchSyncTab('offset')">
+            تأخير الآيات
+          </button>
+          <button class="sync-tab" onclick="switchSyncTab('manual')">
+            يدوي (Space)
+          </button>
+          <button class="sync-tab" onclick="switchSyncTab('live')">
+            مزامنة مباشرة
+          </button>
         </div>
 
         <!-- TAB 1: Offset per ayah -->
         <div class="sync-tc on" id="stc-offset">
-          <div style="font-size:11px;color:rgba(255,255,255,.35);margin-bottom:10px;direction:rtl;line-height:1.7;">
-            تحكم في وقت ظهور نص كل آية بالنسبة للصوت.<br>
-            <b style="color:#e4b55a;">موجب (+)</b> = النص يظهر بعد الصوت &nbsp;|&nbsp; <b style="color:#3ea066;">سالب (-)</b> = يظهر قبله
+          <div
+            style="
+              font-size: 11px;
+              color: rgba(255, 255, 255, 0.35);
+              margin-bottom: 10px;
+              direction: rtl;
+              line-height: 1.7;
+            "
+          >
+            تحكم في وقت ظهور نص كل آية بالنسبة للصوت.<br />
+            <b style="color: #e4b55a">موجب (+)</b> = النص يظهر بعد الصوت
+            &nbsp;|&nbsp; <b style="color: #3ea066">سالب (-)</b> = يظهر قبله
           </div>
-          <div style="display:flex;gap:6px;margin-bottom:10px;align-items:center;">
-            <span style="font-size:11px;color:#6e8878;">تأخير عام (ثانية)</span>
-            <input type="number" id="globalOffsetInp" value="0" step="0.1" min="-5" max="10"
-              style="width:70px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:7px;color:#e4b55a;font-family:'Cairo',sans-serif;font-size:13px;padding:5px 8px;outline:none;text-align:center;"
-              oninput="applyGlobalOffset(this.value)">
-            <button class="syn-btn syn-ghost" style="width:auto;padding:5px 10px;font-size:11px;margin:0;" onclick="resetAllOffsets()">↺ تصفير الكل</button>
+          <div
+            style="
+              display: flex;
+              gap: 6px;
+              margin-bottom: 10px;
+              align-items: center;
+            "
+          >
+            <span style="font-size: 11px; color: #6e8878"
+              >تأخير عام (ثانية)</span
+            >
+            <input
+              type="number"
+              id="globalOffsetInp"
+              value="0"
+              step="0.1"
+              min="-5"
+              max="10"
+              style="
+                width: 70px;
+                background: rgba(255, 255, 255, 0.06);
+                border: 1px solid rgba(255, 255, 255, 0.12);
+                border-radius: 7px;
+                color: #e4b55a;
+                font-family: &quot;Cairo&quot;, sans-serif;
+                font-size: 13px;
+                padding: 5px 8px;
+                outline: none;
+                text-align: center;
+              "
+              oninput="applyGlobalOffset(this.value)"
+            />
+            <button
+              class="syn-btn syn-ghost"
+              style="width: auto; padding: 5px 10px; font-size: 11px; margin: 0"
+              onclick="resetAllOffsets()"
+            >
+              ↺ تصفير الكل
+            </button>
           </div>
-          <div style="max-height:280px;overflow-y:auto;">
+          <div style="max-height: 280px; overflow-y: auto">
             <table class="oft">
-              <thead><tr><th>آية</th><th>النص</th><th>التأخير (ث)</th></tr></thead>
+              <thead>
+                <tr>
+                  <th>آية</th>
+                  <th>النص</th>
+                  <th>التأخير (ث)</th>
+                </tr>
+              </thead>
               <tbody id="offsetTbody"></tbody>
             </table>
           </div>
@@ -2193,63 +2773,224 @@
 
         <!-- TAB 2: Manual sync -->
         <div class="sync-tc" id="stc-manual">
-          <div style="font-size:11px;color:rgba(255,255,255,.35);margin-bottom:10px;direction:rtl;line-height:1.8;">
-            🎯 شغّل الصوت ثم اضغط <b style="color:#e4b55a;">Space</b> أو زرار "علّم" عند بداية كل آية.<br>
+          <div
+            style="
+              font-size: 11px;
+              color: rgba(255, 255, 255, 0.35);
+              margin-bottom: 10px;
+              direction: rtl;
+              line-height: 1.8;
+            "
+          >
+            🎯 شغّل الصوت ثم اضغط <b style="color: #e4b55a">Space</b> أو زرار
+            "علّم" عند بداية كل آية.<br />
             التوقيتات المحفوظة بتتطبق تلقائياً على الـ offset.
           </div>
-          <div style="background:rgba(201,151,58,.06);border:1px solid rgba(201,151,58,.15);border-radius:9px;padding:9px 11px;margin-bottom:9px;">
-            <div style="font-size:10px;color:#6e8878;margin-bottom:5px;">الآية الحالية</div>
-            <div style="font-family:'Scheherazade New',serif;font-size:14px;color:#e4b55a;direction:rtl;" id="ms-cur-ar">—</div>
-            <div style="font-size:10px;color:rgba(255,255,255,.3);margin-top:3px;" id="ms-cur-ref">—</div>
+          <div
+            style="
+              background: rgba(201, 151, 58, 0.06);
+              border: 1px solid rgba(201, 151, 58, 0.15);
+              border-radius: 9px;
+              padding: 9px 11px;
+              margin-bottom: 9px;
+            "
+          >
+            <div style="font-size: 10px; color: #6e8878; margin-bottom: 5px">
+              الآية الحالية
+            </div>
+            <div
+              style="
+                font-family: &quot;Scheherazade New&quot;, serif;
+                font-size: 14px;
+                color: #e4b55a;
+                direction: rtl;
+              "
+              id="ms-cur-ar"
+            >
+              —
+            </div>
+            <div
+              style="
+                font-size: 10px;
+                color: rgba(255, 255, 255, 0.3);
+                margin-top: 3px;
+              "
+              id="ms-cur-ref"
+            >
+              —
+            </div>
           </div>
-          <div style="display:flex;gap:5px;margin-bottom:8px;">
-            <div style="font-size:12px;color:#6e8878;flex:1;align-self:center;" id="ms-progress">٠ / ٠</div>
-            <button class="syn-btn syn-gold" style="width:auto;flex:1;margin:0;padding:7px 10px;" id="ms-mark-btn" onclick="msMark()" disabled>✦ علّم (Space)</button>
+          <div style="display: flex; gap: 5px; margin-bottom: 8px">
+            <div
+              style="
+                font-size: 12px;
+                color: #6e8878;
+                flex: 1;
+                align-self: center;
+              "
+              id="ms-progress"
+            >
+              ٠ / ٠
+            </div>
+            <button
+              class="syn-btn syn-gold"
+              style="width: auto; flex: 1; margin: 0; padding: 7px 10px"
+              id="ms-mark-btn"
+              onclick="msMark()"
+              disabled
+            >
+              ✦ علّم (Space)
+            </button>
           </div>
-          <div style="display:flex;gap:5px;margin-bottom:10px;">
-            <button class="syn-btn syn-grn" style="flex:1;margin:0;padding:7px;" id="ms-start-btn" onclick="msToggle()">▶ ابدأ</button>
-            <button class="syn-btn syn-red" style="flex:1;margin:0;padding:7px;" onclick="msReset()">↺ إعادة</button>
+          <div style="display: flex; gap: 5px; margin-bottom: 10px">
+            <button
+              class="syn-btn syn-grn"
+              style="flex: 1; margin: 0; padding: 7px"
+              id="ms-start-btn"
+              onclick="msToggle()"
+            >
+              ▶ ابدأ
+            </button>
+            <button
+              class="syn-btn syn-red"
+              style="flex: 1; margin: 0; padding: 7px"
+              onclick="msReset()"
+            >
+              ↺ إعادة
+            </button>
           </div>
-          <div style="max-height:200px;overflow-y:auto;">
+          <div style="max-height: 200px; overflow-y: auto">
             <table class="ls-result-tbl">
-              <thead><tr><th>آية</th><th>النص</th><th>التوقيت (ث)</th><th>حالة</th></tr></thead>
+              <thead>
+                <tr>
+                  <th>آية</th>
+                  <th>النص</th>
+                  <th>التوقيت (ث)</th>
+                  <th>حالة</th>
+                </tr>
+              </thead>
               <tbody id="ms-result-body">
-                <tr><td colspan="4" style="text-align:center;padding:10px;color:rgba(255,255,255,.22);">ابدأ المزامنة لرؤية النتائج</td></tr>
+                <tr>
+                  <td
+                    colspan="4"
+                    style="
+                      text-align: center;
+                      padding: 10px;
+                      color: rgba(255, 255, 255, 0.22);
+                    "
+                  >
+                    ابدأ المزامنة لرؤية النتائج
+                  </td>
+                </tr>
               </tbody>
             </table>
           </div>
-          <button class="syn-btn syn-gold" style="margin-top:8px;" onclick="msApply()" id="ms-apply-btn" disabled>✅ تطبيق التوقيتات على الآيات</button>
+          <button
+            class="syn-btn syn-gold"
+            style="margin-top: 8px"
+            onclick="msApply()"
+            id="ms-apply-btn"
+            disabled
+          >
+            ✅ تطبيق التوقيتات على الآيات
+          </button>
         </div>
 
         <!-- TAB 3: Live sync -->
         <div class="sync-tc" id="stc-live">
-          <div style="font-size:11px;color:rgba(255,255,255,.35);margin-bottom:10px;direction:rtl;line-height:1.8;">
-            🎙 شغّل الصوت ثم اضغط <b style="color:#e4b55a;">Space</b> أو "مارك" عند بداية كل آية.<br>
+          <div
+            style="
+              font-size: 11px;
+              color: rgba(255, 255, 255, 0.35);
+              margin-bottom: 10px;
+              direction: rtl;
+              line-height: 1.8;
+            "
+          >
+            🎙 شغّل الصوت ثم اضغط <b style="color: #e4b55a">Space</b> أو "مارك"
+            عند بداية كل آية.<br />
             يصلح لرفع صوت مخصص أو القارئ التلقائي.
           </div>
           <div class="ls-verse-card">
             <div class="ls-verse-ar" id="ls-cur-ar">—</div>
-            <div class="ls-verse-ref" id="ls-cur-ref">آية <span id="ls-vnum">٠</span> / <span id="ls-vtot">٠</span></div>
+            <div class="ls-verse-ref" id="ls-cur-ref">
+              آية <span id="ls-vnum">٠</span> / <span id="ls-vtot">٠</span>
+            </div>
           </div>
-          <div style="display:flex;gap:5px;margin-bottom:8px;">
-            <button class="syn-btn syn-grn" style="flex:1;margin:0;padding:8px;" id="ls-play-btn" onclick="lsToggle()">▶ شغّل</button>
-            <button class="syn-btn" id="ls-mark-btn" onclick="lsMark()" disabled
-              style="flex:1;margin:0;padding:8px;background:rgba(201,151,58,.15);border:1px solid rgba(201,151,58,.3);color:#e4b55a;border-radius:8px;font-family:'Cairo',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">
+          <div style="display: flex; gap: 5px; margin-bottom: 8px">
+            <button
+              class="syn-btn syn-grn"
+              style="flex: 1; margin: 0; padding: 8px"
+              id="ls-play-btn"
+              onclick="lsToggle()"
+            >
+              ▶ شغّل
+            </button>
+            <button
+              class="syn-btn"
+              id="ls-mark-btn"
+              onclick="lsMark()"
+              disabled
+              style="
+                flex: 1;
+                margin: 0;
+                padding: 8px;
+                background: rgba(201, 151, 58, 0.15);
+                border: 1px solid rgba(201, 151, 58, 0.3);
+                color: #e4b55a;
+                border-radius: 8px;
+                font-family: &quot;Cairo&quot;, sans-serif;
+                font-size: 13px;
+                font-weight: 700;
+                cursor: pointer;
+              "
+            >
               ✦ مارك (Space)
             </button>
           </div>
-          <button class="syn-btn syn-red" style="margin-bottom:10px;" onclick="lsStop()">⏹ إيقاف</button>
-          <div style="max-height:200px;overflow-y:auto;">
+          <button
+            class="syn-btn syn-red"
+            style="margin-bottom: 10px"
+            onclick="lsStop()"
+          >
+            ⏹ إيقاف
+          </button>
+          <div style="max-height: 200px; overflow-y: auto">
             <table class="ls-result-tbl">
-              <thead><tr><th>آية</th><th>النص</th><th>التوقيت (ث)</th><th>حالة</th></tr></thead>
+              <thead>
+                <tr>
+                  <th>آية</th>
+                  <th>النص</th>
+                  <th>التوقيت (ث)</th>
+                  <th>حالة</th>
+                </tr>
+              </thead>
               <tbody id="ls-result-body">
-                <tr><td colspan="4" style="text-align:center;padding:10px;color:rgba(255,255,255,.22);">ابدأ المزامنة لرؤية النتائج</td></tr>
+                <tr>
+                  <td
+                    colspan="4"
+                    style="
+                      text-align: center;
+                      padding: 10px;
+                      color: rgba(255, 255, 255, 0.22);
+                    "
+                  >
+                    ابدأ المزامنة لرؤية النتائج
+                  </td>
+                </tr>
               </tbody>
             </table>
           </div>
-          <button class="syn-btn syn-gold" style="margin-top:8px;" onclick="lsApply()" id="ls-apply-btn" disabled>✅ تطبيق على جدول التأخير</button>
+          <button
+            class="syn-btn syn-gold"
+            style="margin-top: 8px"
+            onclick="lsApply()"
+            id="ls-apply-btn"
+            disabled
+          >
+            ✅ تطبيق على جدول التأخير
+          </button>
         </div>
-
       </div>
     </div>
     <div class="xov" id="xov">
@@ -2260,13 +3001,13 @@
           <svg viewBox="0 0 100 100">
             <defs>
               <linearGradient id="xgrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%"   stop-color="#245c38"/>
-                <stop offset="60%"  stop-color="#3ea066"/>
-                <stop offset="100%" stop-color="#e4b55a"/>
+                <stop offset="0%" stop-color="#245c38" />
+                <stop offset="60%" stop-color="#3ea066" />
+                <stop offset="100%" stop-color="#e4b55a" />
               </linearGradient>
             </defs>
-            <circle class="xring-bg" cx="50" cy="50" r="45"/>
-            <circle class="xring-fg" id="xringFg" cx="50" cy="50" r="45"/>
+            <circle class="xring-bg" cx="50" cy="50" r="45" />
+            <circle class="xring-fg" id="xringFg" cx="50" cy="50" r="45" />
           </svg>
           <div class="xring-inner">
             <span class="xring-pct" id="xpct">٠٪</span>
@@ -2288,38 +3029,44 @@
       canvas.height = 2560;
       const ctx = canvas.getContext("2d", { alpha: false }); // alpha:false يسرّع compositing
       let drawLoopActive = false;
-      const TARGET_FPS = 30,           // 30fps كافية وبتوفّر نص CPU
+      const TARGET_FPS = 30, // 30fps كافية وبتوفّر نص CPU
         FRAME_MS = 1000 / TARGET_FPS;
       let lastDrawTime = 0;
 
       /* ── Gradient cache — يتبنى مرة واحدة عند التغيير ── */
-      let _gradCache = null, _gradKey = '';
+      let _gradCache = null,
+        _gradKey = "";
       function getCachedGradient(gradStr, W, H) {
-        const key = gradStr + '|' + W + '|' + H;
+        const key = gradStr + "|" + W + "|" + H;
         if (_gradCache && _gradKey === key) return _gradCache;
         _gradKey = key;
         try {
-          const colors = [...gradStr.matchAll(/#[0-9a-fA-F]{3,6}/g)].map(m => m[0]);
+          const colors = [...gradStr.matchAll(/#[0-9a-fA-F]{3,6}/g)].map(
+            (m) => m[0],
+          );
           if (colors.length >= 2) {
             const angle = (160 * Math.PI) / 180;
             const grd = ctx.createLinearGradient(
-              W/2 - Math.cos(angle)*W, H/2 - Math.sin(angle)*H,
-              W/2 + Math.cos(angle)*W, H/2 + Math.sin(angle)*H
+              W / 2 - Math.cos(angle) * W,
+              H / 2 - Math.sin(angle) * H,
+              W / 2 + Math.cos(angle) * W,
+              H / 2 + Math.sin(angle) * H,
             );
             grd.addColorStop(0, colors[0]);
-            grd.addColorStop(1, colors[colors.length-1]);
+            grd.addColorStop(1, colors[colors.length - 1]);
             return (_gradCache = grd);
           }
-        } catch(e) {}
-        return (_gradCache = '#070e09');
+        } catch (e) {}
+        return (_gradCache = "#070e09");
       }
 
       /* ── measureText cache — تجنّب إعادة الحساب لنفس الكلمة ── */
       const _mtCache = new Map();
       function measureW(text, font) {
-        const k = font + '|' + text;
+        const k = font + "|" + text;
         if (_mtCache.has(k)) return _mtCache.get(k);
-        const saved = ctx.font; ctx.font = font;
+        const saved = ctx.font;
+        ctx.font = font;
         const w = ctx.measureText(text).width;
         ctx.font = saved;
         if (_mtCache.size > 2000) _mtCache.clear();
@@ -2329,7 +3076,9 @@
 
       /* ── CSTATE dirty flag — نتجنب DOM reads لما مفيش تغيير ── */
       let _cstateDirty = true;
-      function markCstateDirty() { _cstateDirty = true; }
+      function markCstateDirty() {
+        _cstateDirty = true;
+      }
 
       const CSTATE = {
         bgGradient: "linear-gradient(160deg,#020d04,#071a0a)",
@@ -2370,7 +3119,10 @@
             const elapsed = performance.now() - canvasFadeStart;
             CSTATE.words = canvasFadeWords.map((w, i) => {
               const delay = i * 90;
-              const progress = Math.min(1, Math.max(0, (elapsed - delay) / CANVAS_FADE_DURATION));
+              const progress = Math.min(
+                1,
+                Math.max(0, (elapsed - delay) / CANVAS_FADE_DURATION),
+              );
               return { text: w.text, color: w.color, opacity: progress };
             });
           } else {
@@ -2388,8 +3140,12 @@
         CSTATE.color = S.color || "#fff";
         CSTATE.fontSize = S.size || 14;
         const fontMap = {
-          amiri: "Amiri", cairo: "Cairo", noto: "Noto Naskh Arabic",
-          lateef: "Lateef", kufi: "Reem Kufi", harmattan: "Harmattan",
+          amiri: "Amiri",
+          cairo: "Cairo",
+          noto: "Noto Naskh Arabic",
+          lateef: "Lateef",
+          kufi: "Reem Kufi",
+          harmattan: "Harmattan",
         };
         CSTATE.fontFamily = fontMap[S.font] || "Scheherazade New";
         CSTATE.showMoon = S.fx.moon !== false;
@@ -2400,18 +3156,28 @@
         CSTATE.showParticles = !!S.fx.particles;
         CSTATE.fadein = !!S.fx.fadein;
         const bgMedia = document.getElementById("bgMedia");
-        if (bgMedia && (bgMedia.tagName === "VIDEO" || bgMedia.tagName === "IMG")) {
+        if (
+          bgMedia &&
+          (bgMedia.tagName === "VIDEO" || bgMedia.tagName === "IMG")
+        ) {
           CSTATE.bgImage = bgMedia;
           CSTATE.bgGradient = null;
           _gradCache = null; // invalidate gradient cache when switching to image
         } else {
           CSTATE.bgImage = null;
-          const newGrad = document.getElementById("screen")?.style.background || "linear-gradient(160deg,#020d04,#071a0a)";
-          if (newGrad !== CSTATE.bgGradient) { CSTATE.bgGradient = newGrad; _gradCache = null; }
+          const newGrad =
+            document.getElementById("screen")?.style.background ||
+            "linear-gradient(160deg,#020d04,#071a0a)";
+          if (newGrad !== CSTATE.bgGradient) {
+            CSTATE.bgGradient = newGrad;
+            _gradCache = null;
+          }
         }
         const dimOv = document.getElementById("bgDimOverlay");
         if (dimOv && dimOv.style.display !== "none") {
-          const m = (dimOv.style.background || "").match(/rgba\(0,0,0,([\d.]+)\)/);
+          const m = (dimOv.style.background || "").match(
+            /rgba\(0,0,0,([\d.]+)\)/,
+          );
           CSTATE.bgDim = m ? parseFloat(m[1]) : 0.5;
         } else {
           CSTATE.bgDim = 0;
@@ -2422,7 +3188,15 @@
         return getCachedGradient(gradStr, w, h);
       }
 
-      function drawArabicText(words, cx, cy, maxWidth, lineHeight, fontSize, fontFamily) {
+      function drawArabicText(
+        words,
+        cx,
+        cy,
+        maxWidth,
+        lineHeight,
+        fontSize,
+        fontFamily,
+      ) {
         if (!words || !words.length) return;
         const font = `${fontSize}px "${fontFamily}", serif`;
         ctx.font = font;
@@ -2430,21 +3204,26 @@
         ctx.textBaseline = "middle";
         const spaceW = measureW(" ", font);
         const lines = [];
-        let currentLine = [], currentWidth = 0;
+        let currentLine = [],
+          currentWidth = 0;
         for (const wo of words) {
           const ww = measureW(wo.text, font);
-          const needed = currentLine.length === 0 ? ww : currentWidth + spaceW + ww;
+          const needed =
+            currentLine.length === 0 ? ww : currentWidth + spaceW + ww;
           if (needed > maxWidth && currentLine.length > 0) {
-            lines.push(currentLine); currentLine = [wo]; currentWidth = ww;
+            lines.push(currentLine);
+            currentLine = [wo];
+            currentWidth = ww;
           } else {
-            currentLine.push(wo); currentWidth = needed;
+            currentLine.push(wo);
+            currentWidth = needed;
           }
         }
         if (currentLine.length) lines.push(currentLine);
         const totalH = lines.length * lineHeight;
         let y = cy - totalH / 2 + lineHeight / 2;
         for (const ln of lines) {
-          const fullText = ln.map(w => w.text).join(" ");
+          const fullText = ln.map((w) => w.text).join(" ");
           const lineW = measureW(fullText, font);
           let x = cx + lineW / 2;
           for (const wo of ln) {
@@ -2708,8 +3487,8 @@
         function loop(ts) {
           if (!drawLoopActive) return;
           const ready = isExporting
-            ? true                                       // تصدير: ارسم كل frame بدون قيود
-            : (_cstateDirty && ts - lastDrawTime >= 50); // معاينة: فقط لما يتغيّر شيء
+            ? true // تصدير: ارسم كل frame بدون قيود
+            : _cstateDirty && ts - lastDrawTime >= 50; // معاينة: فقط لما يتغيّر شيء
           if (ready) {
             lastDrawTime = ts;
             _cstateDirty = true; // أجبر syncCSTATE على القراءة دائماً أثناء التصدير
@@ -2755,147 +3534,309 @@
       //  نظام التصدير — WebCodecs MP4 + WebM fallback
       // ══════════════════════════════════════════════════════
       let _expCtxRef = null;
-      let _expTotalDur = 0, _expElapsedBefore = 0;
+      let _expTotalDur = 0,
+        _expElapsedBefore = 0;
       let _expAbort = false;
       let _expProgressIv = null;
 
       function _stopProgressIv() {
-        if (_expProgressIv) { clearInterval(_expProgressIv); _expProgressIv = null; }
+        if (_expProgressIv) {
+          clearInterval(_expProgressIv);
+          _expProgressIv = null;
+        }
       }
 
       function _setProgress(elapsed) {
         if (!_expTotalDur) return;
-        const pct = Math.min(99, Math.round(elapsed / _expTotalDur * 100));
+        const pct = Math.min(99, Math.round((elapsed / _expTotalDur) * 100));
         const rem = Math.max(0, _expTotalDur - elapsed);
-        const m = Math.floor(rem / 60), s = Math.floor(rem % 60);
+        const m = Math.floor(rem / 60),
+          s = Math.floor(rem % 60);
         const circ = 2 * Math.PI * 45;
         const fg = document.getElementById("xringFg");
-        if (fg) { fg.style.strokeDasharray = circ; fg.style.strokeDashoffset = circ * (1 - pct / 100); }
-        const pe = document.getElementById("xpct"); if (pe) pe.textContent = arN(pct) + "%";
-        const et = document.getElementById("xeta"); if (et) et.textContent = (m > 0 ? arN(m) + "د " : "") + arN(s) + "ث";
+        if (fg) {
+          fg.style.strokeDasharray = circ;
+          fg.style.strokeDashoffset = circ * (1 - pct / 100);
+        }
+        const pe = document.getElementById("xpct");
+        if (pe) pe.textContent = arN(pct) + "%";
+        const et = document.getElementById("xeta");
+        if (et) et.textContent = (m > 0 ? arN(m) + "د " : "") + arN(s) + "ث";
       }
 
       function _finishExport(ctx, msg, color) {
-        isExporting = false; _expAbort = false;
-        updateExportBtn(false); xHide(); _stopProgressIv();
-        stopDrawLoop(); lastDrawTime = 0; startDrawLoop();
+        isExporting = false;
+        _expAbort = false;
+        updateExportBtn(false);
+        xHide();
+        _stopProgressIv();
+        stopDrawLoop();
+        lastDrawTime = 0;
+        startDrawLoop();
         if (ctx) ctx.close().catch(() => {});
-        if (msg) { toast$(msg); setSbar(msg, color || "#5ec285"); }
+        if (msg) {
+          toast$(msg);
+          setSbar(msg, color || "#5ec285");
+        }
       }
+
+      // كشف iOS
+      const _isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
       function _downloadBlob(blob, filename) {
         const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url; a.download = filename; a.click();
-        setTimeout(() => URL.revokeObjectURL(url), 30000);
+        if (_isIOS) {
+          // iOS Safari لا يدعم a.download — نفتح في تاب جديد ونعرض زر الحفظ
+          _showIOSSaveDialog(url, blob, filename);
+        } else {
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          setTimeout(() => URL.revokeObjectURL(url), 30000);
+        }
+      }
+
+      function _showIOSSaveDialog(url, blob, filename) {
+        // فتح الفيديو مباشرة في Safari لحفظه
+        const isMP4 = filename.endsWith('.mp4') || blob.type === 'video/mp4';
+        const overlay = document.createElement('div');
+        overlay.style.cssText = `
+          position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.88);
+          display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;
+          font-family:Cairo,sans-serif;direction:rtl;padding:24px;
+        `;
+        overlay.innerHTML = `
+          <div style="font-size:32px">📱</div>
+          <div style="color:#e4b55a;font-size:16px;font-weight:700;text-align:center">
+            حفظ الفيديو على iOS
+          </div>
+          <div style="color:#b5c4bc;font-size:13px;text-align:center;line-height:1.8;max-width:280px">
+            اضغط <b style="color:#fff">"فتح في Safari"</b> ثم اضغط مطوّلاً على الفيديو
+            واختر <b style="color:#fff">"حفظ الفيديو"</b>
+          </div>
+          <a href="${url}" target="_blank" style="
+            background:#c9973a;color:#000;font-weight:700;font-size:14px;
+            padding:12px 28px;border-radius:100px;text-decoration:none;
+            font-family:Cairo,sans-serif;
+          ">فتح الفيديو ▶</a>
+          <button onclick="this.closest('div[style]').remove();URL.revokeObjectURL('${url}')" style="
+            background:transparent;border:1px solid rgba(255,255,255,.2);color:#6e8878;
+            font-size:12px;padding:8px 20px;border-radius:100px;cursor:pointer;
+            font-family:Cairo,sans-serif;
+          ">إغلاق</button>
+        `;
+        document.body.appendChild(overlay);
       }
 
       function stopExport() {
         _expAbort = true;
-        if (exportRecorder && exportRecorder.state !== "inactive") try { exportRecorder.stop(); } catch(e) {}
-        if (_expCtxRef) { _expCtxRef.close().catch(() => {}); _expCtxRef = null; }
-        isExporting = false; _stopProgressIv();
-        stopDrawLoop(); updateExportBtn(false); xHide(); startDrawLoop();
+        if (exportRecorder && exportRecorder.state !== "inactive")
+          try {
+            exportRecorder.stop();
+          } catch (e) {}
+        if (_expCtxRef) {
+          _expCtxRef.close().catch(() => {});
+          _expCtxRef = null;
+        }
+        isExporting = false;
+        _stopProgressIv();
+        stopDrawLoop();
+        updateExportBtn(false);
+        xHide();
+        startDrawLoop();
         toast$("⏹ تم إيقاف التصدير");
       }
 
       async function _loadData(expCtx, exportAyahs, sn) {
-        if (S.sh.qdcId) await fetchWordTiming(sn, exportAyahs[0]).catch(() => {});
-        const total = exportAyahs.length; let loaded = 0;
-        return Promise.all(exportAyahs.map(async ayahN => {
-          const urls = ayahUrls(S.sh, sn, ayahN);
-          let buf = null;
-          for (const url of urls) {
-            try { const r = await fetch(url,{mode:"cors"}); if(!r.ok) continue; buf = await expCtx.decodeAudioData(await r.arrayBuffer()); break; } catch(e) {}
-          }
-          if (!buf) throw Object.assign(new Error("فشل تحميل آية "+ayahN), {ayahN});
-          const [arRes, segs, qdcW] = await Promise.all([
-            fetch("https://api.alquran.cloud/v1/ayah/"+sn+":"+ayahN+"/ar").then(r=>r.json()),
-            fetchWordTiming(sn, ayahN),
-            S.sh&&S.sh.qdcId ? fetchQdcWords(sn,ayahN) : Promise.resolve(null)
-          ]);
-          const arText = sn===1 ? (arRes.data?.text||"") : stripBasmala(arRes.data?.text||"");
-          loaded++;
-          xShow(loaded, total, "تحميل "+S.surah.ar+" — آية "+arN(ayahN));
-          setSbar("⏳ تحميل ("+loaded+"/"+total+")...", "#c9973a");
-          return { ayahN, buf, arText, wordList: qdcW?.length?qdcW:null, ref:"﴿ "+S.surah.ar+" : "+arN(ayahN)+" ﴾", segs };
-        }));
+        if (S.sh.qdcId)
+          await fetchWordTiming(sn, exportAyahs[0]).catch(() => {});
+        const total = exportAyahs.length;
+        let loaded = 0;
+        return Promise.all(
+          exportAyahs.map(async (ayahN) => {
+            const urls = ayahUrls(S.sh, sn, ayahN);
+            let buf = null;
+            for (const url of urls) {
+              try {
+                const r = await fetch(url, { mode: "cors" });
+                if (!r.ok) continue;
+                buf = await expCtx.decodeAudioData(await r.arrayBuffer());
+                break;
+              } catch (e) {}
+            }
+            if (!buf)
+              throw Object.assign(new Error("فشل تحميل آية " + ayahN), {
+                ayahN,
+              });
+            const [arRes, segs, qdcW] = await Promise.all([
+              fetch(
+                "https://api.alquran.cloud/v1/ayah/" + sn + ":" + ayahN + "/ar",
+              ).then((r) => r.json()),
+              fetchWordTiming(sn, ayahN),
+              S.sh && S.sh.qdcId
+                ? fetchQdcWords(sn, ayahN)
+                : Promise.resolve(null),
+            ]);
+            const arText =
+              sn === 1
+                ? arRes.data?.text || ""
+                : stripBasmala(arRes.data?.text || "");
+            loaded++;
+            xShow(
+              loaded,
+              total,
+              "تحميل " + S.surah.ar + " — آية " + arN(ayahN),
+            );
+            setSbar("⏳ تحميل (" + loaded + "/" + total + ")...", "#c9973a");
+            return {
+              ayahN,
+              buf,
+              arText,
+              wordList: qdcW?.length ? qdcW : null,
+              ref: "﴿ " + S.surah.ar + " : " + arN(ayahN) + " ﴾",
+              segs,
+            };
+          }),
+        );
       }
 
       function _prepVerse(vd, exportAyahs) {
-        stopWordHighlight(); clearChunkCycle(); canvasFadeWords=[];
-        S.active = exportAyahs.indexOf(vd.ayahN); renderVList();
-        $("vRef").textContent = vd.ref; updateScreen();
-        verseChunks = splitIntoChunks(vd.wordList?vd.wordList.join(" "):vd.arText||"", vd.wordList||null);
-        currentChunkIdx=0; showChunk(0,true); markCstateDirty();
+        stopWordHighlight();
+        clearChunkCycle();
+        canvasFadeWords = [];
+        S.active = exportAyahs.indexOf(vd.ayahN);
+        renderVList();
+        $("vRef").textContent = vd.ref;
+        updateScreen();
+        verseChunks = splitIntoChunks(
+          vd.wordList ? vd.wordList.join(" ") : vd.arText || "",
+          vd.wordList || null,
+        );
+        currentChunkIdx = 0;
+        showChunk(0, true);
+        markCstateDirty();
       }
 
       function _drawVerseFrame(vd, f, msPerFrame, hlActive) {
         // chunk transition
         if (window._expChunkAt) {
-          for (const sc of window._expChunkAt) if (f===sc.f) showChunk(sc.ci, true);
+          for (const sc of window._expChunkAt)
+            if (f === sc.f) showChunk(sc.ci, true);
         }
         // highlight
         let newHL = hlActive;
         if (vd.segs) {
-          const nowMs = f * msPerFrame; let found = -1;
-          for (const seg of vd.segs) if (nowMs>=seg[1]&&nowMs<seg[2]) { found=seg[0]; break; }
+          const nowMs = f * msPerFrame;
+          let found = -1;
+          for (const seg of vd.segs)
+            if (nowMs >= seg[1] && nowMs < seg[2]) {
+              found = seg[0];
+              break;
+            }
           if (found !== hlActive) {
-            if (hlActive>=0) { const o=document.getElementById("w"+hlActive); if(o){o.style.color=o.dataset.base||S.color||"#fff";o.style.textShadow="";} }
-            if (found>=0)    { const el=document.getElementById("w"+found);   if(el){el.style.color="#e4b55a";el.style.textShadow="0 0 18px rgba(228,181,90,.9)";} }
+            if (hlActive >= 0) {
+              const o = document.getElementById("w" + hlActive);
+              if (o) {
+                o.style.color = o.dataset.base || S.color || "#fff";
+                o.style.textShadow = "";
+              }
+            }
+            if (found >= 0) {
+              const el = document.getElementById("w" + found);
+              if (el) {
+                el.style.color = "#e4b55a";
+                el.style.textShadow = "0 0 18px rgba(228,181,90,.9)";
+              }
+            }
             newHL = found;
           }
         }
-        _cstateDirty=true; syncCSTATE(); drawFrameDirect();
+        _cstateDirty = true;
+        syncCSTATE();
+        drawFrameDirect();
         return newHL;
       }
 
       async function startExport() {
         if (isExporting) return stopExport();
-        if (!S.sh)    return toast$("⚠ اختر شيخاً أولاً");
+        if (!S.sh) return toast$("⚠ اختر شيخاً أولاً");
         if (!S.surah) return toast$("⚠ اختر سورة أولاً");
         audio.pause();
 
         const exportAyahs = apSelected.size
-          ? [...apSelected].sort((a,b)=>a-b)
-          : Array.from({length:S.vTo-S.vFrom+1},(_,i)=>S.vFrom+i);
-        const total=exportAyahs.length, sn=S.surah.n;
+          ? [...apSelected].sort((a, b) => a - b)
+          : Array.from({ length: S.vTo - S.vFrom + 1 }, (_, i) => S.vFrom + i);
+        const total = exportAyahs.length,
+          sn = S.surah.n;
 
         xShow(0, total, "جارٍ تحضير الآيات...");
         setSbar("⏳ تحميل...", "#c9973a");
 
-        const expCtx = new (window.AudioContext||window.webkitAudioContext)({sampleRate:44100});
+        const expCtx = new (window.AudioContext || window.webkitAudioContext)({
+          sampleRate: 44100,
+        });
         _expCtxRef = expCtx;
 
-        const loadResults = await _loadData(expCtx, exportAyahs, sn).catch(e=>{
-          xHide(); expCtx.close(); toast$("❌ "+e.message); setSbar("❌ "+e.message,"#f47c7c"); return null;
-        });
+        const loadResults = await _loadData(expCtx, exportAyahs, sn).catch(
+          (e) => {
+            xHide();
+            expCtx.close();
+            toast$("❌ " + e.message);
+            setSbar("❌ " + e.message, "#f47c7c");
+            return null;
+          },
+        );
         if (!loadResults) return;
 
-        const ordered   = exportAyahs.map(n=>loadResults.find(r=>r.ayahN===n));
-        const buffers   = ordered.map(r=>r.buf);
-        const verseData = ordered.map(r=>({...r}));
-        _expTotalDur    = buffers.reduce((s,b)=>s+b.duration,0);
-        _expElapsedBefore=0; _expAbort=false;
+        const ordered = exportAyahs.map((n) =>
+          loadResults.find((r) => r.ayahN === n),
+        );
+        const buffers = ordered.map((r) => r.buf);
+        const verseData = ordered.map((r) => ({ ...r }));
+        _expTotalDur = buffers.reduce((s, b) => s + b.duration, 0);
+        _expElapsedBefore = 0;
+        _expAbort = false;
 
-        const qp = QUALITY_PRESETS[currentQuality]||QUALITY_PRESETS.hd;
-        canvas.width=qp.w; canvas.height=qp.h;
-        _gradCache=null; _mtCache.clear(); stopDrawLoop();
-        isExporting=true; updateExportBtn(true);
+        const qp =
+          currentPreset && EXPORT_PRESETS[currentPreset]
+            ? EXPORT_PRESETS[currentPreset]
+            : QUALITY_PRESETS[currentQuality] || QUALITY_PRESETS.hd;
+        canvas.width = qp.w;
+        canvas.height = qp.h;
+        _gradCache = null;
+        _mtCache.clear();
+        stopDrawLoop();
+        isExporting = true;
+        updateExportBtn(true);
 
         // اختيار المسار
-        const canMP4 = typeof VideoEncoder!=="undefined"
-                    && typeof AudioEncoder!=="undefined"
-                    && typeof Mp4Muxer!=="undefined";
+        const canMP4 =
+          typeof VideoEncoder !== "undefined" &&
+          typeof AudioEncoder !== "undefined" &&
+          typeof Mp4Muxer !== "undefined";
 
-        if (_exportFmt==="mp4" && _turboMode && canMP4) {
+        // iOS: WebM غير مدعوم — نجبر MP4 WebCodecs
+        const canWebM = !_isIOS && typeof MediaRecorder !== "undefined" &&
+          (MediaRecorder.isTypeSupported?.("video/webm") || MediaRecorder.isTypeSupported?.("video/webm;codecs=vp8,opus"));
+
+        if ((_exportFmt === "mp4" || _isIOS) && _turboMode && canMP4) {
           toast$("⚡ تصدير MP4...");
-          setSbar("🔴 يصدّر "+total+" آية...", "#f47c7c");
+          setSbar("🔴 يصدّر " + total + " آية...", "#f47c7c");
+          await _exportMP4(expCtx, qp, buffers, verseData, exportAyahs, total);
+        } else if (canWebM) {
+          toast$("🔴 تصدير WebM...");
+          setSbar("🔴 يسجّل " + total + " آية...", "#f47c7c");
+          await _exportWebM(expCtx, qp, buffers, verseData, exportAyahs, total);
+        } else if (canMP4) {
+          toast$("⚡ تصدير MP4...");
+          setSbar("🔴 يصدّر " + total + " آية...", "#f47c7c");
           await _exportMP4(expCtx, qp, buffers, verseData, exportAyahs, total);
         } else {
-          toast$("🔴 تصدير WebM...");
-          setSbar("🔴 يسجّل "+total+" آية...", "#f47c7c");
-          await _exportWebM(expCtx, qp, buffers, verseData, exportAyahs, total);
+          _finishExport(expCtx, "❌ التصدير غير مدعوم في هذا المتصفح", "#f47c7c");
         }
       }
 
@@ -2903,122 +3844,209 @@
       //  MP4 عبر WebCodecs — الحل الصح لمشكلة flush
       //  السر: نستنى encoder queue يخف قبل ما نكمل
       // ══════════════════════════════════════════════════════
-      async function _exportMP4(expCtx, qp, buffers, verseData, exportAyahs, total) {
-        const W=qp.w, H=qp.h, FPS=qp.fps, SR=44100;
-        const frameDurUs = Math.round(1e6/FPS);
+      async function _exportMP4(
+        expCtx,
+        qp,
+        buffers,
+        verseData,
+        exportAyahs,
+        total,
+      ) {
+        const W = qp.w,
+          H = qp.h,
+          FPS = qp.fps,
+          SR = 44100;
+        const frameDurUs = Math.round(1e6 / FPS);
 
         const muxer = new Mp4Muxer.Muxer({
           target: new Mp4Muxer.ArrayBufferTarget(),
-          video: { codec:"avc", width:W, height:H, frameRate:FPS },
-          audio: { codec:"aac", sampleRate:SR, numberOfChannels:2 },
-          fastStart: "in-memory"
+          video: { codec: "avc", width: W, height: H, frameRate: FPS },
+          audio: { codec: "aac", sampleRate: SR, numberOfChannels: 2 },
+          fastStart: "in-memory",
         });
 
         // VideoEncoder مع queue pressure control
         let vEncErr = null;
         const videoEnc = new VideoEncoder({
-          output: (chunk,meta) => muxer.addVideoChunk(chunk,meta),
-          error: e => { vEncErr=e; console.error("VEnc:",e); }
+          output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
+          error: (e) => {
+            vEncErr = e;
+            console.error("VEnc:", e);
+          },
         });
 
         // نجرب codecs
         let codecOk = false;
-        for (const codec of ["avc1.640033","avc1.4d0029","avc1.42001f"]) {
+        for (const codec of ["avc1.640033", "avc1.4d0029", "avc1.42001f"]) {
           try {
-            const s = await VideoEncoder.isConfigSupported({codec,width:W,height:H,bitrate:qp.bitrate,framerate:FPS});
+            const s = await VideoEncoder.isConfigSupported({
+              codec,
+              width: W,
+              height: H,
+              bitrate: qp.bitrate,
+              framerate: FPS,
+            });
             if (!s.supported) continue;
-            videoEnc.configure({codec,width:W,height:H,bitrate:qp.bitrate,framerate:FPS});
-            codecOk=true; break;
-          } catch(e) {}
+            videoEnc.configure({
+              codec,
+              width: W,
+              height: H,
+              bitrate: qp.bitrate,
+              framerate: FPS,
+            });
+            codecOk = true;
+            break;
+          } catch (e) {}
         }
         if (!codecOk) {
           videoEnc.close();
+          if (_isIOS) {
+            _finishExport(expCtx, "❌ التصدير غير مدعوم في هذا الإصدار من iOS. جرّب Safari أحدث.", "#f47c7c");
+            return;
+          }
           toast$("⚠ WebCodecs غير مدعوم — تصدير WebM...");
-          return _exportWebM(expCtx, qp, buffers, verseData, exportAyahs, total);
+          return _exportWebM(
+            expCtx,
+            qp,
+            buffers,
+            verseData,
+            exportAyahs,
+            total,
+          );
         }
 
         // AudioEncoder
         const audioEnc = new AudioEncoder({
-          output: (chunk,meta) => muxer.addAudioChunk(chunk,meta),
-          error: e => console.error("AEnc:",e)
+          output: (chunk, meta) => muxer.addAudioChunk(chunk, meta),
+          error: (e) => console.error("AEnc:", e),
         });
-        audioEnc.configure({codec:"mp4a.40.2", sampleRate:SR, numberOfChannels:2, bitrate:192000});
+        audioEnc.configure({
+          codec: "mp4a.40.2",
+          sampleRate: SR,
+          numberOfChannels: 2,
+          bitrate: 192000,
+        });
 
         // بناء audio arrays
-        const totalSamp = Math.ceil(_expTotalDur*SR)+SR;
-        const aL=new Float32Array(totalSamp), aR=new Float32Array(totalSamp);
-        let aOff=0;
+        const totalSamp = Math.ceil(_expTotalDur * SR) + SR;
+        const aL = new Float32Array(totalSamp),
+          aR = new Float32Array(totalSamp);
+        let aOff = 0;
         for (const buf of buffers) {
-          const n=Math.min(Math.round(buf.duration*SR), totalSamp-aOff);
-          aL.set(buf.getChannelData(0).subarray(0,n), aOff);
-          aR.set((buf.numberOfChannels>1?buf.getChannelData(1):buf.getChannelData(0)).subarray(0,n), aOff);
-          aOff+=n;
+          const n = Math.min(Math.round(buf.duration * SR), totalSamp - aOff);
+          aL.set(buf.getChannelData(0).subarray(0, n), aOff);
+          aR.set(
+            (buf.numberOfChannels > 1
+              ? buf.getChannelData(1)
+              : buf.getChannelData(0)
+            ).subarray(0, n),
+            aOff,
+          );
+          aOff += n;
         }
 
-        let globalFrame=0, audioSent=0;
-        const sampPerFrame = Math.round(SR/FPS);
+        let globalFrame = 0,
+          audioSent = 0;
+        const sampPerFrame = Math.round(SR / FPS);
 
-        for (let idx=0; idx<verseData.length; idx++) {
+        for (let idx = 0; idx < verseData.length; idx++) {
           if (_expAbort || vEncErr) break;
-          const vd=verseData[idx], buf=buffers[idx];
+          const vd = verseData[idx],
+            buf = buffers[idx];
 
           _prepVerse(vd, exportAyahs);
           window._expChunkAt = [];
-          if (verseChunks.length>1) {
-            const tw=verseChunks.reduce((s,c)=>s+c.words.length,0);
-            for (let ci=1;ci<verseChunks.length;ci++)
-              window._expChunkAt.push({f:Math.round(verseChunks[ci].startIdx*buf.duration*FPS/tw),ci});
+          if (verseChunks.length > 1) {
+            const tw = verseChunks.reduce((s, c) => s + c.words.length, 0);
+            for (let ci = 1; ci < verseChunks.length; ci++)
+              window._expChunkAt.push({
+                f: Math.round(
+                  (verseChunks[ci].startIdx * buf.duration * FPS) / tw,
+                ),
+                ci,
+              });
           }
-          xShow(idx+1, total, S.surah.ar+" — آية "+arN(vd.ayahN));
-          setSbar("🔴 آية "+arN(vd.ayahN)+" ("+(idx+1)+"/"+total+")", "#f47c7c");
+          xShow(idx + 1, total, S.surah.ar + " — آية " + arN(vd.ayahN));
+          setSbar(
+            "🔴 آية " + arN(vd.ayahN) + " (" + (idx + 1) + "/" + total + ")",
+            "#f47c7c",
+          );
 
-          const ayahFrames = Math.ceil(buf.duration*FPS);
-          const msPerFrame = 1000/FPS;
-          let hlActive=-1;
+          const ayahFrames = Math.ceil(buf.duration * FPS);
+          const msPerFrame = 1000 / FPS;
+          let hlActive = -1;
 
-          for (let f=0; f<ayahFrames; f++) {
+          for (let f = 0; f < ayahFrames; f++) {
             if (_expAbort || vEncErr) break;
 
             hlActive = _drawVerseFrame(vd, f, msPerFrame, hlActive);
 
             // audio chunk لهذا الـ frame
             if (audioSent < totalSamp) {
-              const aLen = Math.min(sampPerFrame, totalSamp-audioSent);
-              const planar = new Float32Array(aLen*2);
-              planar.set(aL.subarray(audioSent, audioSent+aLen), 0);
-              planar.set(aR.subarray(audioSent, audioSent+aLen), aLen);
-              audioEnc.encode(new AudioData({
-                format:"f32-planar", sampleRate:SR,
-                numberOfFrames:aLen, numberOfChannels:2,
-                timestamp:Math.round(audioSent/SR*1e6), data:planar
-              }));
-              audioSent+=aLen;
+              const aLen = Math.min(sampPerFrame, totalSamp - audioSent);
+              const planar = new Float32Array(aLen * 2);
+              planar.set(aL.subarray(audioSent, audioSent + aLen), 0);
+              planar.set(aR.subarray(audioSent, audioSent + aLen), aLen);
+              audioEnc.encode(
+                new AudioData({
+                  format: "f32-planar",
+                  sampleRate: SR,
+                  numberOfFrames: aLen,
+                  numberOfChannels: 2,
+                  timestamp: Math.round((audioSent / SR) * 1e6),
+                  data: planar,
+                }),
+              );
+              audioSent += aLen;
             }
 
             // video frame
-            const ts = globalFrame*frameDurUs;
-            const vf = new VideoFrame(canvas, {timestamp:ts, duration:frameDurUs});
-            videoEnc.encode(vf, {keyFrame: globalFrame%(FPS*2)===0});
+            const ts = globalFrame * frameDurUs;
+            const vf = new VideoFrame(canvas, {
+              timestamp: ts,
+              duration: frameDurUs,
+            });
+            videoEnc.encode(vf, { keyFrame: globalFrame % (FPS * 2) === 0 });
             vf.close();
             globalFrame++;
 
-            _setProgress(_expElapsedBefore + f/FPS);
+            _setProgress(_expElapsedBefore + f / FPS);
 
             // ← الحل الجوهري: نستنى لو الـ queue امتلأ
             // encodeQueueSize > 10 = ننتظر قبل ما نكمل
             while (videoEnc.encodeQueueSize > 10) {
-              await new Promise(r => setTimeout(r, 5));
+              await new Promise((r) => setTimeout(r, 5));
             }
-            if (f%5===0) await new Promise(r=>setTimeout(r,0));
+            if (f % 5 === 0) await new Promise((r) => setTimeout(r, 0));
           }
 
-          if (hlActive>=0) { const o=document.getElementById("w"+hlActive); if(o){o.style.color=o.dataset.base||S.color||"#fff";o.style.textShadow="";} }
-          _expElapsedBefore+=buf.duration;
+          if (hlActive >= 0) {
+            const o = document.getElementById("w" + hlActive);
+            if (o) {
+              o.style.color = o.dataset.base || S.color || "#fff";
+              o.style.textShadow = "";
+            }
+          }
+          _expElapsedBefore += buf.duration;
         }
 
         if (_expAbort || vEncErr) {
-          if (vEncErr) { toast$("❌ خطأ encoder — تصدير WebM..."); _expElapsedBefore=0; isExporting=false; startDrawLoop(); return _exportWebM(expCtx,qp,buffers,verseData,exportAyahs,total); }
-          _finishExport(expCtx); return;
+          if (vEncErr) {
+            toast$("❌ خطأ encoder — تصدير WebM...");
+            _expElapsedBefore = 0;
+            isExporting = false;
+            startDrawLoop();
+            return _exportWebM(
+              expCtx,
+              qp,
+              buffers,
+              verseData,
+              exportAyahs,
+              total,
+            );
+          }
+          _finishExport(expCtx);
+          return;
         }
 
         xShow(total, total, "جارٍ تجميع MP4...");
@@ -3027,22 +4055,27 @@
         try {
           // ← الحل: ننتظر القطعة الأخيرة تتحول قبل flush
           while (videoEnc.encodeQueueSize > 0) {
-            await new Promise(r => setTimeout(r, 10));
+            await new Promise((r) => setTimeout(r, 10));
           }
           await videoEnc.flush();
           await audioEnc.flush();
           muxer.finalize();
 
-          const blob = new Blob([muxer.target.buffer], {type:"video/mp4"});
+          const blob = new Blob([muxer.target.buffer], { type: "video/mp4" });
           if (blob.size < 1000) throw new Error("ملف تالف");
-          const mb=(blob.size/1024/1024).toFixed(1);
-          _downloadBlob(blob, "Islam-Reels-"+((S.surah?.ar)||"قرآن")+".mp4");
+          const mb = (blob.size / 1024 / 1024).toFixed(1);
+          _downloadBlob(
+            blob,
+            "Islam-Reels-" + (S.surah?.ar || "قرآن") + ".mp4",
+          );
           _setProgress(_expTotalDur);
-          _finishExport(expCtx, "✅ تم حفظ MP4 — "+mb+" MB ✨", "#5ec285");
-        } catch(e) {
+          _finishExport(expCtx, "✅ تم حفظ MP4 — " + mb + " MB ✨", "#5ec285");
+        } catch (e) {
           console.error("finalize:", e);
           toast$("⚠ فشل التجميع — تصدير WebM...");
-          _expElapsedBefore=0; isExporting=false; startDrawLoop();
+          _expElapsedBefore = 0;
+          isExporting = false;
+          startDrawLoop();
           await _exportWebM(expCtx, qp, buffers, verseData, exportAyahs, total);
         }
       }
@@ -3050,118 +4083,202 @@
       // ══════════════════════════════════════════════════════
       //  WebM عبر captureStream(0) + requestFrame
       // ══════════════════════════════════════════════════════
-      async function _exportWebM(expCtx, qp, buffers, verseData, exportAyahs, total) {
+      async function _exportWebM(
+        expCtx,
+        qp,
+        buffers,
+        verseData,
+        exportAyahs,
+        total,
+      ) {
         // الخطوة 1: رسم كل الـ frames وحفظها
-        const FPS=qp.fps, msPerFrame=1000/FPS;
-        const frameBlobs=[];
+        const FPS = qp.fps,
+          msPerFrame = 1000 / FPS;
+        const frameBlobs = [];
 
-        for (let idx=0; idx<verseData.length; idx++) {
+        for (let idx = 0; idx < verseData.length; idx++) {
           if (_expAbort) break;
-          const vd=verseData[idx], buf=buffers[idx];
+          const vd = verseData[idx],
+            buf = buffers[idx];
           _prepVerse(vd, exportAyahs);
-          window._expChunkAt=[];
-          if (verseChunks.length>1) {
-            const tw=verseChunks.reduce((s,c)=>s+c.words.length,0);
-            for (let ci=1;ci<verseChunks.length;ci++)
-              window._expChunkAt.push({f:Math.round(verseChunks[ci].startIdx*buf.duration*FPS/tw),ci});
+          window._expChunkAt = [];
+          if (verseChunks.length > 1) {
+            const tw = verseChunks.reduce((s, c) => s + c.words.length, 0);
+            for (let ci = 1; ci < verseChunks.length; ci++)
+              window._expChunkAt.push({
+                f: Math.round(
+                  (verseChunks[ci].startIdx * buf.duration * FPS) / tw,
+                ),
+                ci,
+              });
           }
-          xShow(idx+1, total, S.surah.ar+" — آية "+arN(vd.ayahN));
-          setSbar("🎬 رسم آية "+arN(vd.ayahN)+" ("+(idx+1)+"/"+total+")", "#f47c7c");
+          xShow(idx + 1, total, S.surah.ar + " — آية " + arN(vd.ayahN));
+          setSbar(
+            "🎬 رسم آية " +
+              arN(vd.ayahN) +
+              " (" +
+              (idx + 1) +
+              "/" +
+              total +
+              ")",
+            "#f47c7c",
+          );
 
-          const ayahFrames=Math.ceil(buf.duration*FPS);
-          let hlActive=-1;
-          for (let f=0; f<ayahFrames; f++) {
+          const ayahFrames = Math.ceil(buf.duration * FPS);
+          let hlActive = -1;
+          for (let f = 0; f < ayahFrames; f++) {
             if (_expAbort) break;
             hlActive = _drawVerseFrame(vd, f, msPerFrame, hlActive);
-            const blob = await new Promise(res=>canvas.toBlob(res,"image/jpeg",0.88));
+            const blob = await new Promise((res) =>
+              canvas.toBlob(res, "image/jpeg", 0.88),
+            );
             frameBlobs.push(blob);
-            _setProgress(_expElapsedBefore + f/FPS);
-            if (f%8===0) await new Promise(r=>setTimeout(r,0));
+            _setProgress(_expElapsedBefore + f / FPS);
+            if (f % 8 === 0) await new Promise((r) => setTimeout(r, 0));
           }
-          if (hlActive>=0) { const o=document.getElementById("w"+hlActive); if(o){o.style.color=o.dataset.base||S.color||"#fff";o.style.textShadow="";} }
-          _expElapsedBefore+=buf.duration;
+          if (hlActive >= 0) {
+            const o = document.getElementById("w" + hlActive);
+            if (o) {
+              o.style.color = o.dataset.base || S.color || "#fff";
+              o.style.textShadow = "";
+            }
+          }
+          _expElapsedBefore += buf.duration;
         }
-        if (_expAbort) { _finishExport(expCtx); return; }
+        if (_expAbort) {
+          _finishExport(expCtx);
+          return;
+        }
 
         // الخطوة 2: replay الـ frames مع الصوت
         xShow(total, total, "جارٍ تسجيل الفيديو...");
         setSbar("⏳ جارٍ تسجيل...", "#c9973a");
 
         // بناء audio blob
-        const SR=44100;
-        const totalSamp=buffers.reduce((s,b)=>s+Math.round(b.duration*SR),0);
-        const wavLen=44+totalSamp*4;
-        const wav=new ArrayBuffer(wavLen);
-        const dv=new DataView(wav);
-        const ws=(p,s)=>{for(let i=0;i<s.length;i++)dv.setUint8(p+i,s.charCodeAt(i));};
-        ws(0,"RIFF");dv.setUint32(4,wavLen-8,true);ws(8,"WAVE");ws(12,"fmt ");
-        dv.setUint32(16,16,true);dv.setUint16(20,3,true);dv.setUint16(22,1,true);
-        dv.setUint32(24,SR,true);dv.setUint32(28,SR*4,true);
-        dv.setUint16(32,4,true);dv.setUint16(34,32,true);
-        ws(36,"data");dv.setUint32(40,totalSamp*4,true);
-        const pcm=new Float32Array(wav,44); let off=0;
+        const SR = 44100;
+        const totalSamp = buffers.reduce(
+          (s, b) => s + Math.round(b.duration * SR),
+          0,
+        );
+        const wavLen = 44 + totalSamp * 4;
+        const wav = new ArrayBuffer(wavLen);
+        const dv = new DataView(wav);
+        const ws = (p, s) => {
+          for (let i = 0; i < s.length; i++)
+            dv.setUint8(p + i, s.charCodeAt(i));
+        };
+        ws(0, "RIFF");
+        dv.setUint32(4, wavLen - 8, true);
+        ws(8, "WAVE");
+        ws(12, "fmt ");
+        dv.setUint32(16, 16, true);
+        dv.setUint16(20, 3, true);
+        dv.setUint16(22, 1, true);
+        dv.setUint32(24, SR, true);
+        dv.setUint32(28, SR * 4, true);
+        dv.setUint16(32, 4, true);
+        dv.setUint16(34, 32, true);
+        ws(36, "data");
+        dv.setUint32(40, totalSamp * 4, true);
+        const pcm = new Float32Array(wav, 44);
+        let off = 0;
         for (const buf of buffers) {
-          const n=Math.round(buf.duration*SR);
-          const c0=buf.getChannelData(0), c1=buf.numberOfChannels>1?buf.getChannelData(1):c0;
-          for(let i=0;i<n&&off<totalSamp;i++) pcm[off++]=(c0[i]+c1[i])*0.5;
+          const n = Math.round(buf.duration * SR);
+          const c0 = buf.getChannelData(0),
+            c1 = buf.numberOfChannels > 1 ? buf.getChannelData(1) : c0;
+          for (let i = 0; i < n && off < totalSamp; i++)
+            pcm[off++] = (c0[i] + c1[i]) * 0.5;
         }
-        const audioBlob=new Blob([wav],{type:"audio/wav"});
-        const audioBuf=await expCtx.decodeAudioData(await audioBlob.arrayBuffer());
+        const audioBlob = new Blob([wav], { type: "audio/wav" });
+        const audioBuf = await expCtx.decodeAudioData(
+          await audioBlob.arrayBuffer(),
+        );
 
         // captureStream(0) + requestFrame
-        const videoStream=canvas.captureStream(0);
-        const videoTrack=videoStream.getVideoTracks()[0];
-        const expDest=expCtx.createMediaStreamDestination();
-        const combined=new MediaStream([...videoStream.getVideoTracks(),...expDest.stream.getAudioTracks()]);
+        const videoStream = canvas.captureStream(0);
+        const videoTrack = videoStream.getVideoTracks()[0];
+        const expDest = expCtx.createMediaStreamDestination();
+        const combined = new MediaStream([
+          ...videoStream.getVideoTracks(),
+          ...expDest.stream.getAudioTracks(),
+        ]);
 
-        let mimeType="";
-        for (const m of ["video/webm;codecs=vp9,opus","video/webm;codecs=vp8,opus","video/webm"])
-          if(MediaRecorder.isTypeSupported(m)){mimeType=m;break;}
+        let mimeType = "";
+        for (const m of [
+          "video/webm;codecs=vp9,opus",
+          "video/webm;codecs=vp8,opus",
+          "video/webm",
+        ])
+          if (MediaRecorder.isTypeSupported(m)) {
+            mimeType = m;
+            break;
+          }
 
-        exportChunks=[];
-        exportRecorder=new MediaRecorder(combined,{mimeType,videoBitsPerSecond:qp.bitrate});
-        exportRecorder.ondataavailable=e=>{if(e.data?.size>0)exportChunks.push(e.data);};
-        exportRecorder.onstop=()=>{
-          const blob=new Blob(exportChunks,{type:"video/webm"});
-          const mb=(blob.size/1024/1024).toFixed(1);
-          _downloadBlob(blob,"Islam-Reels-"+((S.surah?.ar)||"قرآن")+".webm");
+        exportChunks = [];
+        exportRecorder = new MediaRecorder(combined, {
+          mimeType,
+          videoBitsPerSecond: qp.bitrate,
+        });
+        exportRecorder.ondataavailable = (e) => {
+          if (e.data?.size > 0) exportChunks.push(e.data);
+        };
+        exportRecorder.onstop = () => {
+          const blob = new Blob(exportChunks, { type: "video/webm" });
+          const mb = (blob.size / 1024 / 1024).toFixed(1);
+          _downloadBlob(
+            blob,
+            "Islam-Reels-" + (S.surah?.ar || "قرآن") + ".webm",
+          );
           _setProgress(_expTotalDur);
-          _finishExport(expCtx,"✅ تم الحفظ WebM — "+mb+" MB","#5ec285");
+          _finishExport(expCtx, "✅ تم الحفظ WebM — " + mb + " MB", "#5ec285");
         };
         exportRecorder.start(100);
 
-        const audioSrc=expCtx.createBufferSource();
-        audioSrc.buffer=audioBuf; audioSrc.connect(expDest); audioSrc.start(0);
+        const audioSrc = expCtx.createBufferSource();
+        audioSrc.buffer = audioBuf;
+        audioSrc.connect(expDest);
+        audioSrc.start(0);
 
-        const t0=performance.now();
-        for (let f=0; f<frameBlobs.length; f++) {
+        const t0 = performance.now();
+        for (let f = 0; f < frameBlobs.length; f++) {
           if (_expAbort) break;
-          const img=await createImageBitmap(frameBlobs[f]);
-          ctx.drawImage(img,0,0); img.close();
+          const img = await createImageBitmap(frameBlobs[f]);
+          ctx.drawImage(img, 0, 0);
+          img.close();
           if (videoTrack?.requestFrame) videoTrack.requestFrame();
-          const wait=((f+1)*msPerFrame)-(performance.now()-t0);
-          if (wait>0) await new Promise(r=>setTimeout(r,wait));
-          if (f%20===0) _setProgress(_expTotalDur*f/frameBlobs.length);
+          const wait = (f + 1) * msPerFrame - (performance.now() - t0);
+          if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+          if (f % 20 === 0)
+            _setProgress((_expTotalDur * f) / frameBlobs.length);
         }
-        await new Promise(r=>setTimeout(r,800));
-        if (exportRecorder?.state!=="inactive") exportRecorder.stop();
+        await new Promise((r) => setTimeout(r, 800));
+        if (exportRecorder?.state !== "inactive") exportRecorder.stop();
       }
 
-            /* ══ Modal — xShow بيُحدَّث من الـ interval مش هنا ══ */
-      function xShow(cur,tot,sub){
+      /* ══ Modal — xShow بيُحدَّث من الـ interval مش هنا ══ */
+      function xShow(cur, tot, sub) {
         document.getElementById("xov")?.classList.add("show");
-        const c=document.getElementById("xcnt"); if(c)c.textContent=`${arN(cur)} / ${arN(tot)} آية`;
-        const s=document.getElementById("xsub"); if(s)s.textContent=sub||"";
+        const c = document.getElementById("xcnt");
+        if (c) c.textContent = `${arN(cur)} / ${arN(tot)} آية`;
+        const s = document.getElementById("xsub");
+        if (s) s.textContent = sub || "";
         // إعادة تعيين الدائرة للصفر عند الآية الأولى
-        if(cur<=1){
-          const fg=document.getElementById("xringFg");
-          const circ=2*Math.PI*45;
-          if(fg){fg.style.strokeDasharray=circ;fg.style.strokeDashoffset=circ;}
-          const p=document.getElementById("xpct"); if(p)p.textContent="٠%";
-          const e=document.getElementById("xeta"); if(e)e.textContent="";
+        if (cur <= 1) {
+          const fg = document.getElementById("xringFg");
+          const circ = 2 * Math.PI * 45;
+          if (fg) {
+            fg.style.strokeDasharray = circ;
+            fg.style.strokeDashoffset = circ;
+          }
+          const p = document.getElementById("xpct");
+          if (p) p.textContent = "٠%";
+          const e = document.getElementById("xeta");
+          if (e) e.textContent = "";
         }
       }
-      function xHide(){document.getElementById("xov")?.classList.remove("show");}
+      function xHide() {
+        document.getElementById("xov")?.classList.remove("show");
+      }
       function updateExportBtn(recording) {
         const btn = document.getElementById("exportBtn");
         if (!btn) return;
@@ -3539,9 +4656,11 @@
             if (segs) startWordHighlight(segs, S.color);
           });
       });
-      audio.addEventListener("seeked",()=>{
-        if(S.playing&&S.surah&&S.active>=0)
-          fetchWordTiming(S.surah.n,curAN()).then(s=>{if(s)startWordHighlight(s,S.color);});
+      audio.addEventListener("seeked", () => {
+        if (S.playing && S.surah && S.active >= 0)
+          fetchWordTiming(S.surah.n, curAN()).then((s) => {
+            if (s) startWordHighlight(s, S.color);
+          });
       });
       audio.addEventListener("pause", () => {
         S.playing = false;
@@ -3861,15 +4980,20 @@
         try {
           const r = await fetch(
             `https://api.qurancdn.com/api/qdc/verses/by_key/${surahN}:${ayahN}?words=true&word_fields=text_uthmani`,
-            { mode: "cors" }
+            { mode: "cors" },
           );
-          if (!r.ok) { _qdcWordCache[k] = null; return null; }
+          if (!r.ok) {
+            _qdcWordCache[k] = null;
+            return null;
+          }
           const d = await r.json();
           const words = (d.verse?.words || [])
-            .filter(w => w.char_type_name === "word")
-            .map(w => w.text_uthmani || w.text || "");
+            .filter((w) => w.char_type_name === "word")
+            .map((w) => w.text_uthmani || w.text || "");
           _qdcWordCache[k] = words.length ? words : null;
-        } catch { _qdcWordCache[k] = null; }
+        } catch {
+          _qdcWordCache[k] = null;
+        }
         return _qdcWordCache[k];
       }
 
@@ -3898,7 +5022,7 @@
               }
               const off = ts.timestamp_from;
               timingCache[k] = ts.segments.map(([wIdx, wStart, wEnd]) => [
-                wIdx - 1,            // QuranCDN: 1-based → 0-based لمطابقة span id
+                wIdx - 1, // QuranCDN: 1-based → 0-based لمطابقة span id
                 Math.max(0, wStart - off),
                 Math.max(0, wEnd - off),
               ]);
@@ -3941,13 +5065,14 @@
         chunkTimer = null;
 
       function splitIntoChunks(text, wordList) {
-        const words = wordList || (text || "").trim().split(/\s+/).filter(Boolean);
+        const words =
+          wordList || (text || "").trim().split(/\s+/).filter(Boolean);
         if (!words.length) return [];
         const n = words.length;
-        const sz = n <= 10 ? n : n <= 20 ? Math.ceil(n/2) : Math.ceil(n/3);
+        const sz = n <= 10 ? n : n <= 20 ? Math.ceil(n / 2) : Math.ceil(n / 3);
         const chunks = [];
         for (let i = 0; i < words.length; i += sz)
-          chunks.push({ words: words.slice(i, i+sz), startIdx: i });
+          chunks.push({ words: words.slice(i, i + sz), startIdx: i });
         return chunks;
       }
 
@@ -3993,7 +5118,10 @@
         } else {
           vAr.style.opacity = "0";
           vAr.style.transition = "opacity .2s ease";
-          setTimeout(() => { applyAndShow(); markCstateDirty(); }, 220);
+          setTimeout(() => {
+            applyAndShow();
+            markCstateDirty();
+          }, 220);
         }
       }
 
@@ -4027,31 +5155,67 @@
           chunkTimer = null;
         }
       }
-      let _hlRAF=null,_hlLast=-1;
-      function startWordHighlight(segments,color){
+      let _hlRAF = null,
+        _hlLast = -1;
+      function startWordHighlight(segments, color) {
         stopWordHighlight();
-        if(!segments?.length)return;
-        const segs=segments,clr=color||S.color||"#fff";
-        _hlLast=-1;
-        function tick(){
-          if(!S.playing)return;
-          const now=audio.currentTime*1000;
-          let a=-1;
-          for(const[wi,ws,we]of segs)if(now>=ws&&now<we){a=wi;break;}
-          if(a!==_hlLast){
-            if(_hlLast>=0){const o=document.getElementById("w"+_hlLast);if(o){o.style.color=o.dataset.base||clr;o.style.textShadow="";o.style.transform="";}}
-            if(a>=0){const e=document.getElementById("w"+a);if(e){e.style.color="#e4b55a";e.style.textShadow="0 0 18px rgba(228,181,90,.9)";e.style.transform="scale(1.09)";}}
-            _hlLast=a;
+        if (!segments?.length) return;
+        const segs = segments,
+          clr = color || S.color || "#fff";
+        _hlLast = -1;
+        function tick() {
+          if (!S.playing) return;
+          const now = audio.currentTime * 1000;
+          let a = -1;
+          for (const [wi, ws, we] of segs)
+            if (now >= ws && now < we) {
+              a = wi;
+              break;
+            }
+          if (a !== _hlLast) {
+            if (_hlLast >= 0) {
+              const o = document.getElementById("w" + _hlLast);
+              if (o) {
+                o.style.color = o.dataset.base || clr;
+                o.style.textShadow = "";
+                o.style.transform = "";
+              }
+            }
+            if (a >= 0) {
+              const e = document.getElementById("w" + a);
+              if (e) {
+                e.style.color = "#e4b55a";
+                e.style.textShadow = "0 0 18px rgba(228,181,90,.9)";
+                e.style.transform = "scale(1.09)";
+              }
+            }
+            _hlLast = a;
           }
-          _hlRAF=requestAnimationFrame(tick);
+          _hlRAF = requestAnimationFrame(tick);
         }
-        _hlRAF=requestAnimationFrame(tick);
+        _hlRAF = requestAnimationFrame(tick);
       }
-      function stopWordHighlight(){
-        if(_hlRAF){cancelAnimationFrame(_hlRAF);_hlRAF=null;}
-        activeWordTimers.forEach(clearTimeout);activeWordTimers=[];
-        if(_hlLast>=0){const o=document.getElementById("w"+_hlLast);if(o){o.style.color=o.dataset.base||S.color||"#fff";o.style.textShadow="";o.style.transform="";}  _hlLast=-1;}
-        document.querySelectorAll("#vAr span").forEach(el=>{el.style.color=el.dataset.base||S.color||"#fff";el.style.textShadow="";el.style.transform="";});
+      function stopWordHighlight() {
+        if (_hlRAF) {
+          cancelAnimationFrame(_hlRAF);
+          _hlRAF = null;
+        }
+        activeWordTimers.forEach(clearTimeout);
+        activeWordTimers = [];
+        if (_hlLast >= 0) {
+          const o = document.getElementById("w" + _hlLast);
+          if (o) {
+            o.style.color = o.dataset.base || S.color || "#fff";
+            o.style.textShadow = "";
+            o.style.transform = "";
+          }
+          _hlLast = -1;
+        }
+        document.querySelectorAll("#vAr span").forEach((el) => {
+          el.style.color = el.dataset.base || S.color || "#fff";
+          el.style.textShadow = "";
+          el.style.transform = "";
+        });
       }
 
       async function loadVerse() {
@@ -4100,7 +5264,10 @@
 
         // استخدم QuranCDN words إن أمكن (تطابق مضمون مع segments)
         const wordList = qdcWords?.length ? qdcWords : null;
-        verseChunks = splitIntoChunks(wordList ? wordList.join(" ") : ar, wordList);
+        verseChunks = splitIntoChunks(
+          wordList ? wordList.join(" ") : ar,
+          wordList,
+        );
         currentChunkIdx = 0;
         $("vRef").textContent = `﴿ ${S.surah.ar} : ${arN(ayahNum)} ﴾`;
         $("npT").textContent = S.surah.ar + " — آية " + arN(ayahNum);
@@ -4111,9 +5278,12 @@
       function updateScreen() {
         if (!S.surah) return;
         const fontMap = {
-          sch: "'Scheherazade New', serif", amiri: "'Amiri', serif",
-          cairo: "'Cairo', sans-serif", noto: "'Noto Naskh Arabic', serif",
-          lateef: "'Lateef', serif", kufi: "'Reem Kufi', sans-serif",
+          sch: "'Scheherazade New', serif",
+          amiri: "'Amiri', serif",
+          cairo: "'Cairo', sans-serif",
+          noto: "'Noto Naskh Arabic', serif",
+          lateef: "'Lateef', serif",
+          kufi: "'Reem Kufi', sans-serif",
           harmattan: "'Harmattan', sans-serif",
         };
         const ff = fontMap[S.font] || fontMap.sch;
@@ -4283,9 +5453,11 @@
       function applyColor(c) {
         S.color = c;
         document.querySelectorAll("#vAr span").forEach((sp) => {
-          sp.dataset.base = c; sp.style.color = c;
+          sp.dataset.base = c;
+          sp.style.color = c;
         });
-        const prev = document.getElementById("clrPreview"), hex = document.getElementById("clrHex");
+        const prev = document.getElementById("clrPreview"),
+          hex = document.getElementById("clrHex");
         if (prev) prev.style.background = c;
         if (hex) hex.textContent = c;
         markCstateDirty();
@@ -4300,14 +5472,29 @@
         const on = S.fx[k];
         const sw = $("sw-" + k);
         if (sw) {
-          sw.style.background = on ? "linear-gradient(135deg,#245c38,#3ea066)" : "#18301e";
-          sw.style.borderColor = on ? "rgba(62,160,102,.4)" : "rgba(255,255,255,.08)";
+          sw.style.background = on
+            ? "linear-gradient(135deg,#245c38,#3ea066)"
+            : "#18301e";
+          sw.style.borderColor = on
+            ? "rgba(62,160,102,.4)"
+            : "rgba(255,255,255,.08)";
           sw.querySelector(".sw-k").style.right = on ? "3px" : "18px";
         }
-        const mp = { moon: "elMoon", stars: "elStars", glow: "elGlow", border: "elBorder" };
+        const mp = {
+          moon: "elMoon",
+          stars: "elStars",
+          glow: "elGlow",
+          border: "elBorder",
+        };
         if (mp[k]) $(mp[k]).style.display = on ? "block" : "none";
-        if (k === "wave") { const el = $("elWave"); if (el) el.style.display = on ? "flex" : "none"; }
-        if (k === "particles") { if (on) startParticles(); else stopParticles(); }
+        if (k === "wave") {
+          const el = $("elWave");
+          if (el) el.style.display = on ? "flex" : "none";
+        }
+        if (k === "particles") {
+          if (on) startParticles();
+          else stopParticles();
+        }
         markCstateDirty();
       }
 
@@ -4365,14 +5552,89 @@
         }
       }
 
+      // ── Presets الجديدة ──
+      const EXPORT_PRESETS = {
+        yt_hfq: {
+          label: "يوتيوب أفقي",
+          icon: "📺",
+          tag: "1920×1080",
+          w: 1920,
+          h: 1080,
+          fps: 30,
+          bitrate: 8_000_000,
+          desc: "الخيار الأفضل لقنوات يوتيوب.",
+        },
+        yt_hfq60: {
+          label: "يوتيوب عالي",
+          icon: "📺",
+          tag: "60fps",
+          w: 1920,
+          h: 1080,
+          fps: 60,
+          bitrate: 16_000_000,
+          desc: "يوتيوب بـ 60 إطار/ثانية.",
+        },
+        sh_eco: {
+          label: "شورتس اقتصادي",
+          icon: "⚡",
+          tag: "720p",
+          w: 720,
+          h: 1280,
+          fps: 30,
+          bitrate: 4_000_000,
+          desc: "حجم ملف صغير وسرعة تصدير أعلى.",
+        },
+        sh_hd: {
+          label: "شورتس قياسي",
+          icon: "🎬",
+          tag: "1080p",
+          w: 1080,
+          h: 1920,
+          fps: 30,
+          bitrate: 8_000_000,
+          desc: "الخيار الأفضل لمعظم هواتف أندرويد وآيفون.",
+        },
+        sh_hd60: {
+          label: "شورتس عالي",
+          icon: "🎬",
+          tag: "60fps",
+          w: 1080,
+          h: 1920,
+          fps: 60,
+          bitrate: 16_000_000,
+          desc: "شورتس سلس بـ 60 إطار/ثانية.",
+        },
+        sh_4k: {
+          label: "شورتس ممتاز",
+          icon: "💎",
+          tag: "4K",
+          w: 2160,
+          h: 3840,
+          fps: 60,
+          bitrate: 40_000_000,
+          desc: "أعلى جودة ممكنة (يحتاج جهاز قوي).",
+        },
+        custom: {
+          label: "مخصص",
+          icon: "🔧",
+          tag: "يدوي",
+          w: 1080,
+          h: 1920,
+          fps: 30,
+          bitrate: 8_000_000,
+          desc: "اضبط الدقة والـ FPS يدوياً.",
+        },
+      };
+      // نحتفظ بـ QUALITY_PRESETS للتوافق مع الكود القديم
       const QUALITY_PRESETS = {
         hd: { w: 1080, h: 1920, fps: 30, bitrate: 8_000_000 },
         fhd: { w: 1440, h: 2560, fps: 60, bitrate: 20_000_000 },
         "4k": { w: 2160, h: 3840, fps: 60, bitrate: 40_000_000 },
       };
       let currentQuality = "hd";
-      let _exportFmt = "mp4";   // "mp4" | "webm"
-      let _turboMode = true;    // WebCodecs لو متاح
+      let currentPreset = "sh_hd"; // الـ preset الحالي
+      let _exportFmt = "mp4"; // "mp4" | "webm"
+      let _turboMode = true; // WebCodecs لو متاح
 
       function setExportFmt(fmt) {
         _exportFmt = fmt;
@@ -4382,15 +5644,17 @@
         const btn = document.getElementById("exportBtn");
         if (!mp4 || !webm) return;
         if (fmt === "mp4") {
-          mp4.style.border  = "2px solid rgba(201,151,58,.7)";
+          mp4.style.border = "2px solid rgba(201,151,58,.7)";
           mp4.style.background = "rgba(201,151,58,.08)";
           mp4.querySelector("div:last-child").style.background = "#c9973a";
           mp4.querySelector("div:last-child").style.borderColor = "#c9973a";
-          mp4.querySelector("div:last-child").style.boxShadow = "0 0 6px rgba(201,151,58,.6)";
+          mp4.querySelector("div:last-child").style.boxShadow =
+            "0 0 6px rgba(201,151,58,.6)";
           webm.style.border = "2px solid rgba(255,255,255,.1)";
           webm.style.background = "rgba(255,255,255,.03)";
           webm.querySelector("div:last-child").style.background = "transparent";
-          webm.querySelector("div:last-child").style.borderColor = "rgba(255,255,255,.2)";
+          webm.querySelector("div:last-child").style.borderColor =
+            "rgba(255,255,255,.2)";
           webm.querySelector("div:last-child").style.boxShadow = "none";
           turboRow.style.display = "flex";
           if (btn) btn.textContent = "⬇ تصدير MP4";
@@ -4399,11 +5663,13 @@
           webm.style.background = "rgba(201,151,58,.08)";
           webm.querySelector("div:last-child").style.background = "#c9973a";
           webm.querySelector("div:last-child").style.borderColor = "#c9973a";
-          webm.querySelector("div:last-child").style.boxShadow = "0 0 6px rgba(201,151,58,.6)";
-          mp4.style.border  = "2px solid rgba(255,255,255,.1)";
+          webm.querySelector("div:last-child").style.boxShadow =
+            "0 0 6px rgba(201,151,58,.6)";
+          mp4.style.border = "2px solid rgba(255,255,255,.1)";
           mp4.style.background = "rgba(255,255,255,.03)";
           mp4.querySelector("div:last-child").style.background = "transparent";
-          mp4.querySelector("div:last-child").style.borderColor = "rgba(255,255,255,.2)";
+          mp4.querySelector("div:last-child").style.borderColor =
+            "rgba(255,255,255,.2)";
           mp4.querySelector("div:last-child").style.boxShadow = "none";
           turboRow.style.display = "none";
           if (btn) btn.textContent = "⬇ تصدير WebM";
@@ -4416,7 +5682,9 @@
         const warn = document.getElementById("turboWarn");
         if (!sw) return;
         const on = _turboMode;
-        sw.style.background = on ? "linear-gradient(135deg,#245c38,#3ea066)" : "#18301e";
+        sw.style.background = on
+          ? "linear-gradient(135deg,#245c38,#3ea066)"
+          : "#18301e";
         sw.querySelector("div").style.right = on ? "3px" : "18px";
         // تحقق من توفر الـ muxer
         if (on && typeof Mp4Muxer === "undefined") {
@@ -4433,26 +5701,189 @@
           if (warn) warn.style.display = "block";
           _turboMode = false;
           const sw = document.getElementById("turboSw");
-          if (sw) { sw.style.background = "#18301e"; sw.querySelector("div").style.right = "18px"; }
+          if (sw) {
+            sw.style.background = "#18301e";
+            sw.querySelector("div").style.right = "18px";
+          }
+        }
+
+        // على iOS: نخفي WebM ونجبر MP4+Turbo
+        if (_isIOS) {
+          _turboMode = true;
+          _exportFmt = "mp4";
+          const fmtWebm = document.getElementById("fmtWebm");
+          if (fmtWebm) fmtWebm.style.display = "none";
+          setExportFmt("mp4");
+          const sw2 = document.getElementById("turboSw");
+          if (sw2) {
+            sw2.style.background = "linear-gradient(135deg,#245c38,#3ea066)";
+            sw2.querySelector("div").style.right = "3px";
+            sw2.style.pointerEvents = "none";
+            sw2.style.opacity = "0.7";
+          }
+          const turboDesc = document.getElementById("turboDesc");
+          if (turboDesc) turboDesc.textContent = "WebCodecs MP4 — مطلوب على iOS";
+          const warn2 = document.getElementById("turboWarn");
+          if (warn2) warn2.style.display = "none";
         }
       });
 
+      // ── تطبيق preset ──
+      function applyPreset(key) {
+        const p = EXPORT_PRESETS[key];
+        if (!p) return;
+        currentPreset = key;
+
+        // تحديث QUALITY_PRESETS الحالي للتوافق مع بقية الكود
+        QUALITY_PRESETS._active = {
+          w: p.w,
+          h: p.h,
+          fps: p.fps,
+          bitrate: p.bitrate,
+        };
+
+        // تحديث الـ canvas مباشرة
+        canvas.width = p.w;
+        canvas.height = p.h;
+        _gradCache = null;
+        _mtCache.clear();
+        markCstateDirty();
+
+        // تحديث UI الـ presets
+        document.querySelectorAll(".preset-btn").forEach((el) => {
+          const on = el.dataset.key === key;
+          el.style.border = on
+            ? "1.5px solid #c9973a"
+            : "1.5px solid rgba(255,255,255,0.08)";
+          el.style.background = on
+            ? "rgba(201,151,58,0.12)"
+            : "rgba(255,255,255,0.02)";
+        });
+
+        // لو custom، أظهر الـ controls
+        const customRow = document.getElementById("customPresetRow");
+        if (customRow)
+          customRow.style.display = key === "custom" ? "block" : "none";
+
+        // تحديث وصف الـ preset المختار
+        const desc = document.getElementById("presetDesc");
+        if (desc) desc.textContent = p.desc;
+
+        toast$("✓ " + p.label + " — " + p.tag);
+      }
+
+      // للتوافق مع الكود القديم
       function setQuality(q) {
         currentQuality = q;
         ["hd", "fhd", "4k"].forEach((id) => {
           const btn = document.getElementById("qBtn-" + id);
           if (!btn) return;
           const on = id === q;
-          btn.style.border = on ? "1px solid rgba(201,151,58,0.45)" : "1px solid rgba(255,255,255,0.07)";
+          btn.style.border = on
+            ? "1px solid rgba(201,151,58,0.45)"
+            : "1px solid rgba(255,255,255,0.07)";
           btn.style.background = on ? "rgba(201,151,58,0.1)" : "#112016";
           btn.querySelector("div").style.color = on ? "#e4b55a" : "#b5c4bc";
         });
         const p = QUALITY_PRESETS[q];
-        canvas.width = p.w; canvas.height = p.h;
-        _gradCache = null; _mtCache.clear(); // clear caches after resolution change
+        canvas.width = p.w;
+        canvas.height = p.h;
+        _gradCache = null;
+        _mtCache.clear();
         markCstateDirty();
-        toast$("✓ جودة " + (q === "hd" ? "HD 1080p" : q === "fhd" ? "FHD 1440p" : "4K 2160p"));
       }
+
+      // Custom preset: تحديث القيمة
+      function updateCustomPreset() {
+        const wEl = document.getElementById("cpW"),
+          hEl = document.getElementById("cpH"),
+          fEl = document.getElementById("cpFps"),
+          bEl = document.getElementById("cpBr");
+        if (!wEl) return;
+        const w = parseInt(wEl.value) || 1080,
+          h = parseInt(hEl.value) || 1920,
+          fps = parseInt(fEl.value) || 30,
+          br = parseInt(bEl.value) || 8;
+        EXPORT_PRESETS.custom.w = w;
+        EXPORT_PRESETS.custom.h = h;
+        EXPORT_PRESETS.custom.fps = fps;
+        EXPORT_PRESETS.custom.bitrate = br * 1_000_000;
+        QUALITY_PRESETS._active = { w, h, fps: fps, bitrate: br * 1_000_000 };
+        canvas.width = w;
+        canvas.height = h;
+        _gradCache = null;
+        _mtCache.clear();
+        markCstateDirty();
+      }
+
+      // ── بناء قائمة الـ presets ──
+      function buildPresetMenu() {
+        const menu = document.getElementById("presetMenu");
+        if (!menu) return;
+        menu.innerHTML = Object.entries(EXPORT_PRESETS)
+          .map(
+            ([key, p]) => `
+          <div class="preset-btn" data-key="${key}" onclick="selectPreset('${key}')"
+            style="display:flex;align-items:center;gap:10px;padding:10px 12px;
+                   cursor:pointer;transition:.15s;border-bottom:1px solid rgba(255,255,255,0.05);
+                   ${key === currentPreset ? "background:rgba(201,151,58,0.1);" : ""}">
+            <span style="font-size:16px;">${p.icon}</span>
+            <div style="flex:1;">
+              <div style="font-size:12px;font-weight:700;color:${key === currentPreset ? "#e4b55a" : "#c8d8cc"};">${p.label}</div>
+              <div style="font-size:10px;color:#6e8878;">${p.tag}</div>
+            </div>
+            ${key === currentPreset ? '<span style="color:#c9973a;font-size:14px;">✓</span>' : ""}
+          </div>`,
+          )
+          .join("");
+      }
+
+      function togglePresetMenu() {
+        const menu = document.getElementById("presetMenu");
+        const arrow = document.getElementById("presetArrow");
+        if (!menu) return;
+        const open = menu.style.display === "block";
+        menu.style.display = open ? "none" : "block";
+        if (arrow) arrow.style.transform = open ? "" : "rotate(180deg)";
+        if (!open) buildPresetMenu();
+      }
+
+      function selectPreset(key) {
+        const menu = document.getElementById("presetMenu");
+        const arrow = document.getElementById("presetArrow");
+        if (menu) menu.style.display = "none";
+        if (arrow) arrow.style.transform = "";
+        applyPreset(key);
+        // تحديث الـ header
+        const p = EXPORT_PRESETS[key];
+        const nameEl = document.getElementById("presetName");
+        const tagEl = document.getElementById("presetTag");
+        const iconEl = document.getElementById("presetIcon");
+        if (nameEl) nameEl.textContent = p.label;
+        if (tagEl) tagEl.textContent = p.tag + " · " + p.fps + "fps";
+        if (iconEl) iconEl.textContent = p.icon;
+      }
+
+      // إغلاق القائمة لو المستخدم ضغط برة
+      document.addEventListener("click", (e) => {
+        const menu = document.getElementById("presetMenu");
+        const sel = document.getElementById("presetSelected");
+        if (
+          menu &&
+          sel &&
+          !sel.contains(e.target) &&
+          !menu.contains(e.target)
+        ) {
+          menu.style.display = "none";
+          const arrow = document.getElementById("presetArrow");
+          if (arrow) arrow.style.transform = "";
+        }
+      });
+
+      // تهيئة الـ preset الافتراضي عند التحميل
+      window.addEventListener("load", () => {
+        selectPreset("sh_hd");
+      });
 
       /* ══ INIT ══ */
       renderShuyukh();
