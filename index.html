@@ -36,6 +36,45 @@
       document.head.appendChild(s);
     })();
 
+    /* ── FFmpeg WASM loader (WebM→MP4 converter for iOS) ────────────
+       نحمّل @ffmpeg/ffmpeg v0.12 من CDN — يُستخدم فقط عند الحاجة    */
+    window._ffmpegReady = false;
+    window._ffmpegLoading = false;
+    window._ffmpegInst = null;
+    async function _loadFFmpeg() {
+      if (window._ffmpegReady) return true;
+      if (window._ffmpegLoading) {
+        // ننتظر حتى ينتهي التحميل
+        await new Promise(res => {
+          const iv = setInterval(() => {
+            if (!window._ffmpegLoading) { clearInterval(iv); res(); }
+          }, 200);
+        });
+        return window._ffmpegReady;
+      }
+      window._ffmpegLoading = true;
+      try {
+        // تحميل FFmpeg WASM v0.12 (يدعم SharedArrayBuffer fallback)
+        const { FFmpeg } = await import('https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js');
+        const { fetchFile, toBlobURL } = await import('https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/esm/index.js');
+        window._fetchFile = fetchFile;
+        const ff = new FFmpeg();
+        const baseURL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/esm';
+        await ff.load({
+          coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
+          wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
+        });
+        window._ffmpegInst = ff;
+        window._ffmpegReady = true;
+        console.log('✅ FFmpeg WASM loaded');
+      } catch(e) {
+        console.warn('FFmpeg WASM load failed:', e);
+        window._ffmpegReady = false;
+      }
+      window._ffmpegLoading = false;
+      return window._ffmpegReady;
+    }
+
     /* ── JSZip minimal inline (لتصدير ZIP frames كـ fallback) ───────
        نستخدم نسخة مصغّرة مبنية inline — لا تحتاج إنترنت              */
     /* jszip 3.10.1 minified — embedded inline */
@@ -3686,6 +3725,7 @@
       function showVideoPopup(blob, filename) {
         const url = URL.createObjectURL(blob);
         const mb   = (blob.size / 1024 / 1024).toFixed(1);
+        const isWebM = blob.type === 'video/webm' || filename.endsWith('.webm');
         const existing = document.getElementById('_videoPopupOv');
         if (existing) existing.remove();
 
@@ -3698,6 +3738,17 @@
         const canShare = !!(navigator.canShare &&
           navigator.canShare({ files: [new File([blob], filename, { type: blob.type })] }));
 
+        // زر تحويل WebM → MP4 (يظهر فقط على iOS مع WebM)
+        const convertBtn = (_isIOS && isWebM) ? `
+          <button id="_popupConvertBtn"
+            style="display:flex;align-items:center;justify-content:center;gap:8px;
+                   width:100%;background:linear-gradient(135deg,#1a3a5c,#3a7ab5);
+                   color:#fff;border:none;padding:13px 20px;border-radius:12px;
+                   font-size:15px;font-weight:700;cursor:pointer;font-family:'Cairo',sans-serif;
+                   margin-bottom:9px;">
+            <span style="font-size:20px;">🔄</span> تحويل إلى MP4 (مدعوم على iOS)
+          </button>` : '';
+
         ov.innerHTML = `
           <div style="background:#0e1c13;border:1px solid rgba(201,151,58,.45);border-radius:20px;
                       padding:22px 16px;max-width:340px;width:100%;text-align:center;
@@ -3705,10 +3756,11 @@
                       box-shadow:0 0 40px rgba(0,0,0,.6);">
             <div style="font-size:36px;margin-bottom:8px;">🎬</div>
             <div style="color:#e4b55a;font-size:16px;font-weight:800;margin-bottom:4px;">الفيديو جاهز! ✨</div>
-            <div style="font-size:11px;color:#6e8878;margin-bottom:14px;">${mb} MB</div>
+            <div style="font-size:11px;color:#6e8878;margin-bottom:14px;">${mb} MB${isWebM ? ' · WebM' : ' · MP4'}</div>
             <video id="_popupVid" src="${url}" controls playsinline
               style="width:100%;max-height:240px;border-radius:12px;margin-bottom:14px;
                      background:#000;outline:none;"></video>
+            ${convertBtn}
             ${canShare ? `
             <button id="_popupShareBtn"
               style="display:flex;align-items:center;justify-content:center;gap:8px;
@@ -3755,6 +3807,63 @@
               await navigator.share({ files: [file], title: 'Islam Reels' });
             } catch(e) {
               if (e.name !== 'AbortError') window.open(url, '_blank');
+            }
+          };
+        }
+
+        // زر التحويل WebM → MP4
+        if (_isIOS && isWebM) {
+          const cvBtn = ov.querySelector('#_popupConvertBtn');
+          if (cvBtn) cvBtn.onclick = async () => {
+            cvBtn.disabled = true;
+            cvBtn.style.opacity = '0.6';
+            cvBtn.innerHTML = '<span style="font-size:18px;">⏳</span> جارٍ تحميل FFmpeg...';
+
+            try {
+              const ffLoaded = await _loadFFmpeg();
+              if (!ffLoaded || !window._ffmpegInst) throw new Error('FFmpeg load failed');
+
+              const ff = window._ffmpegInst;
+              cvBtn.innerHTML = '<span style="font-size:18px;">⚙️</span> <span id="_cvPct">0%</span> جارٍ التحويل...';
+
+              ff.on('progress', ({ progress }) => {
+                const el = document.getElementById('_cvPct');
+                if (el && progress >= 0) el.textContent = Math.round(progress * 100) + '%';
+              });
+
+              const inData = new Uint8Array(await blob.arrayBuffer());
+              await ff.writeFile('input.webm', inData);
+              await ff.exec([
+                '-i', 'input.webm',
+                '-c:v', 'libx264',
+                '-profile:v', 'baseline',
+                '-level', '3.0',
+                '-pix_fmt', 'yuv420p',
+                '-c:a', 'aac',
+                '-b:a', '128k',
+                '-movflags', '+faststart',
+                '-preset', 'ultrafast',
+                'output.mp4'
+              ]);
+
+              const outData = await ff.readFile('output.mp4');
+              const mp4Blob = new Blob([outData.buffer], { type: 'video/mp4' });
+              await ff.deleteFile('input.webm').catch(() => {});
+              await ff.deleteFile('output.mp4').catch(() => {});
+
+              ov.remove();
+              URL.revokeObjectURL(url);
+              // نفتح popup جديد بالـ MP4
+              showVideoPopup(mp4Blob, filename.replace('.webm', '.mp4'));
+
+            } catch(e) {
+              console.error('Conversion error:', e);
+              cvBtn.disabled = false;
+              cvBtn.style.opacity = '1';
+              cvBtn.innerHTML = '<span style="font-size:18px;">❌</span> فشل التحويل — حاول مرة أخرى';
+              setTimeout(() => {
+                cvBtn.innerHTML = '<span style="font-size:20px;">🔄</span> تحويل إلى MP4 (مدعوم على iOS)';
+              }, 3000);
             }
           };
         }
@@ -4389,13 +4498,75 @@
         exportRecorder.ondataavailable = (e) => {
           if (e.data?.size > 0) exportChunks.push(e.data);
         };
-        exportRecorder.onstop = () => {
-          const blob = new Blob(exportChunks, { type: "video/webm" });
-          const mb = (blob.size / 1024 / 1024).toFixed(1);
-          _downloadBlob(
-            blob,
-            "Islam-Reels-" + (S.surah?.ar || "قرآن") + ".webm",
-          );
+        exportRecorder.onstop = async () => {
+          const webmBlob = new Blob(exportChunks, { type: "video/webm" });
+          const mb = (webmBlob.size / 1024 / 1024).toFixed(1);
+
+          // على iOS: نحاول نحوّل WebM → MP4 باستخدام FFmpeg WASM
+          if (_isIOS) {
+            xShow(total, total, "⚙️ جارٍ تحويل WebM → MP4...");
+            setSbar("⚙️ يحوّل WebM → MP4...", "#c9973a");
+            toast$("⚙️ جارٍ التحويل...");
+
+            try {
+              const ffLoaded = await _loadFFmpeg();
+              if (ffLoaded && window._ffmpegInst) {
+                const ff = window._ffmpegInst;
+
+                // تسجيل progress
+                ff.on('progress', ({ progress }) => {
+                  if (progress >= 0 && progress <= 1) {
+                    const pct = Math.round(progress * 100);
+                    setSbar(`⚙️ تحويل ${pct}%...`, "#c9973a");
+                  }
+                });
+
+                // كتابة ملف WebM داخل FFmpeg
+                const inData = new Uint8Array(await webmBlob.arrayBuffer());
+                await ff.writeFile('input.webm', inData);
+
+                // تحويل WebM → MP4 Baseline H.264 (متوافق مع iOS)
+                await ff.exec([
+                  '-i', 'input.webm',
+                  '-c:v', 'libx264',
+                  '-profile:v', 'baseline',
+                  '-level', '3.0',
+                  '-pix_fmt', 'yuv420p',
+                  '-c:a', 'aac',
+                  '-b:a', '128k',
+                  '-movflags', '+faststart',
+                  '-preset', 'ultrafast',
+                  'output.mp4'
+                ]);
+
+                // قراءة الناتج
+                const outData = await ff.readFile('output.mp4');
+                const mp4Blob = new Blob([outData.buffer], { type: 'video/mp4' });
+
+                // تنظيف ملفات FFmpeg
+                await ff.deleteFile('input.webm').catch(() => {});
+                await ff.deleteFile('output.mp4').catch(() => {});
+
+                const mp4mb = (mp4Blob.size / 1024 / 1024).toFixed(1);
+                showVideoPopup(mp4Blob, "Islam-Reels-" + (S.surah?.ar || "قرآن") + ".mp4");
+                _setProgress(_expTotalDur);
+                _finishExport(expCtx, "✅ تم التحويل MP4 — " + mp4mb + " MB ✨", "#5ec285");
+                return;
+              }
+            } catch(e) {
+              console.error('FFmpeg conversion failed:', e);
+              toast$("⚠️ فشل التحويل — سيتم حفظ WebM");
+            }
+
+            // fallback: إذا فشل التحويل — popup WebM
+            showVideoPopup(webmBlob, "Islam-Reels-" + (S.surah?.ar || "قرآن") + ".webm");
+            _setProgress(_expTotalDur);
+            _finishExport(expCtx, "⚠️ تم الحفظ WebM — " + mb + " MB (لم يتم التحويل)", "#c9973a");
+            return;
+          }
+
+          // غير iOS: حفظ WebM مباشرةً
+          _downloadBlob(webmBlob, "Islam-Reels-" + (S.surah?.ar || "قرآن") + ".webm");
           _setProgress(_expTotalDur);
           _finishExport(expCtx, "✅ تم الحفظ WebM — " + mb + " MB", "#5ec285");
         };
