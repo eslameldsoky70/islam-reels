@@ -21,10 +21,6 @@
       href="/icons/icon-192.png"
     />
     <title>Islam Reels ✨</title>
-    <!-- COOP/COEP لتفعيل SharedArrayBuffer (مطلوب لـ ffmpeg.wasm) -->
-    <!-- ملاحظة: يحتاج السيرفر يرسل هذين الـ headers أيضاً:
-         Cross-Origin-Opener-Policy: same-origin
-         Cross-Origin-Embedder-Policy: require-corp           -->
     <!-- ═══ INLINE LIBRARIES (no internet needed) ═══ -->
     <script>
     /* ── mp4-muxer inline loader ─────────────────────────────────────
@@ -2721,7 +2717,7 @@
             <!-- زرار التصدير -->
             <button
               id="exportBtn"
-              onclick="window._expACtx=new(window.AudioContext||window.webkitAudioContext)({sampleRate:44100});window._expACtx.resume();startExport()"
+              onclick="startExport()"
               style="
                 width: 100%;
                 padding: 10px;
@@ -3676,171 +3672,115 @@
         }
       }
 
-      /* ── iOS detection ──────────────────────────────────────────── */
+      /* ── iOS detection (stronger) ──────────────────────────────── */
       const _isIOS = /iP(hone|od|ad)/.test(navigator.userAgent) ||
-        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) ||
+        (/Mac/.test(navigator.platform) && navigator.maxTouchPoints > 0) ||
+        (typeof window.MSStream === 'undefined' &&
+          /iPad|iPhone|iPod/.test(navigator.userAgent)) ||
+        (navigator.userAgent.includes('Safari') &&
+          !navigator.userAgent.includes('Chrome') &&
+          navigator.maxTouchPoints > 1);
 
-      /* ══ popup بعد التصدير — فيديو + تنزيل + مشاركة ══ */
-      function showVideoPopup(blob, mime) {
-        const old = document.getElementById('vid-popup');
-        if (old) old.remove();
-        const ext = mime.includes('mp4') ? 'mp4' : 'webm';
-        const surahAr = S.surah?.ar || 'القرآن';
-        const fname = `islam-reels-${surahAr}-${S.vFrom}-${S.vTo}.${ext}`;
+      /* ── showVideoPopup: popup مخصص لعرض الفيديو بعد التصدير ──── */
+      function showVideoPopup(blob, filename) {
         const url = URL.createObjectURL(blob);
-        window._lastVidBlob = blob;
-        window._lastVidMime = mime;
-        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-        const isAndroid = /Android/.test(navigator.userAgent);
-        const mb = (blob.size / 1024 / 1024).toFixed(1);
-        const popup = document.createElement('div');
-        popup.id = 'vid-popup';
-        popup.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.93);display:flex;align-items:center;justify-content:center;flex-direction:column;padding:1.2rem;backdrop-filter:blur(18px);overflow-y:auto;';
-        popup.innerHTML = `
-          <div style="text-align:center;max-width:420px;width:100%;font-family:'Cairo',sans-serif;direction:rtl;">
-            <div style="font-size:1.05rem;font-weight:800;color:#c9973a;margin-bottom:.7rem;">🎬 الفيديو جاهز! — ${mb} MB</div>
-            <video controls playsinline webkit-playsinline src="${url}"
-              style="width:100%;max-width:320px;border-radius:14px;background:#000;display:block;margin:0 auto .8rem;max-height:42vh;"></video>
-            <div style="background:rgba(201,151,58,.07);border:1px solid rgba(201,151,58,.2);border-radius:10px;padding:.6rem .75rem;margin-bottom:.7rem;font-size:.7rem;color:rgba(255,255,255,.75);line-height:2;text-align:right;">
-              ${isIOS ? '🍎 <b style="color:#c9973a">iPhone:</b> تنزيل ← افتح الملف ← مشاركة ← حفظ الفيديو'
-                : isAndroid ? '📱 <b style="color:#c9973a">أندرويد:</b> تنزيل ← يُحفظ في التنزيلات'
-                : '💻 <b style="color:#c9973a">كمبيوتر:</b> ستجد الملف في Downloads'}
-            </div>
-            <a href="${url}" download="${fname}"
-              style="display:flex;align-items:center;justify-content:center;gap:.5rem;width:100%;padding:.8rem;border-radius:12px;background:linear-gradient(135deg,#c9973a,#e4b55a);color:#000;font-weight:900;font-size:.9rem;text-decoration:none;margin-bottom:.4rem;">
-              📥 تنزيل (${ext.toUpperCase()}) — ${mb} MB
-            </a>
-            <button id="vid-share-btn" onclick="doShare('${fname}')"
-              style="width:100%;padding:.7rem;border-radius:12px;background:linear-gradient(135deg,#245c38,#3ea066);color:#fff;font-weight:800;font-size:.85rem;border:none;cursor:pointer;font-family:'Cairo',sans-serif;margin-bottom:.4rem;">
-              📤 مشاركة (واتساب / تيليجرام...)
-            </button>
-            <button onclick="document.getElementById('vid-popup').remove()"
-              style="width:100%;padding:.55rem;border-radius:10px;background:rgba(255,255,255,.06);color:rgba(255,255,255,.5);border:1px solid rgba(255,255,255,.1);cursor:pointer;font-family:'Cairo',sans-serif;font-size:.8rem;">
-              ✕ إغلاق
-            </button>
-          </div>`;
-        document.body.appendChild(popup);
-        popup.querySelector('video').play().catch(() => {});
-      }
+        const mb   = (blob.size / 1024 / 1024).toFixed(1);
+        const existing = document.getElementById('_videoPopupOv');
+        if (existing) existing.remove();
 
-      async function doShare(fname) {
-        const blob = window._lastVidBlob;
-        const mime = window._lastVidMime || 'video/mp4';
-        if (!blob) { toast$('⚠ لا يوجد فيديو!'); return; }
-        const btn = document.getElementById('vid-share-btn');
-        if (btn) { btn.textContent = '⏳ جاري...'; btn.disabled = true; }
-        if (navigator.share) {
-          try {
-            const file = new File([blob], fname, { type: mime });
-            if (navigator.canShare?.({ files: [file] })) {
-              await navigator.share({ title: 'Islam Reels', files: [file] });
-              if (btn) { btn.textContent = '📤 مشاركة (واتساب / تيليجرام...)'; btn.disabled = false; }
-              return;
-            }
-          } catch (e) {
-            if (e.name === 'AbortError') {
-              if (btn) { btn.textContent = '📤 مشاركة (واتساب / تيليجرام...)'; btn.disabled = false; }
-              return;
-            }
-          }
-        }
-        // fallback: تنزيل مباشر
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url; a.download = fname;
-        document.body.appendChild(a); a.click();
-        setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 30000);
-        if (btn) { btn.textContent = '✅ تم الحفظ — شاركه من الجاليري'; btn.disabled = false; }
-      }
+        const ov = document.createElement('div');
+        ov.id = '_videoPopupOv';
+        ov.style.cssText =
+          'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.9);' +
+          'display:flex;align-items:center;justify-content:center;padding:16px;';
 
-      function _downloadBlob(blob, filename) {
-        const url = URL.createObjectURL(blob);
-        if (_isIOS) {
-          /* iOS: a.download لا يعمل — نفتح popup مع زر حفظ */
-          const ov = document.createElement('div');
-          ov.id = '_iosOv';
-          ov.style.cssText =
-            'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.85);' +
-            'display:flex;align-items:center;justify-content:center;padding:20px;';
+        const canShare = !!(navigator.canShare &&
+          navigator.canShare({ files: [new File([blob], filename, { type: blob.type })] }));
 
-          /* زر حفظ — يحاول Web Share API أولاً (يفتح sheet الحفظ في الصور) */
-          const canShare = !!(navigator.canShare && navigator.canShare({ files: [new File([blob], filename, { type: blob.type })] }));
-
-          const shareBtn = canShare ? `
-            <button id="_iosSaveBtn"
+        ov.innerHTML = `
+          <div style="background:#0e1c13;border:1px solid rgba(201,151,58,.45);border-radius:20px;
+                      padding:22px 16px;max-width:340px;width:100%;text-align:center;
+                      font-family:'Cairo',sans-serif;color:#f0ebe1;direction:rtl;
+                      box-shadow:0 0 40px rgba(0,0,0,.6);">
+            <div style="font-size:36px;margin-bottom:8px;">🎬</div>
+            <div style="color:#e4b55a;font-size:16px;font-weight:800;margin-bottom:4px;">الفيديو جاهز! ✨</div>
+            <div style="font-size:11px;color:#6e8878;margin-bottom:14px;">${mb} MB</div>
+            <video id="_popupVid" src="${url}" controls playsinline
+              style="width:100%;max-height:240px;border-radius:12px;margin-bottom:14px;
+                     background:#000;outline:none;"></video>
+            ${canShare ? `
+            <button id="_popupShareBtn"
               style="display:flex;align-items:center;justify-content:center;gap:8px;
-                     width:100%;background:linear-gradient(135deg,#245c38,#3ea066);
+                     width:100%;background:linear-gradient(135deg,#1a5c35,#3ea066);
                      color:#fff;border:none;padding:13px 20px;border-radius:12px;
                      font-size:15px;font-weight:700;cursor:pointer;font-family:'Cairo',sans-serif;
-                     margin-bottom:10px;">
-              <span style="font-size:20px;">⬇️</span> حفظ الفيديو في الصور
+                     margin-bottom:9px;">
+              <span style="font-size:20px;">⬆️</span> مشاركة / حفظ في الصور
             </button>` : `
             <a href="${url}" download="${filename}"
               style="display:flex;align-items:center;justify-content:center;gap:8px;
-                     width:100%;background:linear-gradient(135deg,#245c38,#3ea066);
+                     width:100%;background:linear-gradient(135deg,#1a5c35,#3ea066);
                      color:#fff;text-decoration:none;padding:13px 20px;border-radius:12px;
                      font-size:15px;font-weight:700;font-family:'Cairo',sans-serif;
-                     margin-bottom:10px;">
-              <span style="font-size:20px;">⬇️</span> حفظ الفيديو
-            </a>`;
+                     margin-bottom:9px;">
+              <span style="font-size:20px;">⬇️</span> تنزيل الفيديو
+            </a>`}
+            <a href="${url}" target="_blank"
+               style="display:flex;align-items:center;justify-content:center;gap:6px;
+                      width:100%;background:rgba(201,151,58,.1);color:#e4b55a;
+                      text-decoration:none;padding:10px 20px;border-radius:12px;
+                      font-size:13px;font-weight:600;font-family:'Cairo',sans-serif;
+                      border:1px solid rgba(201,151,58,.3);margin-bottom:10px;">
+              <span>↗</span> فتح في تبويب جديد
+            </a>
+            <button id="_popupCloseBtn"
+                    style="background:transparent;border:1px solid rgba(255,255,255,.15);
+                           color:#6e8878;padding:8px 24px;border-radius:100px;
+                           font-size:12px;cursor:pointer;font-family:'Cairo',sans-serif;">
+              إغلاق
+            </button>
+          </div>`;
 
-          ov.innerHTML = `
-            <div style="background:#112016;border:1px solid rgba(201,151,58,.5);border-radius:18px;
-                        padding:24px 18px;max-width:320px;width:100%;text-align:center;
-                        font-family:'Cairo',sans-serif;color:#f0ebe1;direction:rtl;">
-              <div style="font-size:32px;margin-bottom:10px;">🎬</div>
-              <div style="color:#e4b55a;font-size:15px;font-weight:700;margin-bottom:6px;">الفيديو جاهز!</div>
-              <div style="font-size:11px;color:#6e8878;margin-bottom:18px;">
-                ${canShare
-                  ? 'اضغط الزر لفتح خيارات الحفظ'
-                  : 'اضغط الزر ← اضغط مطولاً على الفيديو ← <b style="color:#e4b55a">حفظ الفيديو</b>'}
-              </div>
-              ${shareBtn}
-              <a href="${url}" target="_blank"
-                 style="display:flex;align-items:center;justify-content:center;gap:6px;
-                        width:100%;background:rgba(201,151,58,.12);color:#e4b55a;
-                        text-decoration:none;padding:10px 20px;border-radius:12px;
-                        font-size:13px;font-weight:600;font-family:'Cairo',sans-serif;
-                        border:1px solid rgba(201,151,58,.3);margin-bottom:10px;">
-                <span>↗</span> فتح في المتصفح
-              </a>
-              <button id="_iosCloseBtn"
-                      style="background:transparent;border:1px solid rgba(255,255,255,.15);
-                             color:#6e8878;padding:8px 22px;border-radius:100px;
-                             font-size:12px;cursor:pointer;font-family:'Cairo',sans-serif;">
-                إغلاق
-              </button>
-            </div>`;
+        document.body.appendChild(ov);
 
-          document.body.appendChild(ov);
+        const closeBtn = ov.querySelector('#_popupCloseBtn');
+        if (closeBtn) closeBtn.onclick = () => { ov.remove(); URL.revokeObjectURL(url); };
 
-          /* ربط أحداث الأزرار */
-          const closeBtn = ov.querySelector('#_iosCloseBtn');
-          if (closeBtn) closeBtn.onclick = () => { ov.remove(); URL.revokeObjectURL(url); };
-
-          if (canShare) {
-            const saveBtn = ov.querySelector('#_iosSaveBtn');
-            if (saveBtn) saveBtn.onclick = async () => {
-              try {
-                const file = new File([blob], filename, { type: blob.type });
-                await navigator.share({ files: [file], title: 'Islam Reels' });
-              } catch(e) {
-                if (e.name !== 'AbortError') {
-                  /* fallback: افتح في tab جديد */
-                  window.open(url, '_blank');
-                }
-              }
-            };
-          }
-
-          setTimeout(() => URL.revokeObjectURL(url), 180000);
-        } else {
-          const a = document.createElement("a");
-          a.href = url;
-          a.download = filename;
-          a.click();
-          setTimeout(() => URL.revokeObjectURL(url), 30000);
+        if (canShare) {
+          const shareBtn = ov.querySelector('#_popupShareBtn');
+          if (shareBtn) shareBtn.onclick = async () => {
+            try {
+              const file = new File([blob], filename, { type: blob.type });
+              await navigator.share({ files: [file], title: 'Islam Reels' });
+            } catch(e) {
+              if (e.name !== 'AbortError') window.open(url, '_blank');
+            }
+          };
         }
+
+        // إغلاق بالضغط خارج البطاقة
+        ov.addEventListener('click', (e) => {
+          if (e.target === ov) { ov.remove(); URL.revokeObjectURL(url); }
+        });
+
+        setTimeout(() => URL.revokeObjectURL(url), 300000);
+      }
+
+      /* ── _downloadBlob: نسخة محسّنة مع iOS Share Sheet ─────────── */
+      function _downloadBlob(blob, filename) {
+        if (_isIOS) {
+          /* iOS: نعرض popup مخصص فيه Web Share API */
+          showVideoPopup(blob, filename);
+          return;
+        }
+        /* غير iOS: تنزيل مباشر */
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 30000);
       }
 
       function stopExport() {
@@ -3867,77 +3807,52 @@
           await fetchWordTiming(sn, exportAyahs[0]).catch(() => {});
         const total = exportAyahs.length;
         let loaded = 0;
-
-        // iOS Safari: نحمّل بشكل متسلسل عشان decodeAudioData بيتعلق مع Promise.all
-        const _isIOSSafari = /iP(hone|od|ad)/.test(navigator.userAgent) ||
-          (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-
-        const loadOne = async (ayahN) => {
-          // تأكد AudioContext شغّال قبل decodeAudioData
-          if (expCtx.state === 'suspended') {
-            await expCtx.resume().catch(() => {});
-            await new Promise(r => setTimeout(r, 100));
-          }
-
-          const urls = ayahUrls(S.sh, sn, ayahN);
-          let buf = null;
-          for (const url of urls) {
-            for (let attempt = 0; attempt < 3; attempt++) {
+        return Promise.all(
+          exportAyahs.map(async (ayahN) => {
+            const urls = ayahUrls(S.sh, sn, ayahN);
+            let buf = null;
+            for (const url of urls) {
               try {
                 const r = await fetch(url, { mode: "cors" });
-                if (!r.ok) break;
-                const ab = await r.arrayBuffer();
-                // iOS FIX: لو expCtx مش running، نجرب context جديد
-                if (expCtx.state === 'running') {
-                  buf = await expCtx.decodeAudioData(ab.slice(0));
-                } else {
-                  // expCtx suspended أو closed → نعمل context مؤقت
-                  const tmpCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 44100 });
-                  await tmpCtx.resume().catch(() => {});
-                  await new Promise(r => setTimeout(r, 100));
-                  buf = await tmpCtx.decodeAudioData(ab.slice(0));
-                  await tmpCtx.close().catch(() => {});
-                }
+                if (!r.ok) continue;
+                buf = await expCtx.decodeAudioData(await r.arrayBuffer());
                 break;
-              } catch (e) {
-                console.warn("loadData attempt " + (attempt+1) + " ayah " + ayahN + ":", e.message);
-                if (attempt < 2) await new Promise(r => setTimeout(r, 600 * (attempt + 1)));
-              }
+              } catch (e) {}
             }
-            if (buf) break;
-          }
-
-          if (!buf)
-            throw Object.assign(new Error("فشل تحميل آية " + ayahN), { ayahN });
-
-          const [arRes, segs, qdcW] = await Promise.all([
-            fetch("https://api.alquran.cloud/v1/ayah/" + sn + ":" + ayahN + "/ar").then((r) => r.json()),
-            fetchWordTiming(sn, ayahN),
-            S.sh && S.sh.qdcId ? fetchQdcWords(sn, ayahN) : Promise.resolve(null),
-          ]);
-          const arText = sn === 1 ? arRes.data?.text || "" : stripBasmala(arRes.data?.text || "");
-          loaded++;
-          xShow(loaded, total, "تحميل " + S.surah.ar + " — آية " + arN(ayahN));
-          setSbar("⏳ تحميل (" + loaded + "/" + total + ")...", "#c9973a");
-          return {
-            ayahN, buf, arText,
-            wordList: qdcW?.length ? qdcW : null,
-            ref: "﴿ " + S.surah.ar + " : " + arN(ayahN) + " ﴾",
-            segs,
-          };
-        };
-
-        if (_isIOSSafari) {
-          // iOS: متسلسل — آية آية عشان Safari مش بيحب التحميل المتوازي
-          const results = [];
-          for (const ayahN of exportAyahs) {
-            results.push(await loadOne(ayahN));
-          }
-          return results;
-        } else {
-          // Desktop/Android: متوازي — أسرع
-          return Promise.all(exportAyahs.map(loadOne));
-        }
+            if (!buf)
+              throw Object.assign(new Error("فشل تحميل آية " + ayahN), {
+                ayahN,
+              });
+            const [arRes, segs, qdcW] = await Promise.all([
+              fetch(
+                "https://api.alquran.cloud/v1/ayah/" + sn + ":" + ayahN + "/ar",
+              ).then((r) => r.json()),
+              fetchWordTiming(sn, ayahN),
+              S.sh && S.sh.qdcId
+                ? fetchQdcWords(sn, ayahN)
+                : Promise.resolve(null),
+            ]);
+            const arText =
+              sn === 1
+                ? arRes.data?.text || ""
+                : stripBasmala(arRes.data?.text || "");
+            loaded++;
+            xShow(
+              loaded,
+              total,
+              "تحميل " + S.surah.ar + " — آية " + arN(ayahN),
+            );
+            setSbar("⏳ تحميل (" + loaded + "/" + total + ")...", "#c9973a");
+            return {
+              ayahN,
+              buf,
+              arText,
+              wordList: qdcW?.length ? qdcW : null,
+              ref: "﴿ " + S.surah.ar + " : " + arN(ayahN) + " ﴾",
+              segs,
+            };
+          }),
+        );
       }
 
       function _prepVerse(vd, exportAyahs) {
@@ -4003,15 +3918,6 @@
         if (!S.surah) return toast$("⚠ اختر سورة أولاً");
         audio.pause();
 
-        // iOS FIX: نستخدم الـ AudioContext اللي اتعمل synchronous في onclick
-        // عشان iOS Safari بيرفض AudioContext لو اتعمل داخل async function
-        const expCtx = (window._expACtx && window._expACtx.state !== 'closed')
-          ? window._expACtx
-          : new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 44100 });
-        window._expACtx = expCtx;
-        _expCtxRef = expCtx;
-        const _resumeP = expCtx.resume().catch(() => {});
-
         const exportAyahs = apSelected.size
           ? [...apSelected].sort((a, b) => a - b)
           : Array.from({ length: S.vTo - S.vFrom + 1 }, (_, i) => S.vFrom + i);
@@ -4021,11 +3927,10 @@
         xShow(0, total, "جارٍ تحضير الآيات...");
         setSbar("⏳ تحميل...", "#c9973a");
 
-        await _resumeP;
-        if (expCtx.state !== 'running') {
-          await new Promise(r => setTimeout(r, 400));
-          await expCtx.resume().catch(() => {});
-        }
+        const expCtx = new (window.AudioContext || window.webkitAudioContext)({
+          sampleRate: 44100,
+        });
+        _expCtxRef = expCtx;
 
         const loadResults = await _loadData(expCtx, exportAyahs, sn).catch(
           (e) => {
@@ -4066,31 +3971,14 @@
           typeof AudioEncoder !== "undefined" &&
           typeof Mp4Muxer !== "undefined";
 
-        const _isIOSDevice = /iP(hone|od|ad)/.test(navigator.userAgent) ||
-          (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-
-        if (_isIOSDevice) {
-          // iOS: دائماً _exportIOS المحسّن (bitrate + codec baseline + VideoFrame fallbacks)
-          toast$("🎬 تصدير MP4 (iOS)...");
-          setSbar("🔴 يصدّر " + total + " آية...", "#f47c7c");
-          await _exportIOS(expCtx, qp, buffers, verseData, exportAyahs, total);
-        } else if (_exportFmt === "mp4" && _turboMode && canMP4) {
+        if (_exportFmt === "mp4" && _turboMode && canMP4) {
           toast$("⚡ تصدير MP4...");
           setSbar("🔴 يصدّر " + total + " آية...", "#f47c7c");
           await _exportMP4(expCtx, qp, buffers, verseData, exportAyahs, total);
-        } else if (_exportFmt === "webm") {
+        } else {
           toast$("🔴 تصدير WebM...");
           setSbar("🔴 يسجّل " + total + " آية...", "#f47c7c");
-          await _exportWebM(expCtx, qp, buffers, verseData, exportAyahs, total, false);
-        } else {
-          toast$("🔴 تصدير MP4...");
-          setSbar("🔴 يصدّر " + total + " آية...", "#f47c7c");
-          // iOS بدون WebCodecs → iOS builder مباشرة، Safari مش بيشغل WebM
-          if (_isIOSDevice) {
-            await _exportIOS(expCtx, qp, buffers, verseData, exportAyahs, total);
-          } else {
-            await _exportWebM(expCtx, qp, buffers, verseData, exportAyahs, total, true);
-          }
+          await _exportWebM(expCtx, qp, buffers, verseData, exportAyahs, total);
         }
       }
 
@@ -4129,9 +4017,9 @@
           },
         });
 
-        // نجرب codecs
+        // نجرب codecs — Baseline H.264 أولاً (أوسع دعم على iOS/Android)
         let codecOk = false;
-        for (const codec of ["avc1.640033", "avc1.4d0029", "avc1.42001f"]) {
+        for (const codec of ["avc1.42001e", "avc1.42001f", "avc1.4d0029", "avc1.640033"]) {
           try {
             const s = await VideoEncoder.isConfigSupported({
               codec,
@@ -4154,14 +4042,15 @@
         }
         if (!codecOk) {
           videoEnc.close();
-          const _iosCheck = /iP(hone|od|ad)/.test(navigator.userAgent) ||
-            (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-          if (_iosCheck) {
-            toast$("⚠ WebCodecs غير مدعوم — iOS builder...");
-            return _exportIOS(expCtx, qp, buffers, verseData, exportAyahs, total);
-          }
-          toast$("⚠ WebCodecs غير مدعوم — تصدير MP4 عبر ffmpeg...");
-          return _exportWebM(expCtx, qp, buffers, verseData, exportAyahs, total, true);
+          toast$("⚠ WebCodecs غير مدعوم — تصدير WebM...");
+          return _exportWebM(
+            expCtx,
+            qp,
+            buffers,
+            verseData,
+            exportAyahs,
+            total,
+          );
         }
 
         // AudioEncoder
@@ -4176,31 +4065,22 @@
           bitrate: 192000,
         });
 
-        // بناء audio arrays — مع resample تلقائي لو sampleRate مختلف
+        // بناء audio arrays
         const totalSamp = Math.ceil(_expTotalDur * SR) + SR;
         const aL = new Float32Array(totalSamp),
           aR = new Float32Array(totalSamp);
         let aOff = 0;
         for (const buf of buffers) {
-          if (!buf || buf.duration <= 0) continue;
-          const srcCh0 = buf.getChannelData(0);
-          const srcCh1 = buf.numberOfChannels > 1 ? buf.getChannelData(1) : srcCh0;
-          if (buf.sampleRate === SR) {
-            const n = Math.min(srcCh0.length, totalSamp - aOff);
-            aL.set(srcCh0.subarray(0, n), aOff);
-            aR.set(srcCh1.subarray(0, n), aOff);
-            aOff += n;
-          } else {
-            const ratio = buf.sampleRate / SR;
-            const outLen = Math.min(Math.round(buf.duration * SR), totalSamp - aOff);
-            for (let i = 0; i < outLen; i++) {
-              const si = i * ratio, lo = Math.floor(si);
-              const hi = Math.min(lo + 1, srcCh0.length - 1), t = si - lo;
-              aL[aOff + i] = srcCh0[lo] + (srcCh0[hi] - srcCh0[lo]) * t;
-              aR[aOff + i] = srcCh1[lo] + (srcCh1[hi] - srcCh1[lo]) * t;
-            }
-            aOff += outLen;
-          }
+          const n = Math.min(Math.round(buf.duration * SR), totalSamp - aOff);
+          aL.set(buf.getChannelData(0).subarray(0, n), aOff);
+          aR.set(
+            (buf.numberOfChannels > 1
+              ? buf.getChannelData(1)
+              : buf.getChannelData(0)
+            ).subarray(0, n),
+            aOff,
+          );
+          aOff += n;
         }
 
         let globalFrame = 0,
@@ -4260,26 +4140,21 @@
 
             // video frame
             const ts = globalFrame * frameDurUs;
-            let vf;
-            try {
-              vf = new VideoFrame(canvas, { timestamp: ts, duration: frameDurUs });
-            } catch(_e) {
-              const _bmp = await createImageBitmap(await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.92)));
-              vf = new VideoFrame(_bmp, { timestamp: ts, duration: frameDurUs });
-              _bmp.close();
-            }
+            const vf = new VideoFrame(canvas, {
+              timestamp: ts,
+              duration: frameDurUs,
+            });
             videoEnc.encode(vf, { keyFrame: globalFrame % (FPS * 2) === 0 });
             vf.close();
             globalFrame++;
 
             _setProgress(_expElapsedBefore + f / FPS);
 
-            // ← الحل الجوهري: نستنى لو الـ queue امتلأ
-            // encodeQueueSize > 10 = ننتظر قبل ما نكمل
-            while (videoEnc.encodeQueueSize > 10) {
-              await new Promise((r) => setTimeout(r, 5));
+            // ← Queue Drain Guard: ننتظر لو الـ queue امتلأ (حد 6 بدل 10)
+            while (videoEnc.encodeQueueSize > 6) {
+              await new Promise((r) => setTimeout(r, 4));
             }
-            if (f % 5 === 0) await new Promise((r) => setTimeout(r, 0));
+            if (f % 4 === 0) await new Promise((r) => setTimeout(r, 0));
           }
 
           if (hlActive >= 0) {
@@ -4294,17 +4169,18 @@
 
         if (_expAbort || vEncErr) {
           if (vEncErr) {
-            const _iosCheck = /iP(hone|od|ad)/.test(navigator.userAgent) ||
-              (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+            toast$("❌ خطأ encoder — تصدير WebM...");
             _expElapsedBefore = 0;
             isExporting = false;
             startDrawLoop();
-            if (_iosCheck) {
-              toast$("❌ خطأ encoder — iOS builder...");
-              return _exportIOS(expCtx, qp, buffers, verseData, exportAyahs, total);
-            }
-            toast$("❌ خطأ encoder — تصدير MP4 عبر ffmpeg...");
-            return _exportWebM(expCtx, qp, buffers, verseData, exportAyahs, total, true);
+            return _exportWebM(
+              expCtx,
+              qp,
+              buffers,
+              verseData,
+              exportAyahs,
+              total,
+            );
           }
           _finishExport(expCtx);
           return;
@@ -4314,9 +4190,14 @@
         setSbar("⏳ جارٍ تجميع MP4...", "#c9973a");
 
         try {
-          // ← الحل: ننتظر القطعة الأخيرة تتحول قبل flush
+          // ← Queue Drain Guard محسّن: ننتظر مع timeout بحد أقصى 8 ثوانٍ
+          const drainStart = Date.now();
           while (videoEnc.encodeQueueSize > 0) {
-            await new Promise((r) => setTimeout(r, 10));
+            if (Date.now() - drainStart > 8000) {
+              console.warn('Queue drain timeout — proceeding with flush');
+              break;
+            }
+            await new Promise((r) => setTimeout(r, 8));
           }
           await videoEnc.flush();
           await audioEnc.flush();
@@ -4325,380 +4206,29 @@
           const blob = new Blob([muxer.target.buffer], { type: "video/mp4" });
           if (blob.size < 1000) throw new Error("ملف تالف");
           const mb = (blob.size / 1024 / 1024).toFixed(1);
-          showVideoPopup(blob, "video/mp4");
+          if (_isIOS) {
+            // iOS: popup مخصص مع Web Share API
+            _downloadBlob(blob, "Islam-Reels-" + (S.surah?.ar || "قرآن") + ".mp4");
+          } else {
+            // غير iOS: popup الفيديو + تنزيل تلقائي
+            showVideoPopup(blob, "Islam-Reels-" + (S.surah?.ar || "قرآن") + ".mp4");
+            _downloadBlob(blob, "Islam-Reels-" + (S.surah?.ar || "قرآن") + ".mp4");
+          }
           _setProgress(_expTotalDur);
           _finishExport(expCtx, "✅ تم حفظ MP4 — " + mb + " MB ✨", "#5ec285");
         } catch (e) {
           console.error("finalize:", e);
+          toast$("⚠ فشل التجميع — تصدير WebM...");
           _expElapsedBefore = 0;
           isExporting = false;
           startDrawLoop();
-          const _iosCheck = /iP(hone|od|ad)/.test(navigator.userAgent) ||
-            (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-          if (_iosCheck) {
-            toast$("⚠ فشل التجميع — iOS builder...");
-            await _exportIOS(expCtx, qp, buffers, verseData, exportAyahs, total);
-          } else {
-            toast$("⚠ فشل التجميع — تصدير MP4 عبر ffmpeg...");
-            await _exportWebM(expCtx, qp, buffers, verseData, exportAyahs, total, true);
-          }
-        }
-      }
-
-      // ══════════════════════════════════════════════════════
-      //  MP4 Fallback — ffmpeg.wasm (للأجهزة غير المدعومة)
-      //  يعمل على Safari / iOS / أي متصفح بدون MediaRecorder
-      // ══════════════════════════════════════════════════════
-      async function _exportMP4viaFFmpeg(expCtx, qp, buffers, frameBlobs, total) {
-        /* ─ الخطوة 1: تحميل ffmpeg.wasm بشكل lazy ─ */
-        toast$("⏳ جارٍ تحميل محوّل الفيديو...");
-        xShow(total, total, "جارٍ تحميل ffmpeg.wasm...");
-        setSbar("⏳ تحميل ffmpeg...", "#c9973a");
-
-        try {
-          if (!window._ffmpegReady) {
-            // نحمّل الـ ESM version من CDN
-            const { FFmpeg } = await import('https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js');
-            const { fetchFile, toBlobURL } = await import('https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/esm/index.js');
-            const baseURL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/esm';
-            window._FFmpeg    = FFmpeg;
-            window._fetchFile = fetchFile;
-            window._ffmpegBaseURL = baseURL;
-            window._ffmpegReady = true;
-          }
-
-          const ffmpeg = new window._FFmpeg();
-
-          // تحديث progress من ffmpeg
-          ffmpeg.on('progress', ({ progress }) => {
-            _setProgress(progress * _expTotalDur);
-            const pct = Math.round(progress * 100);
-            setSbar(`🎬 تحويل MP4... ${pct}%`, "#c9973a");
-          });
-          ffmpeg.on('log', ({ message }) => console.log('[ffmpeg]', message));
-
-          // تحميل الـ core
-          xShow(total, total, "جارٍ تهيئة ffmpeg...");
-          await ffmpeg.load({
-            coreURL:   await window._fetchFile(`${window._ffmpegBaseURL}/ffmpeg-core.js`).then(f=>URL.createObjectURL(new Blob([f],{type:'text/javascript'}))).catch(()=>`${window._ffmpegBaseURL}/ffmpeg-core.js`),
-            wasmURL:   `${window._ffmpegBaseURL}/ffmpeg-core.wasm`,
-          });
-
-          if (_expAbort) { ffmpeg.terminate(); _finishExport(expCtx); return; }
-
-          /* ─ الخطوة 2: كتابة الـ frames ─ */
-          toast$("🎞 جارٍ تجهيز الـ frames...");
-          xShow(total, total, "جارٍ تجهيز الـ frames...");
-          for (let i = 0; i < frameBlobs.length; i++) {
-            if (_expAbort) { ffmpeg.terminate(); _finishExport(expCtx); return; }
-            const name = `f${String(i).padStart(6,'0')}.jpg`;
-            await ffmpeg.writeFile(name, new Uint8Array(await frameBlobs[i].arrayBuffer()));
-            if (i % 30 === 0) {
-              setSbar(`🖼 frames ${i+1}/${frameBlobs.length}`, "#c9973a");
-              await new Promise(r => setTimeout(r, 0));
-            }
-          }
-
-          /* ─ الخطوة 3: بناء WAV وكتابته ─ */
-          const SR = 44100;
-          const totalSamp = buffers.reduce((s,b)=>s+Math.round(b.duration*SR),0);
-          const wavLen = 44 + totalSamp * 4;
-          const wav = new ArrayBuffer(wavLen);
-          const dv  = new DataView(wav);
-          const ws  = (p,s)=>{ for(let i=0;i<s.length;i++) dv.setUint8(p+i,s.charCodeAt(i)); };
-          ws(0,"RIFF"); dv.setUint32(4,wavLen-8,true); ws(8,"WAVE");
-          ws(12,"fmt "); dv.setUint32(16,16,true); dv.setUint16(20,3,true);
-          dv.setUint16(22,1,true); dv.setUint32(24,SR,true); dv.setUint32(28,SR*4,true);
-          dv.setUint16(32,4,true); dv.setUint16(34,32,true);
-          ws(36,"data"); dv.setUint32(40,totalSamp*4,true);
-          const pcm = new Float32Array(wav,44); let off=0;
-          for(const buf of buffers){
-            const n=Math.round(buf.duration*SR);
-            const c0=buf.getChannelData(0), c1=buf.numberOfChannels>1?buf.getChannelData(1):c0;
-            for(let i=0;i<n&&off<totalSamp;i++) pcm[off++]=(c0[i]+c1[i])*0.5;
-          }
-          await ffmpeg.writeFile('audio.wav', new Uint8Array(wav));
-
-          /* ─ الخطوة 4: تشغيل ffmpeg ─ */
-          toast$("🔴 جارٍ تحويل إلى MP4...");
-          xShow(total, total, "جارٍ تحويل إلى MP4...");
-          setSbar("🔴 جارٍ تحويل MP4...", "#f47c7c");
-
-          await ffmpeg.exec([
-            '-framerate', String(qp.fps),
-            '-i', 'f%06d.jpg',
-            '-i', 'audio.wav',
-            '-c:v', 'libx264',
-            '-preset', 'ultrafast',
-            '-crf', '23',
-            '-c:a', 'aac',
-            '-b:a', '128k',
-            '-pix_fmt', 'yuv420p',
-            '-movflags', '+faststart',
-            '-y', 'output.mp4'
-          ]);
-
-          /* ─ الخطوة 5: تحميل الناتج ─ */
-          const data = await ffmpeg.readFile('output.mp4');
-          const mp4Blob = new Blob([data.buffer], { type: 'video/mp4' });
-          const mb = (mp4Blob.size/1024/1024).toFixed(1);
-
-          ffmpeg.terminate();
-          showVideoPopup(mp4Blob, 'video/mp4');
-          _setProgress(_expTotalDur);
-          _finishExport(expCtx, `✅ تم التحويل MP4 — ${mb} MB`, '#5ec285');
-
-        } catch(err) {
-          console.error('ffmpeg.wasm error:', err);
-          toast$('⚠ فشل ffmpeg — جارٍ تصدير ZIP كاحتياط...');
-          // fallback نهائي: ZIP
-          const zipFiles = frameBlobs.map((b,i)=>({
-            name: `frame_${String(i).padStart(5,'0')}.jpg`, blob: b
-          }));
-          const zipBlob = await window.SimpleZip.build(zipFiles);
-          const mb = (zipBlob.size/1024/1024).toFixed(1);
-          _downloadBlob(zipBlob, 'Islam-Reels-frames-'+(S.surah?.ar||'قرآن')+'.zip');
-          _setProgress(_expTotalDur);
-          _finishExport(expCtx, `⚠ تم تصدير ZIP — ${mb} MB`, '#c9973a');
+          await _exportWebM(expCtx, qp, buffers, verseData, exportAyahs, total);
         }
       }
 
       // ══════════════════════════════════════════════════════
       //  WebM عبر captureStream(0) + requestFrame
       // ══════════════════════════════════════════════════════
-      // ══════════════════════════════════════════════════════
-      //  iOS MP4 Builder — بدون captureStream أو MediaRecorder أو ffmpeg
-      //  يعمل على iOS Safari 17.4+ عبر WebCodecs + mp4-muxer
-      //  يعمل على iOS أقدم عبر mp4-muxer مع Software encoder
-      // ══════════════════════════════════════════════════════
-      async function _exportIOS(expCtx, qp, buffers, verseData, exportAyahs, total) {
-        const W = qp.w, H = qp.h, FPS = qp.fps, SR = 44100;
-        const frameDurUs = Math.round(1e6 / FPS);
-
-        // iOS: canvas منفصل — بدون alpha:false وبدون willReadFrequently
-        const expCanvas = document.createElement('canvas');
-        expCanvas.width = W; expCanvas.height = H;
-        const expCtx2d = expCanvas.getContext('2d', { alpha: true });
-
-        // تحقق من mp4-muxer — لو مش محمّل نستنى ثانية
-        if (typeof Mp4Muxer === "undefined") {
-          toast$("⏳ جارٍ تحميل mp4-muxer...");
-          await new Promise(r => setTimeout(r, 2000));
-          if (typeof Mp4Muxer === "undefined") {
-            toast$("⚠ mp4-muxer غير متاح — جرب لاحقاً");
-            _finishExport(expCtx, "❌ mp4-muxer غير محمّل", "#f47c7c");
-            return;
-          }
-        }
-
-        // iOS Safari: نحدّ الـ bitrate بـ 4Mbps — أعلى من كده بيفشل
-        const iosBitrate = Math.min(qp.bitrate, 4_000_000);
-
-        const muxer = new Mp4Muxer.Muxer({
-          target: new Mp4Muxer.ArrayBufferTarget(),
-          video: { codec: "avc", width: W, height: H, frameRate: FPS },
-          audio: { codec: "aac", sampleRate: SR, numberOfChannels: 2 },
-          fastStart: "in-memory",
-        });
-
-        // VideoEncoder — iOS بيدعم baseline profile فقط
-        let vEncErr = null;
-        const videoEnc = new VideoEncoder({
-          output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
-          error: (e) => { vEncErr = e; console.error("iOS VEnc:", e); },
-        });
-
-        // codecs مرتّبة من الأبسط للأعلى — iOS بيدعم baseline (42E01E) أكيد
-        let codecOk = false;
-        const iosCodecs = ["avc1.42E01E", "avc1.42001e", "avc1.420034", "avc1.4d0028"];
-        for (const codec of iosCodecs) {
-          try {
-            const cfg = { codec, width: W, height: H, bitrate: iosBitrate, framerate: FPS };
-            const s = await VideoEncoder.isConfigSupported(cfg);
-            if (!s.supported) continue;
-            videoEnc.configure(cfg);
-            codecOk = true;
-            console.log("iOS codec OK:", codec, "bitrate:", iosBitrate);
-            break;
-          } catch(e) {
-            console.warn("iOS codec failed:", codec, e.message);
-          }
-        }
-
-        if (!codecOk) {
-          videoEnc.close();
-          toast$("❌ WebCodecs غير مدعوم — يحتاج iOS 17+");
-          _finishExport(expCtx, "❌ جهازك لا يدعم التصدير", "#f47c7c");
-          return;
-        }
-
-        // AudioEncoder
-        let aEncErr = null;
-        const audioEnc = new AudioEncoder({
-          output: (chunk, meta) => muxer.addAudioChunk(chunk, meta),
-          error: (e) => { aEncErr = e; console.error("iOS AEnc:", e); },
-        });
-        try {
-          audioEnc.configure({ codec: "mp4a.40.2", sampleRate: SR, numberOfChannels: 2, bitrate: 128000 });
-        } catch(e) {
-          console.warn("AudioEncoder configure:", e.message);
-        }
-
-        // بناء audio arrays — مع resample تلقائي لو sampleRate مختلف
-        const totalSamp = Math.ceil(_expTotalDur * SR) + SR;
-        const aL = new Float32Array(totalSamp), aR = new Float32Array(totalSamp);
-        let aOff = 0;
-        for (const buf of buffers) {
-          if (!buf || buf.duration <= 0) continue;
-          const srcCh0 = buf.getChannelData(0);
-          const srcCh1 = buf.numberOfChannels > 1 ? buf.getChannelData(1) : srcCh0;
-          if (buf.sampleRate === SR) {
-            const n = Math.min(srcCh0.length, totalSamp - aOff);
-            aL.set(srcCh0.subarray(0, n), aOff);
-            aR.set(srcCh1.subarray(0, n), aOff);
-            aOff += n;
-          } else {
-            const ratio = buf.sampleRate / SR;
-            const outLen = Math.min(Math.round(buf.duration * SR), totalSamp - aOff);
-            for (let i = 0; i < outLen; i++) {
-              const si = i * ratio, lo = Math.floor(si);
-              const hi = Math.min(lo + 1, srcCh0.length - 1), t = si - lo;
-              aL[aOff + i] = srcCh0[lo] + (srcCh0[hi] - srcCh0[lo]) * t;
-              aR[aOff + i] = srcCh1[lo] + (srcCh1[hi] - srcCh1[lo]) * t;
-            }
-            aOff += outLen;
-          }
-        }
-
-        let globalFrame = 0, audioSent = 0;
-        const sampPerFrame = Math.round(SR / FPS);
-        const msPerFrame = 1000 / FPS;
-
-        for (let idx = 0; idx < verseData.length; idx++) {
-          if (_expAbort || vEncErr) break;
-          const vd = verseData[idx], buf = buffers[idx];
-
-          _prepVerse(vd, exportAyahs);
-          window._expChunkAt = [];
-          if (verseChunks.length > 1) {
-            const tw = verseChunks.reduce((s, c) => s + c.words.length, 0);
-            for (let ci = 1; ci < verseChunks.length; ci++)
-              window._expChunkAt.push({
-                f: Math.round((verseChunks[ci].startIdx * buf.duration * FPS) / tw), ci,
-              });
-          }
-          xShow(idx + 1, total, S.surah.ar + " — آية " + arN(vd.ayahN));
-          setSbar("🔴 آية " + arN(vd.ayahN) + " (" + (idx+1) + "/" + total + ")", "#f47c7c");
-
-          const ayahFrames = Math.ceil(buf.duration * FPS);
-          let hlActive = -1;
-
-          for (let f = 0; f < ayahFrames; f++) {
-            if (_expAbort || vEncErr) break;
-            hlActive = _drawVerseFrame(vd, f, msPerFrame, hlActive);
-
-            // audio chunk
-            if (audioSent < totalSamp && !aEncErr) {
-              const aLen = Math.min(sampPerFrame, totalSamp - audioSent);
-              const planar = new Float32Array(aLen * 2);
-              planar.set(aL.subarray(audioSent, audioSent + aLen), 0);
-              planar.set(aR.subarray(audioSent, audioSent + aLen), aLen);
-              try {
-                audioEnc.encode(new AudioData({
-                  format: "f32-planar", sampleRate: SR,
-                  numberOfFrames: aLen, numberOfChannels: 2,
-                  timestamp: Math.round((audioSent / SR) * 1e6),
-                  data: planar,
-                }));
-              } catch(ae) { console.warn("AudioData:", ae.message); }
-              audioSent += aLen;
-            }
-
-            // video frame — iOS: 3 محاولات
-            const ts = globalFrame * frameDurUs;
-            expCtx2d.clearRect(0, 0, W, H);
-            expCtx2d.drawImage(canvas, 0, 0, W, H);
-            let vf = null;
-            // محاولة 1: VideoFrame من canvas مباشرة
-            try {
-              vf = new VideoFrame(expCanvas, { timestamp: ts, duration: frameDurUs });
-            } catch(_e1) {
-              // محاولة 2: عبر ImageBitmap
-              try {
-                const bmp = await createImageBitmap(expCanvas);
-                vf = new VideoFrame(bmp, { timestamp: ts, duration: frameDurUs });
-                bmp.close();
-              } catch(_e2) {
-                // محاولة 3: عبر toBlob
-                try {
-                  const imgBlob = await new Promise(r => expCanvas.toBlob(r, 'image/jpeg', 0.92));
-                  const bmp2 = await createImageBitmap(imgBlob);
-                  vf = new VideoFrame(bmp2, { timestamp: ts, duration: frameDurUs });
-                  bmp2.close();
-                } catch(_e3) {
-                  vEncErr = _e3;
-                  console.error("VideoFrame all 3 methods failed:", _e3);
-                  break;
-                }
-              }
-            }
-
-            if (vf) {
-              videoEnc.encode(vf, { keyFrame: globalFrame % (FPS * 2) === 0 });
-              vf.close();
-            }
-            globalFrame++;
-            _setProgress(_expElapsedBefore + f / FPS);
-
-            // queue pressure — iOS بطيء، نبقى أكثر حرصاً
-            while (videoEnc.encodeQueueSize > 8) await new Promise(r => setTimeout(r, 10));
-            if (f % 3 === 0) await new Promise(r => setTimeout(r, 0));
-          }
-
-          if (hlActive >= 0) {
-            const o = document.getElementById("w" + hlActive);
-            if (o) { o.style.color = o.dataset.base || S.color || "#fff"; o.style.textShadow = ""; }
-          }
-          _expElapsedBefore += buf.duration;
-        }
-
-        if (_expAbort) { _finishExport(expCtx); return; }
-        if (vEncErr) {
-          toast$("❌ خطأ encoder: " + (vEncErr.message || String(vEncErr)));
-          _finishExport(expCtx, "❌ فشل التصدير", "#f47c7c");
-          return;
-        }
-
-        xShow(total, total, "جارٍ تجميع MP4...");
-        setSbar("⏳ جارٍ تجميع MP4...", "#c9973a");
-
-        try {
-          // انتظر queue يخلص — iOS بيحتاج وقت أطول
-          const t0 = Date.now();
-          while (videoEnc.encodeQueueSize > 0 && Date.now() - t0 < 30000) {
-            await new Promise(r => setTimeout(r, 20));
-          }
-          await videoEnc.flush();
-          await new Promise(r => setTimeout(r, 300)); // iOS بيحتاج buffer time بعد flush
-          if (!aEncErr) {
-            await audioEnc.flush();
-            await new Promise(r => setTimeout(r, 150));
-          }
-          muxer.finalize();
-
-          const blob = new Blob([muxer.target.buffer], { type: "video/mp4" });
-          if (blob.size < 5000) throw new Error("ملف تالف — حجم: " + blob.size + " bytes");
-          const mb = (blob.size / 1024 / 1024).toFixed(1);
-          showVideoPopup(blob, "video/mp4");
-          _setProgress(_expTotalDur);
-          _finishExport(expCtx, "✅ تم حفظ MP4 — " + mb + " MB ✨", "#5ec285");
-        } catch(e) {
-          console.error("iOS finalize:", e);
-          toast$("❌ فشل التجميع: " + e.message);
-          _finishExport(expCtx, "❌ فشل التصدير", "#f47c7c");
-        }
-      }
-
       async function _exportWebM(
         expCtx,
         qp,
@@ -4819,14 +4349,24 @@
           ...expDest.stream.getAudioTracks(),
         ]);
 
-        /* ── MP4 Fallback لو MediaRecorder مش متاح (iOS/Safari) ──────
-           نستخدم ffmpeg.wasm لتحويل frames JPG + WAV → MP4 حقيقي     */
+        /* ── ZIP fallback لو MediaRecorder مش متاح (iOS/Safari قديم) ── */
         const _canWebM = typeof MediaRecorder !== 'undefined' &&
           ["video/webm;codecs=vp9,opus","video/webm;codecs=vp8,opus","video/webm"]
             .some(m => MediaRecorder.isTypeSupported(m));
 
         if (!_canWebM) {
-          await _exportMP4viaFFmpeg(expCtx, qp, buffers, frameBlobs, total);
+          toast$("📦 MediaRecorder غير متاح — تصدير ZIP frames...");
+          xShow(total, total, "جارٍ تجميع ZIP...");
+          setSbar("📦 جارٍ تصدير ZIP...", "#c9973a");
+          const zipFiles = frameBlobs.map((b, i) => ({
+            name: `frame_${String(i).padStart(5,'0')}.jpg`,
+            blob: b
+          }));
+          const zipBlob = await window.SimpleZip.build(zipFiles);
+          const mb = (zipBlob.size/1024/1024).toFixed(1);
+          _downloadBlob(zipBlob, "Islam-Reels-frames-" + (S.surah?.ar||"قرآن") + ".zip");
+          _setProgress(_expTotalDur);
+          _finishExport(expCtx, "✅ تم تصدير ZIP — " + mb + " MB (افتح بتطبيق دمج فيديو)", "#c9973a");
           return;
         }
 
@@ -4852,7 +4392,10 @@
         exportRecorder.onstop = () => {
           const blob = new Blob(exportChunks, { type: "video/webm" });
           const mb = (blob.size / 1024 / 1024).toFixed(1);
-          showVideoPopup(blob, "video/webm");
+          _downloadBlob(
+            blob,
+            "Islam-Reels-" + (S.surah?.ar || "قرآن") + ".webm",
+          );
           _setProgress(_expTotalDur);
           _finishExport(expCtx, "✅ تم الحفظ WebM — " + mb + " MB", "#5ec285");
         };
@@ -5377,7 +4920,7 @@
 
       function prevV() {
         if (S.active > 0) {
-            S.active--;
+          S.active--;
           curUrl = "";
           loadVerse();
           updateScreen();
@@ -5388,7 +4931,7 @@
       function nextV() {
         const total = getPlayQueue().length || curSl().length;
         if (S.active < total - 1) {
-            S.active++;
+          S.active++;
           curUrl = "";
           loadVerse();
           updateScreen();
