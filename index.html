@@ -4177,8 +4177,8 @@
             if (found >= 0) {
               const el = document.getElementById("w" + found);
               if (el) {
-                el.style.color = "#e4b55a";
-                el.style.textShadow = "0 0 18px rgba(228,181,90,.9)";
+                el.style.color = el.dataset.base || S.color || "#fff";
+                el.style.textShadow = "";
               }
             }
             newHL = found;
@@ -5731,8 +5731,8 @@
             if (a >= 0) {
               const e = document.getElementById("w" + a);
               if (e) {
-                e.style.color = "#e4b55a";
-                e.style.textShadow = "0 0 18px rgba(228,181,90,.9)";
+                e.style.color = e.dataset.base || S.color || "#fff";
+                e.style.textShadow = "";
                 e.style.transform = "scale(1.09)";
               }
             }
