@@ -4578,45 +4578,65 @@
         xShow(total, total, "جارٍ تسجيل الفيديو...");
         setSbar("⏳ جارٍ تسجيل...", "#c9973a");
 
-        // بناء audio blob
-        const SR = 44100;
-        const totalSamp = buffers.reduce(
-          (s, b) => s + Math.round(b.duration * SR),
-          0,
-        );
-        const wavLen = 44 + totalSamp * 4;
+        // بناء audio blob — نستخدم الـ sample rate الفعلي للـ AudioContext
+        // (على iOS قد يكون 48000 مش 44100 — لو غلطنا الـ duration بيتقصّر)
+        const SR = expCtx.sampleRate;
+        const nCh = 2; // stereo دايماً
+
+        // نحوّل كل buffer لـ SR الصح لو مختلف
+        let totalSamp = 0;
+        const resampledBuffers = await Promise.all(buffers.map(async buf => {
+          if (buf.sampleRate === SR) return buf;
+          // resample باستخدام OfflineAudioContext
+          try {
+            const offLen = Math.ceil(buf.duration * SR);
+            const off = new OfflineAudioContext(nCh, offLen, SR);
+            const src = off.createBufferSource();
+            src.buffer = buf;
+            src.connect(off.destination);
+            src.start(0);
+            return await off.startRendering();
+          } catch(e) {
+            return buf; // fallback: استخدم كما هو
+          }
+        }));
+
+        resampledBuffers.forEach(b => { totalSamp += Math.round(b.duration * SR); });
+
+        const wavLen = 44 + totalSamp * nCh * 4; // stereo float32
         const wav = new ArrayBuffer(wavLen);
         const dv = new DataView(wav);
-        const ws = (p, s) => {
-          for (let i = 0; i < s.length; i++)
-            dv.setUint8(p + i, s.charCodeAt(i));
-        };
-        ws(0, "RIFF");
-        dv.setUint32(4, wavLen - 8, true);
-        ws(8, "WAVE");
+        const ws = (p, s) => { for (let i=0;i<s.length;i++) dv.setUint8(p+i, s.charCodeAt(i)); };
+
+        ws(0,  "RIFF");
+        dv.setUint32(4,  wavLen - 8,         true);
+        ws(8,  "WAVE");
         ws(12, "fmt ");
-        dv.setUint32(16, 16, true);
-        dv.setUint16(20, 3, true);
-        dv.setUint16(22, 1, true);
-        dv.setUint32(24, SR, true);
-        dv.setUint32(28, SR * 4, true);
-        dv.setUint16(32, 4, true);
-        dv.setUint16(34, 32, true);
-        ws(36, "data");
-        dv.setUint32(40, totalSamp * 4, true);
-        const pcm = new Float32Array(wav, 44);
+        dv.setUint32(16, 18,                 true); // chunk size (18 for float)
+        dv.setUint16(20, 3,                  true); // IEEE_FLOAT
+        dv.setUint16(22, nCh,                true); // stereo
+        dv.setUint32(24, SR,                 true); // sample rate
+        dv.setUint32(28, SR * nCh * 4,       true); // byte rate
+        dv.setUint16(32, nCh * 4,            true); // block align
+        dv.setUint16(34, 32,                 true); // bits per sample
+        dv.setUint16(36, 0,                  true); // cbSize = 0
+        ws(38, "data");
+        dv.setUint32(42, totalSamp * nCh * 4, true);
+
+        const pcm = new Float32Array(wav, 46); // offset 46 (after 44 + cbSize 2)
         let off = 0;
-        for (const buf of buffers) {
-          const n = Math.round(buf.duration * SR);
-          const c0 = buf.getChannelData(0),
-            c1 = buf.numberOfChannels > 1 ? buf.getChannelData(1) : c0;
-          for (let i = 0; i < n && off < totalSamp; i++)
-            pcm[off++] = (c0[i] + c1[i]) * 0.5;
+        for (const buf of resampledBuffers) {
+          const n   = Math.round(buf.duration * SR);
+          const c0  = buf.getChannelData(0);
+          const c1  = buf.numberOfChannels > 1 ? buf.getChannelData(1) : c0;
+          for (let i = 0; i < n; i++) {
+            pcm[off++] = c0[i]; // L
+            pcm[off++] = c1[i]; // R
+          }
         }
+
         const audioBlob = new Blob([wav], { type: "audio/wav" });
-        const audioBuf = await expCtx.decodeAudioData(
-          await audioBlob.arrayBuffer(),
-        );
+        const audioBuf  = await expCtx.decodeAudioData(await audioBlob.arrayBuffer());
 
         // captureStream(0) + requestFrame
         const videoStream = canvas.captureStream(0);
@@ -4769,16 +4789,8 @@
         audioSrc.buffer = audioBuf;
         audioSrc.connect(expDest);
 
-        const audioDurMs = audioBuf.duration * 1000;
-
-        // Promise تنحل لما الصوت يخلص فعلياً
-        const audioEndedPromise = new Promise(res => {
-          audioSrc.onended = res;
-          // safety timeout: مدة الصوت + 500ms على الأكثر
-          setTimeout(res, audioDurMs + 500);
-        });
-
-        const wallStart = performance.now(); // wall clock — مش بيتجمّد على iOS
+        const audioDurMs  = audioBuf.duration * 1000;
+        const wallStart   = performance.now();
         audioSrc.start(0);
 
         const t0 = performance.now();
@@ -4794,20 +4806,13 @@
             _setProgress((_expTotalDur * f) / frameBlobs.length);
         }
 
-        // ننتظر حتى ينتهي الصوت فعلياً (onended) أو الـ safety timeout
-        // هذا يضمن إن الـ recorder ما يوقفش قبل آخر كلمة مهما كان الجهاز بطيء
-        const wallElapsed = performance.now() - wallStart;
+        // ننتظر الوقت المتبقي من الصوت بناءً على wall clock (مش بيتجمّد على iOS)
+        const wallElapsed   = performance.now() - wallStart;
         const wallRemaining = Math.max(0, audioDurMs - wallElapsed);
-        if (wallRemaining > 10) {
-          // لسه فيه صوت — ننتظر الـ onended event
-          await audioEndedPromise;
-        }
-
-        // buffer صغير بعد نهاية الصوت يضمن الـ MediaRecorder يكتب آخر chunk
-        await new Promise((r) => setTimeout(r, 120));
+        await new Promise((r) => setTimeout(r, wallRemaining + 200));
 
         try { audioSrc.stop(); } catch(e) {}
-        await new Promise((r) => setTimeout(r, 30));
+        await new Promise((r) => setTimeout(r, 50));
         if (exportRecorder?.state !== "inactive") exportRecorder.stop();
       }
 
