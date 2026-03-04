@@ -4782,7 +4782,12 @@
           if (f % 20 === 0)
             _setProgress((_expTotalDur * f) / frameBlobs.length);
         }
-        await new Promise((r) => setTimeout(r, 800));
+
+        // نوقف الصوت صراحةً عشان ما يكملش بعد نهاية الآية
+        try { audioSrc.stop(); } catch(e) {}
+
+        // ننتظر بس الـ MediaRecorder يفلش آخر chunk (50ms كافية)
+        await new Promise((r) => setTimeout(r, 50));
         if (exportRecorder?.state !== "inactive") exportRecorder.stop();
       }
 
