@@ -4769,11 +4769,16 @@
         audioSrc.buffer = audioBuf;
         audioSrc.connect(expDest);
 
-        // نحسب المدة الكاملة للصوت
         const audioDurMs = audioBuf.duration * 1000;
 
-        // نشغّل الصوت ونحفظ وقت البداية بالـ AudioContext clock (أدق من performance.now)
-        const audioStartTime = expCtx.currentTime;
+        // Promise تنحل لما الصوت يخلص فعلياً
+        const audioEndedPromise = new Promise(res => {
+          audioSrc.onended = res;
+          // safety timeout: مدة الصوت + 500ms على الأكثر
+          setTimeout(res, audioDurMs + 500);
+        });
+
+        const wallStart = performance.now(); // wall clock — مش بيتجمّد على iOS
         audioSrc.start(0);
 
         const t0 = performance.now();
@@ -4789,20 +4794,20 @@
             _setProgress((_expTotalDur * f) / frameBlobs.length);
         }
 
-        // ننتظر حتى ينتهي الصوت فعلياً بدل ما نوقف بعد الـ frames مباشرةً
-        // هذا يحل مشكلة iOS حيث الـ frames بتتحرق أسرع من الصوت
-        const audioElapsedMs = (expCtx.currentTime - audioStartTime) * 1000;
-        const audioRemainingMs = Math.max(0, audioDurMs - audioElapsedMs);
-        if (audioRemainingMs > 0) {
-          await new Promise((r) => setTimeout(r, audioRemainingMs + 80));
-        } else {
-          await new Promise((r) => setTimeout(r, 80));
+        // ننتظر حتى ينتهي الصوت فعلياً (onended) أو الـ safety timeout
+        // هذا يضمن إن الـ recorder ما يوقفش قبل آخر كلمة مهما كان الجهاز بطيء
+        const wallElapsed = performance.now() - wallStart;
+        const wallRemaining = Math.max(0, audioDurMs - wallElapsed);
+        if (wallRemaining > 10) {
+          // لسه فيه صوت — ننتظر الـ onended event
+          await audioEndedPromise;
         }
 
-        // نوقف الصوت بعد ما خلّص
-        try { audioSrc.stop(); } catch(e) {}
+        // buffer صغير بعد نهاية الصوت يضمن الـ MediaRecorder يكتب آخر chunk
+        await new Promise((r) => setTimeout(r, 120));
 
-        await new Promise((r) => setTimeout(r, 50));
+        try { audioSrc.stop(); } catch(e) {}
+        await new Promise((r) => setTimeout(r, 30));
         if (exportRecorder?.state !== "inactive") exportRecorder.stop();
       }
 
