@@ -4771,8 +4771,16 @@
         audioSrc.buffer = audioBuf;
         audioSrc.connect(expDest);
 
-        const audioDurMs  = audioBuf.duration * 1000;
-        const wallStart   = performance.now();
+        const audioDurMs = audioBuf.duration * 1000;
+
+        // نسجّل الـ onended قبل الـ start — هذا هو المُشغّل الحقيقي لإيقاف الـ recorder
+        // safety: لو onended ما جاش في audioDurMs + 1500ms نوقف بالقوة
+        let _audioEndedResolve;
+        const audioEndedPromise = new Promise(res => { _audioEndedResolve = res; });
+        audioSrc.onended = () => _audioEndedResolve('ended');
+        const safetyTimer = setTimeout(() => _audioEndedResolve('safety'), audioDurMs + 1500);
+
+        const wallStart = performance.now();
         audioSrc.start(0);
 
         const t0 = performance.now();
@@ -4788,11 +4796,13 @@
             _setProgress((_expTotalDur * f) / frameBlobs.length);
         }
 
-        // ننتظر الوقت المتبقي من الصوت بناءً على wall clock (مش بيتجمّد على iOS)
-        const wallElapsed   = performance.now() - wallStart;
-        const wallRemaining = Math.max(0, audioDurMs - wallElapsed);
-        await new Promise((r) => setTimeout(r, wallRemaining + 200));
+        // ننتظر الـ onended الحقيقي — مش نحسب تقديري
+        // لو الـ frames خلصت قبل الصوت (iOS) هنستنى هنا حتى يخلص الصوت فعلاً
+        await audioEndedPromise;
+        clearTimeout(safetyTimer);
 
+        // 150ms بعد نهاية الصوت يضمن الـ MediaRecorder يكتب آخر chunk
+        await new Promise((r) => setTimeout(r, 150));
         try { audioSrc.stop(); } catch(e) {}
         await new Promise((r) => setTimeout(r, 50));
         if (exportRecorder?.state !== "inactive") exportRecorder.stop();
