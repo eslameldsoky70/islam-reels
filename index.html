@@ -4156,38 +4156,10 @@
           for (const sc of window._expChunkAt)
             if (f === sc.f) showChunk(sc.ci, true);
         }
-        // highlight
-        let newHL = hlActive;
-        if (vd.segs) {
-          const nowMs = f * msPerFrame;
-          let found = -1;
-          for (const seg of vd.segs)
-            if (nowMs >= seg[1] && nowMs < seg[2]) {
-              found = seg[0];
-              break;
-            }
-          if (found !== hlActive) {
-            if (hlActive >= 0) {
-              const o = document.getElementById("w" + hlActive);
-              if (o) {
-                o.style.color = o.dataset.base || S.color || "#fff";
-                o.style.textShadow = "";
-              }
-            }
-            if (found >= 0) {
-              const el = document.getElementById("w" + found);
-              if (el) {
-                el.style.color = el.dataset.base || S.color || "#fff";
-                el.style.textShadow = "";
-              }
-            }
-            newHL = found;
-          }
-        }
         _cstateDirty = true;
         syncCSTATE();
         drawFrameDirect();
-        return newHL;
+        return -1;
       }
 
       async function startExport() {
@@ -5726,14 +5698,6 @@
                 o.style.color = o.dataset.base || clr;
                 o.style.textShadow = "";
                 o.style.transform = "";
-              }
-            }
-            if (a >= 0) {
-              const e = document.getElementById("w" + a);
-              if (e) {
-                e.style.color = e.dataset.base || S.color || "#fff";
-                e.style.textShadow = "";
-                e.style.transform = "scale(1.09)";
               }
             }
             _hlLast = a;
