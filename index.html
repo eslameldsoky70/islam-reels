@@ -4750,38 +4750,53 @@
         audioSrc.buffer = audioBuf;
         audioSrc.connect(expDest);
 
-        // مدة التلاوة الحقيقية (بدون الـ tail)
         const realDurMs = buffers.reduce((s, b) => s + b.duration, 0) * 1000;
 
-        if (expCtx.state === 'suspended') {
-          await expCtx.resume().catch(() => {});
-        }
+        if (expCtx.state === 'suspended') await expCtx.resume().catch(() => {});
 
-        const wallStart = performance.now();
+        // ── نجدول كل الـ frames مسبقاً بـ setTimeout ──
+        // بهذه الطريقة حرق الـ frames مش بيبلوك الـ AudioContext
+        // لأن كل frame بتتنفذ في microtask منفصل
+        const framesDone = new Promise(resolve => {
+          let f = 0;
+          const startWall = performance.now();
+
+          function scheduleNext() {
+            if (f >= frameBlobs.length || _expAbort) { resolve(); return; }
+            const targetMs = f * msPerFrame;
+            const nowMs    = performance.now() - startWall;
+            const delay    = Math.max(0, targetMs - nowMs);
+            setTimeout(async () => {
+              if (_expAbort) { resolve(); return; }
+              try {
+                const img = await createImageBitmap(frameBlobs[f]);
+                ctx.drawImage(img, 0, 0);
+                img.close();
+                if (videoTrack?.requestFrame) videoTrack.requestFrame();
+              } catch(e) {}
+              if (f % 20 === 0)
+                _setProgress((_expTotalDur * f) / frameBlobs.length);
+              f++;
+              scheduleNext();
+            }, delay);
+          }
+          scheduleNext();
+        });
+
+        // نشغّل الصوت
         audioSrc.start(0);
 
-        // حرق الـ frames
-        const t0 = performance.now();
-        for (let f = 0; f < frameBlobs.length; f++) {
-          if (_expAbort) break;
-          if (expCtx.state === 'suspended') await expCtx.resume().catch(() => {});
-          const img = await createImageBitmap(frameBlobs[f]);
-          ctx.drawImage(img, 0, 0);
-          img.close();
-          if (videoTrack?.requestFrame) videoTrack.requestFrame();
-          const wait = (f + 1) * msPerFrame - (performance.now() - t0);
-          if (wait > 0) await new Promise(r => setTimeout(r, wait));
-          if (f % 20 === 0)
-            _setProgress((_expTotalDur * f) / frameBlobs.length);
-        }
+        // ننتظر الـ frames تخلص
+        await framesDone;
 
-        // ننتظر حتى تنتهي التلاوة الحقيقية (wall clock)
-        // الـ 1.5 ثانية صمت في الـ buffer تضمن إن الصوت لسه شغّال في الـ MediaRecorder
-        const elapsed = performance.now() - wallStart;
-        const remaining = Math.max(0, realDurMs - elapsed);
-        if (remaining > 0) await new Promise(r => setTimeout(r, remaining));
+        // ننتظر الصوت يخلص — بـ setTimeout مباشر على realDurMs
+        // مش بنعتمد على expCtx.currentTime لأنه بيتجمّد على iOS
+        const audioEndTime = performance.now();
+        const audioStart   = audioEndTime - (frameBlobs.length * msPerFrame);
+        const audioWait    = Math.max(0, realDurMs - (audioEndTime - audioStart));
+        if (audioWait > 0) await new Promise(r => setTimeout(r, audioWait + 300));
+        else await new Promise(r => setTimeout(r, 300));
 
-        // نوقف الـ recorder دلوقتي — الـ tail الصامت ضمن تسجيل آخر chunk
         try { audioSrc.stop(); } catch(e) {}
         await new Promise(r => setTimeout(r, 80));
         if (exportRecorder?.state !== "inactive") exportRecorder.stop();
