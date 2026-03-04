@@ -4578,60 +4578,42 @@
         xShow(total, total, "جارٍ تسجيل الفيديو...");
         setSbar("⏳ جارٍ تسجيل...", "#c9973a");
 
-        // بناء audio blob — نستخدم الـ sample rate الفعلي للـ AudioContext
-        // (على iOS قد يكون 48000 مش 44100 — لو غلطنا الـ duration بيتقصّر)
-        const SR = expCtx.sampleRate;
-        const nCh = 2; // stereo دايماً
+        // بناء audio blob — stereo, sample rate حقيقي من الـ context
+        const SR  = expCtx.sampleRate; // 44100 أو 48000 حسب الجهاز
+        const nCh = 2;
 
-        // نحوّل كل buffer لـ SR الصح لو مختلف
         let totalSamp = 0;
-        const resampledBuffers = await Promise.all(buffers.map(async buf => {
-          if (buf.sampleRate === SR) return buf;
-          // resample باستخدام OfflineAudioContext
-          try {
-            const offLen = Math.ceil(buf.duration * SR);
-            const off = new OfflineAudioContext(nCh, offLen, SR);
-            const src = off.createBufferSource();
-            src.buffer = buf;
-            src.connect(off.destination);
-            src.start(0);
-            return await off.startRendering();
-          } catch(e) {
-            return buf; // fallback: استخدم كما هو
-          }
-        }));
+        buffers.forEach(b => { totalSamp += Math.ceil(b.duration * SR); });
 
-        resampledBuffers.forEach(b => { totalSamp += Math.round(b.duration * SR); });
+        // WAV header — IEEE Float 32 stereo
+        const dataBytes = totalSamp * nCh * 4;
+        const wav = new ArrayBuffer(44 + dataBytes);
+        const dv  = new DataView(wav);
+        const ws  = (p, s) => { for (let i=0;i<s.length;i++) dv.setUint8(p+i, s.charCodeAt(i)); };
+        ws(0,  "RIFF"); dv.setUint32(4,  36 + dataBytes,  true);
+        ws(8,  "WAVE"); ws(12, "fmt ");
+        dv.setUint32(16, 16,             true); // chunk size
+        dv.setUint16(20, 3,              true); // IEEE_FLOAT
+        dv.setUint16(22, nCh,            true); // stereo
+        dv.setUint32(24, SR,             true); // sample rate
+        dv.setUint32(28, SR * nCh * 4,   true); // byte rate
+        dv.setUint16(32, nCh * 4,        true); // block align
+        dv.setUint16(34, 32,             true); // bits
+        ws(36, "data"); dv.setUint32(40, dataBytes, true);
 
-        const wavLen = 44 + totalSamp * nCh * 4; // stereo float32
-        const wav = new ArrayBuffer(wavLen);
-        const dv = new DataView(wav);
-        const ws = (p, s) => { for (let i=0;i<s.length;i++) dv.setUint8(p+i, s.charCodeAt(i)); };
-
-        ws(0,  "RIFF");
-        dv.setUint32(4,  wavLen - 8,         true);
-        ws(8,  "WAVE");
-        ws(12, "fmt ");
-        dv.setUint32(16, 18,                 true); // chunk size (18 for float)
-        dv.setUint16(20, 3,                  true); // IEEE_FLOAT
-        dv.setUint16(22, nCh,                true); // stereo
-        dv.setUint32(24, SR,                 true); // sample rate
-        dv.setUint32(28, SR * nCh * 4,       true); // byte rate
-        dv.setUint16(32, nCh * 4,            true); // block align
-        dv.setUint16(34, 32,                 true); // bits per sample
-        dv.setUint16(36, 0,                  true); // cbSize = 0
-        ws(38, "data");
-        dv.setUint32(42, totalSamp * nCh * 4, true);
-
-        const pcm = new Float32Array(wav, 46); // offset 46 (after 44 + cbSize 2)
+        const pcm = new Float32Array(wav, 44);
         let off = 0;
-        for (const buf of resampledBuffers) {
-          const n   = Math.round(buf.duration * SR);
-          const c0  = buf.getChannelData(0);
-          const c1  = buf.numberOfChannels > 1 ? buf.getChannelData(1) : c0;
+        for (const buf of buffers) {
+          const bufSR = buf.sampleRate;
+          const n     = Math.ceil(buf.duration * SR);
+          const c0    = buf.getChannelData(0);
+          const c1    = buf.numberOfChannels > 1 ? buf.getChannelData(1) : c0;
           for (let i = 0; i < n; i++) {
-            pcm[off++] = c0[i]; // L
-            pcm[off++] = c1[i]; // R
+            // لو الـ buffer بـ sample rate مختلف نعمل linear interpolation بسيط
+            const srcI = (i * bufSR) / SR;
+            const si   = Math.min(Math.floor(srcI), c0.length - 1);
+            pcm[off++] = c0[si]; // L
+            pcm[off++] = c1[si]; // R
           }
         }
 
