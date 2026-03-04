@@ -4205,9 +4205,7 @@
         xShow(0, total, "جارٍ تحضير الآيات...");
         setSbar("⏳ تحميل...", "#c9973a");
 
-        const expCtx = new (window.AudioContext || window.webkitAudioContext)({
-          sampleRate: 44100,
-        });
+        const expCtx = new (window.AudioContext || window.webkitAudioContext)();
         _expCtxRef = expCtx;
 
         const loadResults = await _loadData(expCtx, exportAyahs, sn).catch(
@@ -4771,40 +4769,49 @@
         audioSrc.buffer = audioBuf;
         audioSrc.connect(expDest);
 
+        // على iOS الـ AudioContext بيتعلّق (suspended) بعد فترة بدون user gesture
+        // لازم نعمل resume قبل ما نشغّل الصوت
+        if (expCtx.state === 'suspended') {
+          await expCtx.resume().catch(() => {});
+        }
+
         const audioDurMs = audioBuf.duration * 1000;
 
-        // نسجّل الـ onended قبل الـ start — هذا هو المُشغّل الحقيقي لإيقاف الـ recorder
-        // safety: لو onended ما جاش في audioDurMs + 1500ms نوقف بالقوة
-        let _audioEndedResolve;
-        const audioEndedPromise = new Promise(res => { _audioEndedResolve = res; });
-        audioSrc.onended = () => _audioEndedResolve('ended');
-        const safetyTimer = setTimeout(() => _audioEndedResolve('safety'), audioDurMs + 1500);
+        let _resolve;
+        const donePromise = new Promise(res => { _resolve = res; });
+        audioSrc.onended = () => _resolve('ended');
+        const safety = setTimeout(() => _resolve('safety'), audioDurMs + 2000);
 
-        const wallStart = performance.now();
         audioSrc.start(0);
 
+        // حرق الـ frames — نستخدم AudioContext clock مش performance.now
+        // لأن expCtx.currentTime بيتجمّد لو الـ context suspended
         const t0 = performance.now();
         for (let f = 0; f < frameBlobs.length; f++) {
           if (_expAbort) break;
+
+          // تأكد إن الـ context شغّال
+          if (expCtx.state === 'suspended') {
+            await expCtx.resume().catch(() => {});
+          }
+
           const img = await createImageBitmap(frameBlobs[f]);
           ctx.drawImage(img, 0, 0);
           img.close();
           if (videoTrack?.requestFrame) videoTrack.requestFrame();
           const wait = (f + 1) * msPerFrame - (performance.now() - t0);
-          if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+          if (wait > 0) await new Promise(r => setTimeout(r, wait));
           if (f % 20 === 0)
             _setProgress((_expTotalDur * f) / frameBlobs.length);
         }
 
-        // ننتظر الـ onended الحقيقي — مش نحسب تقديري
-        // لو الـ frames خلصت قبل الصوت (iOS) هنستنى هنا حتى يخلص الصوت فعلاً
-        await audioEndedPromise;
-        clearTimeout(safetyTimer);
+        // استنى الـ onended الحقيقي من الـ Web Audio API
+        await donePromise;
+        clearTimeout(safety);
 
-        // 150ms بعد نهاية الصوت يضمن الـ MediaRecorder يكتب آخر chunk
-        await new Promise((r) => setTimeout(r, 150));
+        await new Promise(r => setTimeout(r, 200));
         try { audioSrc.stop(); } catch(e) {}
-        await new Promise((r) => setTimeout(r, 50));
+        await new Promise(r => setTimeout(r, 50));
         if (exportRecorder?.state !== "inactive") exportRecorder.stop();
       }
 
