@@ -36,39 +36,60 @@
       document.head.appendChild(s);
     })();
 
-    /* ── FFmpeg WASM loader (WebM→MP4 converter for iOS) ────────────
-       نحمّل @ffmpeg/ffmpeg v0.12 من CDN — يُستخدم فقط عند الحاجة    */
-    window._ffmpegReady = false;
+    /* ── FFmpeg WASM loader (WebM→MP4 — iOS Safe, no SharedArrayBuffer) ──
+       نستخدم @ffmpeg/core-st (single-thread) لأن iOS Safari يحجب
+       SharedArrayBuffer بدون COOP/COEP headers                          */
+    window._ffmpegReady   = false;
     window._ffmpegLoading = false;
-    window._ffmpegInst = null;
-    async function _loadFFmpeg() {
+    window._ffmpegInst    = null;
+
+    async function _loadFFmpeg(onLog) {
       if (window._ffmpegReady) return true;
       if (window._ffmpegLoading) {
-        // ننتظر حتى ينتهي التحميل
         await new Promise(res => {
           const iv = setInterval(() => {
             if (!window._ffmpegLoading) { clearInterval(iv); res(); }
-          }, 200);
+          }, 300);
         });
         return window._ffmpegReady;
       }
       window._ffmpegLoading = true;
       try {
-        // تحميل FFmpeg WASM v0.12 (يدعم SharedArrayBuffer fallback)
-        const { FFmpeg } = await import('https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js');
-        const { fetchFile, toBlobURL } = await import('https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/esm/index.js');
-        window._fetchFile = fetchFile;
+        const { FFmpeg } = await import(
+          'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js'
+        );
+        const { toBlobURL } = await import(
+          'https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/esm/index.js'
+        );
+
         const ff = new FFmpeg();
-        const baseURL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/esm';
-        await ff.load({
-          coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
-          wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
-        });
-        window._ffmpegInst = ff;
+        if (onLog) ff.on('log', ({ message }) => onLog(message));
+
+        /* single-thread أولاً (لا يحتاج SharedArrayBuffer — آمن على iOS Safari) */
+        const ST = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core-st@0.12.6/dist/esm';
+        const MT = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/esm';
+
+        let loaded = false;
+        for (const base of [ST, MT]) {
+          try {
+            await ff.load({
+              coreURL : await toBlobURL(`${base}/ffmpeg-core.js`,   'text/javascript'),
+              wasmURL : await toBlobURL(`${base}/ffmpeg-core.wasm`, 'application/wasm'),
+            });
+            loaded = true;
+            console.log('FFmpeg loaded from', base);
+            break;
+          } catch(e) {
+            console.warn('FFmpeg attempt failed:', base, e.message);
+          }
+        }
+
+        if (!loaded) throw new Error('All FFmpeg CDNs failed');
+        window._ffmpegInst  = ff;
         window._ffmpegReady = true;
-        console.log('✅ FFmpeg WASM loaded');
+
       } catch(e) {
-        console.warn('FFmpeg WASM load failed:', e);
+        console.error('FFmpeg WASM load failed:', e);
         window._ffmpegReady = false;
       }
       window._ffmpegLoading = false;
@@ -3819,51 +3840,59 @@
             cvBtn.style.opacity = '0.6';
             cvBtn.innerHTML = '<span style="font-size:18px;">⏳</span> جارٍ تحميل FFmpeg...';
 
+            const logLines = [];
             try {
-              const ffLoaded = await _loadFFmpeg();
-              if (!ffLoaded || !window._ffmpegInst) throw new Error('FFmpeg load failed');
+              const ffLoaded = await _loadFFmpeg(msg => logLines.push(msg));
+              if (!ffLoaded || !window._ffmpegInst) throw new Error('FFmpeg failed to load');
 
               const ff = window._ffmpegInst;
               cvBtn.innerHTML = '<span style="font-size:18px;">⚙️</span> <span id="_cvPct">0%</span> جارٍ التحويل...';
 
               ff.on('progress', ({ progress }) => {
                 const el = document.getElementById('_cvPct');
-                if (el && progress >= 0) el.textContent = Math.round(progress * 100) + '%';
+                if (el && progress >= 0) el.textContent = Math.round(Math.min(progress,1) * 100) + '%';
               });
 
               const inData = new Uint8Array(await blob.arrayBuffer());
               await ff.writeFile('input.webm', inData);
-              await ff.exec([
-                '-i', 'input.webm',
-                '-c:v', 'libx264',
+
+              const ret = await ff.exec([
+                '-i',         'input.webm',
+                '-c:v',       'libx264',
                 '-profile:v', 'baseline',
-                '-level', '3.0',
-                '-pix_fmt', 'yuv420p',
-                '-c:a', 'aac',
-                '-b:a', '128k',
-                '-movflags', '+faststart',
-                '-preset', 'ultrafast',
+                '-level',     '3.0',
+                '-pix_fmt',   'yuv420p',
+                '-c:a',       'aac',
+                '-b:a',       '128k',
+                '-movflags',  '+faststart',
+                '-preset',    'ultrafast',
+                '-y',
                 'output.mp4'
               ]);
 
+              if (ret !== 0) {
+                console.error('FFmpeg exit:', ret, logLines.join('\n'));
+                throw new Error(`FFmpeg exit code ${ret}`);
+              }
+
               const outData = await ff.readFile('output.mp4');
+              if (!outData || outData.byteLength < 1000) throw new Error('output empty');
               const mp4Blob = new Blob([outData.buffer], { type: 'video/mp4' });
               await ff.deleteFile('input.webm').catch(() => {});
               await ff.deleteFile('output.mp4').catch(() => {});
 
               ov.remove();
               URL.revokeObjectURL(url);
-              // نفتح popup جديد بالـ MP4
               showVideoPopup(mp4Blob, filename.replace('.webm', '.mp4'));
 
             } catch(e) {
-              console.error('Conversion error:', e);
+              console.error('Conversion error:', e, logLines.join('\n'));
               cvBtn.disabled = false;
               cvBtn.style.opacity = '1';
-              cvBtn.innerHTML = '<span style="font-size:18px;">❌</span> فشل التحويل — حاول مرة أخرى';
+              cvBtn.innerHTML = '<span style="font-size:18px;">❌</span> فشل — تحقق من الكونسول وحاول مرة أخرى';
               setTimeout(() => {
                 cvBtn.innerHTML = '<span style="font-size:20px;">🔄</span> تحويل إلى MP4 (مدعوم على iOS)';
-              }, 3000);
+              }, 4000);
             }
           };
         }
@@ -4505,64 +4534,76 @@
           // على iOS: نحاول نحوّل WebM → MP4 باستخدام FFmpeg WASM
           if (_isIOS) {
             xShow(total, total, "⚙️ جارٍ تحويل WebM → MP4...");
-            setSbar("⚙️ يحوّل WebM → MP4...", "#c9973a");
-            toast$("⚙️ جارٍ التحويل...");
+            setSbar("⚙️ يحمّل FFmpeg...", "#c9973a");
+            toast$("⚙️ جارٍ التحويل — قد يأخذ دقيقة...");
 
+            const logLines = [];
             try {
-              const ffLoaded = await _loadFFmpeg();
-              if (ffLoaded && window._ffmpegInst) {
-                const ff = window._ffmpegInst;
-
-                // تسجيل progress
-                ff.on('progress', ({ progress }) => {
-                  if (progress >= 0 && progress <= 1) {
-                    const pct = Math.round(progress * 100);
-                    setSbar(`⚙️ تحويل ${pct}%...`, "#c9973a");
-                  }
-                });
-
-                // كتابة ملف WebM داخل FFmpeg
-                const inData = new Uint8Array(await webmBlob.arrayBuffer());
-                await ff.writeFile('input.webm', inData);
-
-                // تحويل WebM → MP4 Baseline H.264 (متوافق مع iOS)
-                await ff.exec([
-                  '-i', 'input.webm',
-                  '-c:v', 'libx264',
-                  '-profile:v', 'baseline',
-                  '-level', '3.0',
-                  '-pix_fmt', 'yuv420p',
-                  '-c:a', 'aac',
-                  '-b:a', '128k',
-                  '-movflags', '+faststart',
-                  '-preset', 'ultrafast',
-                  'output.mp4'
-                ]);
-
-                // قراءة الناتج
-                const outData = await ff.readFile('output.mp4');
-                const mp4Blob = new Blob([outData.buffer], { type: 'video/mp4' });
-
-                // تنظيف ملفات FFmpeg
-                await ff.deleteFile('input.webm').catch(() => {});
-                await ff.deleteFile('output.mp4').catch(() => {});
-
-                const mp4mb = (mp4Blob.size / 1024 / 1024).toFixed(1);
-                showVideoPopup(mp4Blob, "Islam-Reels-" + (S.surah?.ar || "قرآن") + ".mp4");
-                _setProgress(_expTotalDur);
-                _finishExport(expCtx, "✅ تم التحويل MP4 — " + mp4mb + " MB ✨", "#5ec285");
-                return;
+              const ffLoaded = await _loadFFmpeg(msg => logLines.push(msg));
+              if (!ffLoaded || !window._ffmpegInst) {
+                throw new Error('FFmpeg failed to load — check console');
               }
-            } catch(e) {
-              console.error('FFmpeg conversion failed:', e);
-              toast$("⚠️ فشل التحويل — سيتم حفظ WebM");
-            }
 
-            // fallback: إذا فشل التحويل — popup WebM
-            showVideoPopup(webmBlob, "Islam-Reels-" + (S.surah?.ar || "قرآن") + ".webm");
-            _setProgress(_expTotalDur);
-            _finishExport(expCtx, "⚠️ تم الحفظ WebM — " + mb + " MB (لم يتم التحويل)", "#c9973a");
-            return;
+              const ff = window._ffmpegInst;
+
+              // progress listener
+              ff.on('progress', ({ progress }) => {
+                if (progress >= 0 && progress <= 1) {
+                  const pct = Math.round(progress * 100);
+                  setSbar(`⚙️ تحويل ${pct}%...`, "#c9973a");
+                  xShow(total, total, `⚙️ تحويل ${pct}%...`);
+                }
+              });
+
+              setSbar("⚙️ جارٍ كتابة الملف...", "#c9973a");
+              const inData = new Uint8Array(await webmBlob.arrayBuffer());
+              await ff.writeFile('input.webm', inData);
+
+              setSbar("⚙️ يشغّل FFmpeg...", "#c9973a");
+
+              // تحويل WebM → MP4 Baseline H.264 آمن على iOS
+              const ret = await ff.exec([
+                '-i',         'input.webm',
+                '-c:v',       'libx264',
+                '-profile:v', 'baseline',
+                '-level',     '3.0',
+                '-pix_fmt',   'yuv420p',
+                '-c:a',       'aac',
+                '-b:a',       '128k',
+                '-movflags',  '+faststart',
+                '-preset',    'ultrafast',
+                '-y',
+                'output.mp4'
+              ]);
+
+              if (ret !== 0) {
+                console.error('FFmpeg exit code:', ret, '\nLog:\n', logLines.join('\n'));
+                throw new Error(`FFmpeg exit ${ret}`);
+              }
+
+              const outData = await ff.readFile('output.mp4');
+              if (!outData || outData.byteLength < 1000) {
+                throw new Error('MP4 output empty or corrupt');
+              }
+              const mp4Blob = new Blob([outData.buffer], { type: 'video/mp4' });
+
+              await ff.deleteFile('input.webm').catch(() => {});
+              await ff.deleteFile('output.mp4').catch(() => {});
+
+              const mp4mb = (mp4Blob.size / 1024 / 1024).toFixed(1);
+              showVideoPopup(mp4Blob, "Islam-Reels-" + (S.surah?.ar || "قرآن") + ".mp4");
+              _setProgress(_expTotalDur);
+              _finishExport(expCtx, "✅ تم التحويل MP4 — " + mp4mb + " MB ✨", "#5ec285");
+              return;
+
+            } catch(e) {
+              console.error('FFmpeg conversion failed:', e, '\nLog:\n', logLines.join('\n'));
+              // نعرض popup WebM مع زر تحويل يدوي
+              showVideoPopup(webmBlob, "Islam-Reels-" + (S.surah?.ar || "قرآن") + ".webm");
+              _setProgress(_expTotalDur);
+              _finishExport(expCtx, "⚠️ WebM جاهز — اضغط 🔄 للتحويل يدوياً", "#c9973a");
+              return;
+            }
           }
 
           // غير iOS: حفظ WebM مباشرةً
