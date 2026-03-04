@@ -4508,16 +4508,21 @@
           return;
         }
 
-        let mimeType = "";
-        for (const m of [
-          "video/webm;codecs=vp9,opus",
-          "video/webm;codecs=vp8,opus",
-          "video/webm",
-        ])
-          if (MediaRecorder.isTypeSupported(m)) {
-            mimeType = m;
-            break;
-          }
+        /* ── اختيار أفضل mimeType — MP4 أولاً (يعمل مباشرةً على iOS/Safari) ── */
+        const _mimeCandidates = [
+          'video/mp4;codecs=avc1.42E01E,mp4a.40.2', // H.264 Baseline + AAC — أوسع دعم iOS/Android
+          'video/mp4;codecs=avc1,mp4a.40.2',
+          'video/mp4;codecs=h264,aac',
+          'video/mp4',
+          'video/webm;codecs=vp9,opus',
+          'video/webm;codecs=vp8,opus',
+          'video/webm',
+        ];
+        const mimeType = _mimeCandidates.find(t => {
+          try { return MediaRecorder.isTypeSupported(t); } catch { return false; }
+        }) || 'video/webm';
+        const _recIsMP4 = mimeType.includes('mp4');
+        toast$(_recIsMP4 ? '🎬 تسجيل MP4 مباشر...' : '🎬 تسجيل WebM...');
 
         exportChunks = [];
         exportRecorder = new MediaRecorder(combined, {
@@ -4528,10 +4533,20 @@
           if (e.data?.size > 0) exportChunks.push(e.data);
         };
         exportRecorder.onstop = async () => {
-          const webmBlob = new Blob(exportChunks, { type: "video/webm" });
-          const mb = (webmBlob.size / 1024 / 1024).toFixed(1);
+          const recBlob = new Blob(exportChunks, { type: mimeType });
+          const mb = (recBlob.size / 1024 / 1024).toFixed(1);
 
-          // على iOS: نحاول نحوّل WebM → MP4 باستخدام FFmpeg WASM
+          // لو سُجِّل مباشرةً كـ MP4 — نعرضه فوراً بدون أي تحويل
+          if (_recIsMP4) {
+            showVideoPopup(recBlob, "Islam-Reels-" + (S.surah?.ar || "قرآن") + ".mp4");
+            _setProgress(_expTotalDur);
+            _finishExport(expCtx, "✅ تم الحفظ MP4 — " + mb + " MB ✨", "#5ec285");
+            return;
+          }
+
+          // WebM — على iOS نحوّل، على غيره نحفظ مباشرةً
+          const webmBlob = recBlob;
+
           if (_isIOS) {
             xShow(total, total, "⚙️ جارٍ تحويل WebM → MP4...");
             setSbar("⚙️ يحمّل FFmpeg...", "#c9973a");
@@ -4546,7 +4561,6 @@
 
               const ff = window._ffmpegInst;
 
-              // progress listener
               ff.on('progress', ({ progress }) => {
                 if (progress >= 0 && progress <= 1) {
                   const pct = Math.round(progress * 100);
@@ -4561,7 +4575,6 @@
 
               setSbar("⚙️ يشغّل FFmpeg...", "#c9973a");
 
-              // تحويل WebM → MP4 Baseline H.264 آمن على iOS
               const ret = await ff.exec([
                 '-i',         'input.webm',
                 '-c:v',       'libx264',
@@ -4598,7 +4611,6 @@
 
             } catch(e) {
               console.error('FFmpeg conversion failed:', e, '\nLog:\n', logLines.join('\n'));
-              // نعرض popup WebM مع زر تحويل يدوي
               showVideoPopup(webmBlob, "Islam-Reels-" + (S.surah?.ar || "قرآن") + ".webm");
               _setProgress(_expTotalDur);
               _finishExport(expCtx, "⚠️ WebM جاهز — اضغط 🔄 للتحويل يدوياً", "#c9973a");
