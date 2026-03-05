@@ -2394,204 +2394,6 @@
             />
           </div>
           <div class="sec">
-            <span class="lbl">🎬 جودة الفيديو والتصدير</span>
-
-            <!-- Preset Picker -->
-            <div style="position: relative; margin-bottom: 8px">
-              <div
-                id="presetSelected"
-                onclick="togglePresetMenu()"
-                style="
-                  display: flex;
-                  align-items: center;
-                  justify-content: space-between;
-                  padding: 10px 12px;
-                  border-radius: 10px;
-                  cursor: pointer;
-                  border: 1.5px solid rgba(201, 151, 58, 0.6);
-                  background: rgba(201, 151, 58, 0.08);
-                "
-              >
-                <div style="display: flex; align-items: center; gap: 7px">
-                  <span id="presetIcon" style="font-size: 16px">🎬</span>
-                  <div>
-                    <div
-                      id="presetName"
-                      style="font-size: 12px; font-weight: 700; color: #e4b55a"
-                    >
-                      شورتس قياسي
-                    </div>
-                    <div id="presetTag" style="font-size: 10px; color: #6e8878">
-                      1080p · 30fps
-                    </div>
-                  </div>
-                </div>
-                <span
-                  id="presetArrow"
-                  style="color: #c9973a; font-size: 12px; transition: 0.2s"
-                  >▼</span
-                >
-              </div>
-
-              <!-- Dropdown -->
-              <div
-                id="presetMenu"
-                style="
-                  display: none;
-                  position: absolute;
-                  top: calc(100% + 4px);
-                  left: 0;
-                  right: 0;
-                  z-index: 999;
-                  background: #0d1f13;
-                  border: 1.5px solid rgba(201, 151, 58, 0.3);
-                  border-radius: 10px;
-                  overflow: hidden;
-                  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
-                "
-              ></div>
-            </div>
-
-            <!-- Preset description -->
-            <div
-              id="presetDesc"
-              style="
-                font-size: 10px;
-                color: #7a9a82;
-                margin-bottom: 8px;
-                padding: 0 2px;
-              "
-            ></div>
-
-            <!-- Custom controls -->
-            <div
-              id="customPresetRow"
-              style="
-                display: none;
-                background: rgba(255, 255, 255, 0.03);
-                border: 1px solid rgba(255, 255, 255, 0.07);
-                border-radius: 9px;
-                padding: 10px;
-                margin-bottom: 8px;
-              "
-            >
-              <div
-                style="
-                  display: grid;
-                  grid-template-columns: 1fr 1fr;
-                  gap: 7px;
-                  margin-bottom: 7px;
-                "
-              >
-                <div>
-                  <div
-                    style="font-size: 10px; color: #6e8878; margin-bottom: 3px"
-                  >
-                    العرض (px)
-                  </div>
-                  <input
-                    id="cpW"
-                    type="number"
-                    value="1080"
-                    min="360"
-                    max="3840"
-                    onchange="updateCustomPreset()"
-                    style="
-                      width: 100%;
-                      background: #112016;
-                      border: 1px solid rgba(255, 255, 255, 0.1);
-                      border-radius: 6px;
-                      padding: 5px 8px;
-                      color: #e4b55a;
-                      font-size: 12px;
-                      box-sizing: border-box;
-                    "
-                  />
-                </div>
-                <div>
-                  <div
-                    style="font-size: 10px; color: #6e8878; margin-bottom: 3px"
-                  >
-                    الارتفاع (px)
-                  </div>
-                  <input
-                    id="cpH"
-                    type="number"
-                    value="1920"
-                    min="640"
-                    max="4096"
-                    onchange="updateCustomPreset()"
-                    style="
-                      width: 100%;
-                      background: #112016;
-                      border: 1px solid rgba(255, 255, 255, 0.1);
-                      border-radius: 6px;
-                      padding: 5px 8px;
-                      color: #e4b55a;
-                      font-size: 12px;
-                      box-sizing: border-box;
-                    "
-                  />
-                </div>
-              </div>
-              <div
-                style="display: grid; grid-template-columns: 1fr 1fr; gap: 7px"
-              >
-                <div>
-                  <div
-                    style="font-size: 10px; color: #6e8878; margin-bottom: 3px"
-                  >
-                    FPS (إطارات/ثانية)
-                  </div>
-                  <select
-                    id="cpFps"
-                    onchange="updateCustomPreset()"
-                    style="
-                      width: 100%;
-                      background: #112016;
-                      border: 1px solid rgba(255, 255, 255, 0.1);
-                      border-radius: 6px;
-                      padding: 5px 8px;
-                      color: #e4b55a;
-                      font-size: 12px;
-                      box-sizing: border-box;
-                    "
-                  >
-                    <option value="24">24 (سينمائي)</option>
-                    <option value="30" selected>30 (قياسي)</option>
-                    <option value="60">60 (عالي)</option>
-                  </select>
-                </div>
-                <div>
-                  <div
-                    style="font-size: 10px; color: #6e8878; margin-bottom: 3px"
-                  >
-                    الجودة (Mbps)
-                  </div>
-                  <select
-                    id="cpBr"
-                    onchange="updateCustomPreset()"
-                    style="
-                      width: 100%;
-                      background: #112016;
-                      border: 1px solid rgba(255, 255, 255, 0.1);
-                      border-radius: 6px;
-                      padding: 5px 8px;
-                      color: #e4b55a;
-                      font-size: 12px;
-                      box-sizing: border-box;
-                    "
-                  >
-                    <option value="4">4 Mbps (اقتصادي)</option>
-                    <option value="8" selected>8 Mbps (عالية)</option>
-                    <option value="16">16 Mbps (ممتازة)</option>
-                    <option value="40">40 Mbps (احترافية)</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="sec">
             <span class="lbl">صيغة التصدير</span>
             <!-- خيارات الصيغة -->
             <div style="display: flex; gap: 7px; margin-bottom: 9px">
@@ -2772,6 +2574,25 @@
                 >
                   ⚠ mp4-muxer لم يُحمَّل بعد...
                 </div>
+              </div>
+            </div>
+            <!-- جودة الفيديو + معدل الإطارات -->
+            <div style="display:flex;gap:8px;margin-bottom:10px;">
+              <div style="flex:1;">
+                <div style="font-size:10px;color:#6e8878;margin-bottom:3px;">جودة الفيديو</div>
+                <select id="s-qual" style="width:100%;background:#112016;border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:6px 8px;color:#e4b55a;font-size:12px;font-family:'Cairo',sans-serif;box-sizing:border-box;">
+                  <option value="800000">عالية جداً (4 Mbps)</option>
+                  <option value="500000" selected>عالية (2.5 Mbps)</option>
+                  <option value="300000">متوسطة (1.5 Mbps)</option>
+                </select>
+              </div>
+              <div style="flex:1;">
+                <div style="font-size:10px;color:#6e8878;margin-bottom:3px;">معدل الإطارات</div>
+                <select id="s-fps" style="width:100%;background:#112016;border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:6px 8px;color:#e4b55a;font-size:12px;font-family:'Cairo',sans-serif;box-sizing:border-box;">
+                  <option value="30" selected>30 fps (ريلز)</option>
+                  <option value="25">25 fps</option>
+                  <option value="60">60 fps</option>
+                </select>
               </div>
             </div>
             <!-- زرار التصدير -->
@@ -3177,8 +2998,8 @@
       }
 
       const canvas = document.createElement("canvas");
-      canvas.width = 1440;
-      canvas.height = 2560;
+      canvas.width = 540;   // 540×960 — يتغيّر لو المستخدم اختار preset تاني
+      canvas.height = 960;
       const ctx = canvas.getContext("2d", { alpha: false }); // alpha:false يسرّع compositing
       let drawLoopActive = false;
       const TARGET_FPS = 30, // 30fps كافية وبتوفّر نص CPU
@@ -4200,12 +4021,15 @@
         _expElapsedBefore = 0;
         _expAbort = false;
 
-        const qp =
+        const _baseQp =
           currentPreset && EXPORT_PRESETS[currentPreset]
             ? EXPORT_PRESETS[currentPreset]
             : QUALITY_PRESETS[currentQuality] || QUALITY_PRESETS.hd;
-        canvas.width = qp.w;
-        canvas.height = qp.h;
+        // اقرأ الجودة والـ fps من الـ dropdowns
+        const _selBitrate = document.getElementById('s-qual') ? parseInt(document.getElementById('s-qual').value) : 2_500_000;
+        const _selFps     = document.getElementById('s-fps')  ? parseInt(document.getElementById('s-fps').value)  : 30;
+        const qp = { ..._baseQp, w: canvas.width, h: canvas.height, bitrate: _selBitrate, fps: _selFps };
+        // لا نغيّر canvas.width / canvas.height — نصدّر بالحجم الحالي
         _gradCache = null;
         _mtCache.clear();
         stopDrawLoop();
@@ -4310,7 +4134,7 @@
           codec: "mp4a.40.2",
           sampleRate: SR,
           numberOfChannels: 2,
-          bitrate: 192000,
+          bitrate: 96000,
         });
 
         // بناء audio arrays — SR الحقيقي من الـ buffers مع ثانيتين padding
@@ -6073,7 +5897,7 @@
           w: 1920,
           h: 1080,
           fps: 30,
-          bitrate: 8_000_000,
+          bitrate: 4_000_000,
           desc: "الخيار الأفضل لقنوات يوتيوب.",
         },
         yt_hfq60: {
@@ -6083,7 +5907,7 @@
           w: 1920,
           h: 1080,
           fps: 60,
-          bitrate: 16_000_000,
+          bitrate: 6_000_000,
           desc: "يوتيوب بـ 60 إطار/ثانية.",
         },
         sh_eco: {
@@ -6093,7 +5917,7 @@
           w: 720,
           h: 1280,
           fps: 30,
-          bitrate: 4_000_000,
+          bitrate: 2_000_000,
           desc: "حجم ملف صغير وسرعة تصدير أعلى.",
         },
         sh_hd: {
@@ -6103,7 +5927,7 @@
           w: 1080,
           h: 1920,
           fps: 30,
-          bitrate: 8_000_000,
+          bitrate: 4_000_000,
           desc: "الخيار الأفضل لمعظم هواتف أندرويد وآيفون.",
         },
         sh_hd60: {
@@ -6113,7 +5937,7 @@
           w: 1080,
           h: 1920,
           fps: 60,
-          bitrate: 16_000_000,
+          bitrate: 6_000_000,
           desc: "شورتس سلس بـ 60 إطار/ثانية.",
         },
         sh_4k: {
@@ -6123,7 +5947,7 @@
           w: 2160,
           h: 3840,
           fps: 60,
-          bitrate: 40_000_000,
+          bitrate: 16_000_000,
           desc: "أعلى جودة ممكنة (يحتاج جهاز قوي).",
         },
         custom: {
@@ -6133,15 +5957,15 @@
           w: 1080,
           h: 1920,
           fps: 30,
-          bitrate: 8_000_000,
+          bitrate: 4_000_000,
           desc: "اضبط الدقة والـ FPS يدوياً.",
         },
       };
       // نحتفظ بـ QUALITY_PRESETS للتوافق مع الكود القديم
       const QUALITY_PRESETS = {
-        hd: { w: 1080, h: 1920, fps: 30, bitrate: 8_000_000 },
-        fhd: { w: 1440, h: 2560, fps: 60, bitrate: 20_000_000 },
-        "4k": { w: 2160, h: 3840, fps: 60, bitrate: 40_000_000 },
+        hd: { w: 1080, h: 1920, fps: 30, bitrate: 4_000_000 },
+        fhd: { w: 1440, h: 2560, fps: 60, bitrate: 8_000_000 },
+        "4k": { w: 2160, h: 3840, fps: 60, bitrate: 16_000_000 },
       };
       let currentQuality = "hd";
       let currentPreset = "sh_hd"; // الـ preset الحالي
@@ -6234,9 +6058,9 @@
           bitrate: p.bitrate,
         };
 
-        // تحديث الـ canvas مباشرة
-        canvas.width = p.w;
-        canvas.height = p.h;
+        // الـ canvas ثابت على 540×960 — لا يتغير بالـ preset
+        canvas.width = 540;
+        canvas.height = 960;
         _gradCache = null;
         _mtCache.clear();
         markCstateDirty();
@@ -6278,8 +6102,8 @@
           btn.querySelector("div").style.color = on ? "#e4b55a" : "#b5c4bc";
         });
         const p = QUALITY_PRESETS[q];
-        canvas.width = p.w;
-        canvas.height = p.h;
+        canvas.width = 540;
+        canvas.height = 960;
         _gradCache = null;
         _mtCache.clear();
         markCstateDirty();
@@ -6301,8 +6125,8 @@
         EXPORT_PRESETS.custom.fps = fps;
         EXPORT_PRESETS.custom.bitrate = br * 1_000_000;
         QUALITY_PRESETS._active = { w, h, fps: fps, bitrate: br * 1_000_000 };
-        canvas.width = w;
-        canvas.height = h;
+        canvas.width = 540;
+        canvas.height = 960;
         _gradCache = null;
         _mtCache.clear();
         markCstateDirty();
