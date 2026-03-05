@@ -3621,19 +3621,9 @@
 
             <!-- مشغّل -->
             <video id="_popupVid" src="${url}" controls playsinline webkit-playsinline
-              muted
               style="width:100%;max-height:220px;border-radius:12px;margin-bottom:14px;
-                     background:#000;display:block;"></video>
-            <script>
-              (function(){
-                var v = document.getElementById('_popupVid');
-                if (!v) return;
-                // iOS: بعد أول tap يُزال الـ mute تلقائياً ويشتغل الصوت
-                function unmute(){ v.muted = false; v.play().catch(()=>{}); v.removeEventListener('play', unmute); document.removeEventListener('touchstart', unmute); }
-                v.addEventListener('play', unmute);
-                document.addEventListener('touchstart', unmute, { once: true });
-              })();
-            </script>
+                     background:#000;display:block;"
+              oncanplay="this.muted=false;"></video>
 
             <!-- تحويل WebM (iOS فقط) -->
             ${convertBtn}
@@ -3877,24 +3867,18 @@
         setTimeout(() => URL.revokeObjectURL(url), 600000); // 10 دقائق
       }
 
-      /* ── _downloadBlob: نسخة محسّنة مع iOS Share Sheet ─────────── */
-      // بناء WAV ArrayBuffer من AudioBuffer — يُستخدم على iOS لضمان الصوت في FFmpeg
+      /* ── _buildWAV: بناء WAV من AudioBuffer — يُستخدم على iOS لضمان الصوت ── */
       function _buildWAV(audioBuf) {
-        const numCh = audioBuf.numberOfChannels;
-        const sr    = audioBuf.sampleRate;
-        const len   = audioBuf.length;
-        const bps   = 16;
-        const blockAlign = numCh * 2;
-        const dataSize   = len * blockAlign;
-        const buf  = new ArrayBuffer(44 + dataSize);
-        const view = new DataView(buf);
-        const ws = (off, str) => { for (let i = 0; i < str.length; i++) view.setUint8(off + i, str.charCodeAt(i)); };
-        ws(0, 'RIFF'); view.setUint32(4, 36 + dataSize, true);
-        ws(8, 'WAVE'); ws(12, 'fmt '); view.setUint32(16, 16, true);
+        const numCh = audioBuf.numberOfChannels, sr = audioBuf.sampleRate, len = audioBuf.length;
+        const blockAlign = numCh * 2, dataSize = len * blockAlign;
+        const buf = new ArrayBuffer(44 + dataSize), view = new DataView(buf);
+        const ws = (o, s) => { for (let i = 0; i < s.length; i++) view.setUint8(o + i, s.charCodeAt(i)); };
+        ws(0,'RIFF'); view.setUint32(4, 36 + dataSize, true);
+        ws(8,'WAVE'); ws(12,'fmt '); view.setUint32(16, 16, true);
         view.setUint16(20, 1, true); view.setUint16(22, numCh, true);
         view.setUint32(24, sr, true); view.setUint32(28, sr * blockAlign, true);
-        view.setUint16(32, blockAlign, true); view.setUint16(34, bps, true);
-        ws(36, 'data'); view.setUint32(40, dataSize, true);
+        view.setUint16(32, blockAlign, true); view.setUint16(34, 16, true);
+        ws(36,'data'); view.setUint32(40, dataSize, true);
         const chs = []; for (let c = 0; c < numCh; c++) chs.push(audioBuf.getChannelData(c));
         let off = 44;
         for (let i = 0; i < len; i++) for (let c = 0; c < numCh; c++) {
@@ -3904,6 +3888,7 @@
         return buf;
       }
 
+      /* ── _downloadBlob: نسخة محسّنة مع iOS Share Sheet ─────────── */
       function _downloadBlob(blob, filename) {
         if (_isIOS) {
           /* iOS: نعرض popup مخصص فيه Web Share API */
@@ -4555,9 +4540,8 @@
                 }
               });
 
-              // كتابة WebM (بدون صوت موثوق على iOS)
+              // WebM (video) + WAV منفصل (audio مضمون على iOS)
               await ff.writeFile('input.webm', new Uint8Array(await webmBlob.arrayBuffer()));
-              // كتابة WAV من الـ audioBuf مباشرة — يضمن الصوت بغض النظر عن iOS
               await ff.writeFile('audio.wav', new Uint8Array(_buildWAV(audioBuf)));
 
               const ret = await ff.exec([
@@ -4579,7 +4563,6 @@
               ]);
 
               if (ret !== 0) throw new Error(`FFmpeg exit ${ret}`);
-
               const outData = await ff.readFile('output.mp4');
               if (!outData || outData.byteLength < 1000) throw new Error('MP4 output empty');
               const mp4Blob = new Blob([outData.buffer], { type: 'video/mp4' });
