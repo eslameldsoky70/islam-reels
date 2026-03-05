@@ -5588,7 +5588,7 @@
           wordList || (text || "").trim().split(/\s+/).filter(Boolean);
         if (!words.length) return [];
         const n = words.length;
-        const sz = n <= 10 ? n : n <= 20 ? Math.ceil(n / 2) : Math.ceil(n / 3);
+        const sz = n <= 30 ? n : n <= 45 ? Math.ceil(n / 2) : Math.ceil(n / 3);
         const chunks = [];
         for (let i = 0; i < words.length; i += sz)
           chunks.push({ words: words.slice(i, i + sz), startIdx: i });
