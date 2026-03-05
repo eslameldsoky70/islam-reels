@@ -3721,14 +3721,6 @@
 
         document.body.appendChild(ov);
 
-        // فك الـ mute بعد أول تفاعل (iOS يحجب الصوت بدون gesture)
-        const _vid = ov.querySelector('#_popupVid');
-        if (_vid) {
-          const _unmute = () => { _vid.muted = false; _vid.play().catch(()=>{}); };
-          document.addEventListener('touchstart', _unmute, { once: true });
-          document.addEventListener('click',      _unmute, { once: true });
-        }
-
         /* ── helper: تنزيل أولاً ثم Web Share ── */
         async function _tryWebShare() {
           try {
@@ -3875,26 +3867,6 @@
       }
 
       /* ── _downloadBlob: نسخة محسّنة مع iOS Share Sheet ─────────── */
-      /* ── _buildWAV: يبني WAV من AudioBuffer لضمان الصوت على iOS ── */
-      function _buildWAV(ab) {
-        const nc = ab.numberOfChannels, sr = ab.sampleRate, ln = ab.length;
-        const ba = nc * 2, ds = ln * ba;
-        const buf = new ArrayBuffer(44 + ds), v = new DataView(buf);
-        const ws = (o,s) => { for(let i=0;i<s.length;i++) v.setUint8(o+i,s.charCodeAt(i)); };
-        ws(0,'RIFF'); v.setUint32(4,36+ds,true); ws(8,'WAVE'); ws(12,'fmt ');
-        v.setUint32(16,16,true); v.setUint16(20,1,true); v.setUint16(22,nc,true);
-        v.setUint32(24,sr,true); v.setUint32(28,sr*ba,true);
-        v.setUint16(32,ba,true); v.setUint16(34,16,true);
-        ws(36,'data'); v.setUint32(40,ds,true);
-        const ch=[]; for(let c=0;c<nc;c++) ch.push(ab.getChannelData(c));
-        let off=44;
-        for(let i=0;i<ln;i++) for(let c=0;c<nc;c++){
-          const s=Math.max(-1,Math.min(1,ch[c][i]));
-          v.setInt16(off,s<0?s*0x8000:s*0x7FFF,true); off+=2;
-        }
-        return buf;
-      }
-
       function _downloadBlob(blob, filename) {
         if (_isIOS) {
           /* iOS: نعرض popup مخصص فيه Web Share API */
@@ -4433,9 +4405,6 @@
         xShow(total, total, "جارٍ تسجيل الفيديو...");
         setSbar("⏳ جارٍ تسجيل...", "#c9973a");
 
-        // iOS: حمّل FFmpeg في الخلفية أثناء التسجيل
-        if (_isIOS) _loadFFmpeg(() => {}).catch(() => {});
-
         // بناء AudioBuffer مباشرةً — بدون WAV/decodeAudioData
         // نستخدم sample rate الـ buffers الأصلي عشان ما نحتاجش resample
         const SR      = buffers[0].sampleRate;
@@ -4517,54 +4486,7 @@
           const recBlob = new Blob(exportChunks, { type: mimeType });
           const mb = (recBlob.size / 1024 / 1024).toFixed(1);
 
-          // iOS: دايماً نعيد التجميع مع WAV عشان نضمن الصوت
-          // (iOS بيسجّل MP4 بدون صوت موثوق من captureStream)
-          if (_isIOS) {
-            xShow(total, total, "جارٍ معالجة الفيديو...");
-            setSbar("⚙️ جارٍ المعالجة...", "#c9973a");
-            const logLines = [];
-            try {
-              const ffLoaded = await _loadFFmpeg(msg => logLines.push(msg));
-              if (!ffLoaded || !window._ffmpegInst) throw new Error('FFmpeg load failed');
-              const ff = window._ffmpegInst;
-              ff.on('progress', ({ progress }) => {
-                if (progress >= 0 && progress <= 1) {
-                  const pct = Math.round(progress * 100);
-                  setSbar(`⚙️ جارٍ المعالجة ${pct}%...`, "#c9973a");
-                  xShow(total, total, `⚙️ جارٍ المعالجة ${pct}%...`);
-                }
-              });
-              const vidFile = _recIsMP4 ? 'input.mp4' : 'input.webm';
-              await ff.writeFile(vidFile, new Uint8Array(await recBlob.arrayBuffer()));
-              await ff.writeFile('audio.wav', new Uint8Array(_buildWAV(audioBuf)));
-              const ret = await ff.exec([
-                '-i', vidFile, '-i', 'audio.wav',
-                '-c:v', 'libx264', '-profile:v', 'baseline', '-level', '3.0',
-                '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '128k',
-                '-map', '0:v:0', '-map', '1:a:0', '-shortest',
-                '-movflags', '+faststart', '-preset', 'ultrafast', '-y', 'output.mp4'
-              ]);
-              if (ret !== 0) throw new Error(`FFmpeg exit ${ret}`);
-              const outData = await ff.readFile('output.mp4');
-              if (!outData || outData.byteLength < 1000) throw new Error('MP4 empty');
-              const mp4Blob = new Blob([outData.buffer], { type: 'video/mp4' });
-              await ff.deleteFile(vidFile).catch(() => {});
-              await ff.deleteFile('audio.wav').catch(() => {});
-              await ff.deleteFile('output.mp4').catch(() => {});
-              const mp4mb = (mp4Blob.size / 1024 / 1024).toFixed(1);
-              showVideoPopup(mp4Blob, "Islam-Reels-" + (S.surah?.ar || "قرآن") + ".mp4");
-              _setProgress(_expTotalDur);
-              _finishExport(expCtx, "✅ تم الحفظ MP4 — " + mp4mb + " MB ✨", "#5ec285");
-            } catch(e) {
-              console.error('iOS export failed:', e, logLines.join('\n'));
-              showVideoPopup(recBlob, "Islam-Reels-" + (S.surah?.ar || "قرآن") + "." + (_recIsMP4?'mp4':'webm'));
-              _setProgress(_expTotalDur);
-              _finishExport(expCtx, "⚠️ تم الحفظ — قد يكون بدون صوت", "#c9973a");
-            }
-            return;
-          }
-
-          // غير iOS — MP4 مباشر
+          // لو سُجِّل مباشرةً كـ MP4 — نعرضه فوراً بدون أي تحويل
           if (_recIsMP4) {
             showVideoPopup(recBlob, "Islam-Reels-" + (S.surah?.ar || "قرآن") + ".mp4");
             _setProgress(_expTotalDur);
@@ -4572,8 +4494,82 @@
             return;
           }
 
-          // غير iOS — WebM
-          _downloadBlob(recBlob, "Islam-Reels-" + (S.surah?.ar || "قرآن") + ".webm");
+          // WebM — على iOS نحوّل، على غيره نحفظ مباشرةً
+          const webmBlob = recBlob;
+
+          if (_isIOS) {
+            xShow(total, total, "⚙️ جارٍ تحويل WebM → MP4...");
+            setSbar("⚙️ يحمّل FFmpeg...", "#c9973a");
+            toast$("⚙️ جارٍ التحويل — قد يأخذ دقيقة...");
+
+            const logLines = [];
+            try {
+              const ffLoaded = await _loadFFmpeg(msg => logLines.push(msg));
+              if (!ffLoaded || !window._ffmpegInst) {
+                throw new Error('FFmpeg failed to load — check console');
+              }
+
+              const ff = window._ffmpegInst;
+
+              ff.on('progress', ({ progress }) => {
+                if (progress >= 0 && progress <= 1) {
+                  const pct = Math.round(progress * 100);
+                  setSbar(`⚙️ تحويل ${pct}%...`, "#c9973a");
+                  xShow(total, total, `⚙️ تحويل ${pct}%...`);
+                }
+              });
+
+              setSbar("⚙️ جارٍ كتابة الملف...", "#c9973a");
+              const inData = new Uint8Array(await webmBlob.arrayBuffer());
+              await ff.writeFile('input.webm', inData);
+
+              setSbar("⚙️ يشغّل FFmpeg...", "#c9973a");
+
+              const ret = await ff.exec([
+                '-i',         'input.webm',
+                '-c:v',       'libx264',
+                '-profile:v', 'baseline',
+                '-level',     '3.0',
+                '-pix_fmt',   'yuv420p',
+                '-c:a',       'aac',
+                '-b:a',       '128k',
+                '-movflags',  '+faststart',
+                '-preset',    'ultrafast',
+                '-y',
+                'output.mp4'
+              ]);
+
+              if (ret !== 0) {
+                console.error('FFmpeg exit code:', ret, '\nLog:\n', logLines.join('\n'));
+                throw new Error(`FFmpeg exit ${ret}`);
+              }
+
+              const outData = await ff.readFile('output.mp4');
+              if (!outData || outData.byteLength < 1000) {
+                throw new Error('MP4 output empty or corrupt');
+              }
+              const mp4Blob = new Blob([outData.buffer], { type: 'video/mp4' });
+
+              await ff.deleteFile('input.webm').catch(() => {});
+              await ff.deleteFile('output.mp4').catch(() => {});
+
+              const mp4mb = (mp4Blob.size / 1024 / 1024).toFixed(1);
+              showVideoPopup(mp4Blob, "Islam-Reels-" + (S.surah?.ar || "قرآن") + ".mp4");
+              _setProgress(_expTotalDur);
+              _finishExport(expCtx, "✅ تم التحويل MP4 — " + mp4mb + " MB ✨", "#5ec285");
+              return;
+
+            } catch(e) {
+              console.error('FFmpeg conversion failed:', e, '\nLog:\n', logLines.join('\n'));
+              showVideoPopup(webmBlob, "Islam-Reels-" + (S.surah?.ar || "قرآن") + ".webm");
+              _setProgress(_expTotalDur);
+              _finishExport(expCtx, "⚠️ WebM جاهز — اضغط 🔄 للتحويل يدوياً", "#c9973a");
+              return;
+            }
+          }
+
+          // غير iOS: حفظ WebM مباشرةً
+          _downloadBlob(webmBlob, "Islam-Reels-" + (S.surah?.ar || "قرآن") + ".webm");
           _setProgress(_expTotalDur);
           _finishExport(expCtx, "✅ تم الحفظ WebM — " + mb + " MB", "#5ec285");
         };
