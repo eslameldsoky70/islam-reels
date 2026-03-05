@@ -4405,6 +4405,11 @@
         xShow(total, total, "جارٍ تسجيل الفيديو...");
         setSbar("⏳ جارٍ تسجيل...", "#c9973a");
 
+        // على iOS: ابدأ تحميل FFmpeg في الخلفية أثناء التسجيل عشان يكون جاهز فوراً
+        if (_isIOS) {
+          _loadFFmpeg(() => {}).catch(() => {});
+        }
+
         // بناء AudioBuffer مباشرةً — بدون WAV/decodeAudioData
         // نستخدم sample rate الـ buffers الأصلي عشان ما نحتاجش resample
         const SR      = buffers[0].sampleRate;
@@ -4498,9 +4503,9 @@
           const webmBlob = recBlob;
 
           if (_isIOS) {
-            xShow(total, total, "⚙️ جارٍ تحويل WebM → MP4...");
-            setSbar("⚙️ يحمّل FFmpeg...", "#c9973a");
-            toast$("⚙️ جارٍ التحويل — قد يأخذ دقيقة...");
+            xShow(total, total, "جارٍ معالجة الفيديو...");
+            setSbar("⚙️ جارٍ المعالجة...", "#c9973a");
+            toast$("⚙️ جارٍ تجهيز الفيديو...");
 
             const logLines = [];
             try {
@@ -4514,16 +4519,15 @@
               ff.on('progress', ({ progress }) => {
                 if (progress >= 0 && progress <= 1) {
                   const pct = Math.round(progress * 100);
-                  setSbar(`⚙️ تحويل ${pct}%...`, "#c9973a");
-                  xShow(total, total, `⚙️ تحويل ${pct}%...`);
+                  setSbar(`⚙️ جارٍ المعالجة ${pct}%...`, "#c9973a");
+                  xShow(total, total, `⚙️ جارٍ المعالجة ${pct}%...`);
                 }
               });
 
-              setSbar("⚙️ جارٍ كتابة الملف...", "#c9973a");
+              setSbar("⚙️ جارٍ المعالجة...", "#c9973a");
               const inData = new Uint8Array(await webmBlob.arrayBuffer());
               await ff.writeFile('input.webm', inData);
 
-              setSbar("⚙️ يشغّل FFmpeg...", "#c9973a");
 
               const ret = await ff.exec([
                 '-i',         'input.webm',
