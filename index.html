@@ -6045,7 +6045,7 @@
       });
 
       // ── تطبيق preset ──
-      function applyPreset(key) {
+      function applyPreset(key, silent) {
         const p = EXPORT_PRESETS[key];
         if (!p) return;
         currentPreset = key;
@@ -6085,7 +6085,7 @@
         const desc = document.getElementById("presetDesc");
         if (desc) desc.textContent = p.desc;
 
-        toast$("✓ " + p.label + " — " + p.tag);
+        if (!silent) if (!silent) toast$("✓ " + p.label + " — " + p.tag);
       }
 
       // للتوافق مع الكود القديم
@@ -6164,20 +6164,12 @@
         if (!open) buildPresetMenu();
       }
 
-      function selectPreset(key) {
+      function selectPreset(key, silent) {
         const menu = document.getElementById("presetMenu");
         const arrow = document.getElementById("presetArrow");
         if (menu) menu.style.display = "none";
         if (arrow) arrow.style.transform = "";
-        applyPreset(key);
-        // تحديث الـ header
-        const p = EXPORT_PRESETS[key];
-        const nameEl = document.getElementById("presetName");
-        const tagEl = document.getElementById("presetTag");
-        const iconEl = document.getElementById("presetIcon");
-        if (nameEl) nameEl.textContent = p.label;
-        if (tagEl) tagEl.textContent = p.tag + " · " + p.fps + "fps";
-        if (iconEl) iconEl.textContent = p.icon;
+        applyPreset(key, silent);
       }
 
       // إغلاق القائمة لو المستخدم ضغط برة
@@ -6198,7 +6190,7 @@
 
       // تهيئة الـ preset الافتراضي عند التحميل
       window.addEventListener("load", () => {
-        selectPreset("sh_hd");
+        selectPreset("sh_hd", true); // true = بدون toast
       });
 
       /* ══ INIT ══ */
