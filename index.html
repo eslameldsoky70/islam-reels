@@ -4313,22 +4313,29 @@
           bitrate: 192000,
         });
 
-        // بناء audio arrays — بدون padding زيادة (كان يسبب ثانية صمت في النهاية)
-        const totalSamp = Math.ceil(_expTotalDur * SR);
-        const aL = new Float32Array(totalSamp),
-          aR = new Float32Array(totalSamp);
+        // بناء audio arrays — SR الحقيقي من الـ buffers مع ثانيتين padding
+        const actualSR = buffers[0].sampleRate;
+        const actualTotalSamp = buffers.reduce((s, b) => s + b.length, 0) + (actualSR * 2);
+        const aL = new Float32Array(actualTotalSamp),
+          aR = new Float32Array(actualTotalSamp);
         let aOff = 0;
         for (const buf of buffers) {
-          const n = Math.min(Math.round(buf.duration * SR), totalSamp - aOff);
-          aL.set(buf.getChannelData(0).subarray(0, n), aOff);
-          aR.set(
-            (buf.numberOfChannels > 1
-              ? buf.getChannelData(1)
-              : buf.getChannelData(0)
-            ).subarray(0, n),
-            aOff,
-          );
-          aOff += n;
+          aL.set(buf.getChannelData(0), aOff);
+          aR.set(buf.numberOfChannels > 1 ? buf.getChannelData(1) : buf.getChannelData(0), aOff);
+          aOff += buf.length;
+        }
+        // نعمل resample لـ 44100 لو الـ buffer بـ sampleRate مختلف
+        let finalL = aL, finalR = aR, totalSamp = actualTotalSamp;
+        if (actualSR !== SR) {
+          const ratio = SR / actualSR;
+          totalSamp = Math.round(actualTotalSamp * ratio);
+          finalL = new Float32Array(totalSamp);
+          finalR = new Float32Array(totalSamp);
+          for (let i = 0; i < totalSamp; i++) {
+            const src = Math.min(Math.floor(i / ratio), actualTotalSamp - 1);
+            finalL[i] = aL[src];
+            finalR[i] = aR[src];
+          }
         }
 
         let globalFrame = 0,
@@ -4371,8 +4378,8 @@
             if (audioSent < totalSamp) {
               const aLen = Math.min(sampPerFrame, totalSamp - audioSent);
               const planar = new Float32Array(aLen * 2);
-              planar.set(aL.subarray(audioSent, audioSent + aLen), 0);
-              planar.set(aR.subarray(audioSent, audioSent + aLen), aLen);
+              planar.set(finalL.subarray(audioSent, audioSent + aLen), 0);
+              planar.set(finalR.subarray(audioSent, audioSent + aLen), aLen);
               audioEnc.encode(
                 new AudioData({
                   format: "f32-planar",
@@ -4413,6 +4420,32 @@
             }
           }
           _expElapsedBefore += buf.duration;
+        }
+
+        // نضيف ثانيتين audio صامت + video بعد آخر آية تضمن تسجيل آخر كلمة
+        if (!_expAbort && !vEncErr) {
+          const extraFrames = Math.ceil(FPS * 2);
+          for (let f = 0; f < extraFrames; f++) {
+            if (_expAbort || vEncErr) break;
+            if (audioSent < totalSamp) {
+              const aLen = Math.min(sampPerFrame, totalSamp - audioSent);
+              const planar = new Float32Array(aLen * 2);
+              audioEnc.encode(new AudioData({
+                format: "f32-planar", sampleRate: SR,
+                numberOfFrames: aLen, numberOfChannels: 2,
+                timestamp: Math.round((audioSent / SR) * 1e6), data: planar,
+              }));
+              audioSent += aLen;
+            }
+            const ts = globalFrame * frameDurUs;
+            const vf = new VideoFrame(canvas, { timestamp: ts, duration: frameDurUs });
+            videoEnc.encode(vf, { keyFrame: false });
+            vf.close();
+            globalFrame++;
+            while (videoEnc.encodeQueueSize > 6)
+              await new Promise((r) => setTimeout(r, 4));
+            if (f % 4 === 0) await new Promise((r) => setTimeout(r, 0));
+          }
         }
 
         if (_expAbort || vEncErr) {
@@ -4552,7 +4585,7 @@
         // نستخدم sample rate الـ buffers الأصلي عشان ما نحتاجش resample
         const SR      = buffers[0].sampleRate;
         const nCh     = 2;
-        const TAIL    = Math.ceil(SR * 1.5); // 1.5 ثانية صمت في الآخر تضمن تسجيل آخر كلمة
+        const TAIL    = Math.ceil(SR * 2);
 
         let totalSamp = 0;
         buffers.forEach(b => { totalSamp += b.length; });
@@ -4722,55 +4755,23 @@
         audioSrc.buffer = audioBuf;
         audioSrc.connect(expDest);
 
-        const realDurMs = buffers.reduce((s, b) => s + b.duration, 0) * 1000;
-
         if (expCtx.state === 'suspended') await expCtx.resume().catch(() => {});
-
-        // ── نجدول كل الـ frames مسبقاً بـ setTimeout ──
-        // بهذه الطريقة حرق الـ frames مش بيبلوك الـ AudioContext
-        // لأن كل frame بتتنفذ في microtask منفصل
-        const framesDone = new Promise(resolve => {
-          let f = 0;
-          const startWall = performance.now();
-
-          function scheduleNext() {
-            if (f >= frameBlobs.length || _expAbort) { resolve(); return; }
-            const targetMs = f * msPerFrame;
-            const nowMs    = performance.now() - startWall;
-            const delay    = Math.max(0, targetMs - nowMs);
-            setTimeout(async () => {
-              if (_expAbort) { resolve(); return; }
-              try {
-                const img = await createImageBitmap(frameBlobs[f]);
-                ctx.drawImage(img, 0, 0);
-                img.close();
-                if (videoTrack?.requestFrame) videoTrack.requestFrame();
-              } catch(e) {}
-              if (f % 20 === 0)
-                _setProgress((_expTotalDur * f) / frameBlobs.length);
-              f++;
-              scheduleNext();
-            }, delay);
-          }
-          scheduleNext();
-        });
-
-        // نشغّل الصوت
         audioSrc.start(0);
 
-        // ننتظر الـ frames تخلص
-        await framesDone;
+        const t0 = performance.now();
+        for (let f = 0; f < frameBlobs.length; f++) {
+          if (_expAbort) break;
+          const img = await createImageBitmap(frameBlobs[f]);
+          ctx.drawImage(img, 0, 0);
+          img.close();
+          if (videoTrack?.requestFrame) videoTrack.requestFrame();
+          const wait = (f + 1) * msPerFrame - (performance.now() - t0);
+          if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+          if (f % 20 === 0)
+            _setProgress((_expTotalDur * f) / frameBlobs.length);
+        }
 
-        // ننتظر الصوت يخلص — بـ setTimeout مباشر على realDurMs
-        // مش بنعتمد على expCtx.currentTime لأنه بيتجمّد على iOS
-        const audioEndTime = performance.now();
-        const audioStart   = audioEndTime - (frameBlobs.length * msPerFrame);
-        const audioWait    = Math.max(0, realDurMs - (audioEndTime - audioStart));
-        if (audioWait > 0) await new Promise(r => setTimeout(r, audioWait + 300));
-        else await new Promise(r => setTimeout(r, 300));
-
-        try { audioSrc.stop(); } catch(e) {}
-        await new Promise(r => setTimeout(r, 80));
+        await new Promise((r) => setTimeout(r, 800));
         if (exportRecorder?.state !== "inactive") exportRecorder.stop();
       }
 
