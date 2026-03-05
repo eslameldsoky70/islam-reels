@@ -3754,7 +3754,7 @@
         const fontSizePx = Math.round(
           (CSTATE.fontSize / 220) * (canvas.width - 110),
         );
-        const lineH = fontSizePx * 1.9;
+        const lineH = fontSizePx * 1.45;
         const textCX = canvas.width / 2;
         const textCY = canvas.height / 2;
         const maxTextW = canvas.width - 120;
@@ -4612,7 +4612,7 @@
 
         // بناء audio arrays — SR الحقيقي من الـ buffers مع ثانيتين padding
         const actualSR = buffers[0].sampleRate;
-        const actualTotalSamp = buffers.reduce((s, b) => s + b.length, 0) + (actualSR * 2);
+        const actualTotalSamp = buffers.reduce((s, b) => s + b.length, 0);
         const aL = new Float32Array(actualTotalSamp),
           aR = new Float32Array(actualTotalSamp);
         let aOff = 0;
@@ -4721,7 +4721,7 @@
 
         // نضيف ثانيتين audio صامت + video بعد آخر آية تضمن تسجيل آخر كلمة
         if (!_expAbort && !vEncErr) {
-          const extraFrames = Math.ceil(FPS * 2);
+          const extraFrames = Math.ceil(FPS * 0.3);
           for (let f = 0; f < extraFrames; f++) {
             if (_expAbort || vEncErr) break;
             if (audioSent < totalSamp) {
@@ -4882,7 +4882,7 @@
         // نستخدم sample rate الـ buffers الأصلي عشان ما نحتاجش resample
         const SR      = buffers[0].sampleRate;
         const nCh     = 2;
-        const TAIL    = Math.ceil(SR * 2);
+        const TAIL    = Math.ceil(SR * 0.3);
 
         let totalSamp = 0;
         buffers.forEach(b => { totalSamp += b.length; });
@@ -5388,6 +5388,26 @@
         ];
       }
       const ayahUrl = (sh, sn, an) => ayahUrls(sh, sn, an)[0];
+
+      // ── Prefetch next ayah audio ──────────────────────────────────────
+      let _prefetchAudio = new Audio();
+      _prefetchAudio.preload = "auto";
+      let _prefetchedUrl = "";
+
+      function prefetchNextAyah() {
+        if (!S.sh || !S.surah) return;
+        const queue = getPlayQueue();
+        const nextIdx = S.active + 1;
+        if (nextIdx >= queue.length) return;
+        const nextAyahNum = queue[nextIdx];
+        const nextUrl = ayahUrls(S.sh, S.surah.n, nextAyahNum)[0];
+        if (_prefetchedUrl === nextUrl) return;
+        _prefetchedUrl = nextUrl;
+        _prefetchAudio.src = nextUrl;
+        _prefetchAudio.load();
+      }
+      // ─────────────────────────────────────────────────────────────────
+
       let toastT,
         pendingPlay = false,
         curUrl = "";
@@ -5472,6 +5492,8 @@
           fetchWordTiming(S.surah.n, curAN()).then((segs) => {
             if (segs) startWordHighlight(segs, S.color);
           });
+        // prefetch الآية القادمة أثناء تشغيل الحالية
+        setTimeout(prefetchNextAyah, 500);
       });
       audio.addEventListener("seeked", () => {
         if (S.playing && S.surah && S.active >= 0)
@@ -5497,8 +5519,20 @@
         const total = getPlayQueue().length || S.vTo - S.vFrom + 1;
         if (S.active < total - 1) {
           S.active++;
-          curUrl = "";
-          loadAudio(true);
+          // لو الآية القادمة جاهزة من الـ prefetch، استخدمها مباشرة
+          const queue = getPlayQueue();
+          const nextAyahNum = queue[S.active];
+          const nextUrl = S.sh && S.surah ? ayahUrls(S.sh, S.surah.n, nextAyahNum)[0] : "";
+          if (_prefetchedUrl === nextUrl && _prefetchAudio.readyState >= 3) {
+            // swap: نستخدم الـ prefetched audio مباشرة بدون تحميل جديد
+            audio.src = nextUrl;
+            curUrl = nextUrl;
+            _prefetchedUrl = "";
+            loadAudio(true);
+          } else {
+            curUrl = "";
+            loadAudio(true);
+          }
         } else {
           S.playing = false;
           if (
