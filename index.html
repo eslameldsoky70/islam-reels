@@ -3622,8 +3622,7 @@
             <!-- مشغّل -->
             <video id="_popupVid" src="${url}" controls playsinline webkit-playsinline
               style="width:100%;max-height:220px;border-radius:12px;margin-bottom:14px;
-                     background:#000;display:block;"
-              oncanplay="this.muted=false;"></video>
+                     background:#000;display:block;"></video>
 
             <!-- تحويل WebM (iOS فقط) -->
             ${convertBtn}
@@ -3721,6 +3720,20 @@
           </div>`;
 
         document.body.appendChild(ov);
+
+        /* ── iOS: فك الـ mute فوراً بعد أول لمسة — iOS يحجب الصوت بدون user gesture ── */
+        const _vid = ov.querySelector('#_popupVid');
+        if (_vid) {
+          _vid.muted = false;
+          const _iosUnmute = () => {
+            _vid.muted = false;
+            _vid.play().catch(() => {});
+            document.removeEventListener('touchstart', _iosUnmute);
+            document.removeEventListener('click', _iosUnmute);
+          };
+          document.addEventListener('touchstart', _iosUnmute, { once: true });
+          document.addEventListener('click', _iosUnmute, { once: true });
+        }
 
         /* ── helper: تنزيل أولاً ثم Web Share ── */
         async function _tryWebShare() {
@@ -4466,6 +4479,76 @@
         const _canWebM = typeof MediaRecorder !== 'undefined' &&
           ["video/webm;codecs=vp9,opus","video/webm;codecs=vp8,opus","video/webm"]
             .some(m => MediaRecorder.isTypeSupported(m));
+
+        // على iOS: استخدم FFmpeg مباشرة (WAV + frames) — MediaRecorder مش موثوق
+        if (_isIOS) {
+          xShow(total, total, "جارٍ معالجة الفيديو...");
+          setSbar("⚙️ جارٍ المعالجة...", "#c9973a");
+          const logLines = [];
+          try {
+            const ffLoaded = await _loadFFmpeg(msg => logLines.push(msg));
+            if (!ffLoaded || !window._ffmpegInst) throw new Error('FFmpeg failed');
+            const ff = window._ffmpegInst;
+
+            ff.on('progress', ({ progress }) => {
+              if (progress >= 0 && progress <= 1) {
+                const pct = Math.round(progress * 100);
+                setSbar(`⚙️ جارٍ المعالجة ${pct}%...`, "#c9973a");
+                xShow(total, total, `⚙️ جارٍ المعالجة ${pct}%...`);
+              }
+            });
+
+            // كتابة WAV من الـ audioBuf مباشرة
+            await ff.writeFile('audio.wav', new Uint8Array(_buildWAV(audioBuf)));
+
+            // كتابة كل frame كصورة
+            for (let i = 0; i < frameBlobs.length; i++) {
+              const ab = await frameBlobs[i].arrayBuffer();
+              await ff.writeFile(`frame_${String(i).padStart(5,'0')}.jpg`, new Uint8Array(ab));
+            }
+
+            const fps = qp.fps || 30;
+            const ret = await ff.exec([
+              '-framerate',  String(fps),
+              '-i',          'frame_%05d.jpg',
+              '-i',          'audio.wav',
+              '-c:v',        'libx264',
+              '-profile:v',  'baseline',
+              '-level',      '3.0',
+              '-pix_fmt',    'yuv420p',
+              '-c:a',        'aac',
+              '-b:a',        '128k',
+              '-map',        '0:v:0',
+              '-map',        '1:a:0',
+              '-shortest',
+              '-movflags',   '+faststart',
+              '-preset',     'ultrafast',
+              '-y',
+              'output.mp4'
+            ]);
+
+            if (ret !== 0) throw new Error(`FFmpeg exit ${ret}`);
+            const outData = await ff.readFile('output.mp4');
+            if (!outData || outData.byteLength < 1000) throw new Error('MP4 empty');
+            const mp4Blob = new Blob([outData.buffer], { type: 'video/mp4' });
+
+            // تنظيف الملفات
+            await ff.deleteFile('audio.wav').catch(() => {});
+            await ff.deleteFile('output.mp4').catch(() => {});
+            for (let i = 0; i < frameBlobs.length; i++)
+              await ff.deleteFile(`frame_${String(i).padStart(5,'0')}.jpg`).catch(() => {});
+
+            const mp4mb = (mp4Blob.size / 1024 / 1024).toFixed(1);
+            showVideoPopup(mp4Blob, "Islam-Reels-" + (S.surah?.ar || "قرآن") + ".mp4");
+            _setProgress(_expTotalDur);
+            _finishExport(expCtx, "✅ تم الحفظ MP4 — " + mp4mb + " MB ✨", "#5ec285");
+          } catch(e) {
+            console.error('iOS FFmpeg export failed:', e, logLines.join('\n'));
+            setSbar("❌ " + e.message, "#f47c7c");
+            _finishExport(expCtx);
+          }
+          return;
+        }
 
         if (!_canWebM) {
           toast$("📦 MediaRecorder غير متاح — تصدير ZIP frames...");
