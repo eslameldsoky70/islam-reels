@@ -5389,22 +5389,58 @@
       }
       const ayahUrl = (sh, sn, an) => ayahUrls(sh, sn, an)[0];
 
-      // ── Prefetch next ayah audio ──────────────────────────────────────
-      let _prefetchAudio = new Audio();
-      _prefetchAudio.preload = "auto";
-      let _prefetchedUrl = "";
+      // ── Prefetch next ayah as Blob (zero-gap playback) ──────────────
+      let _prefetchCache = {};   // url → objectURL (blob)
+      let _prefetchingUrl = "";
 
-      function prefetchNextAyah() {
+      async function prefetchNextAyah() {
         if (!S.sh || !S.surah) return;
         const queue = getPlayQueue();
         const nextIdx = S.active + 1;
         if (nextIdx >= queue.length) return;
         const nextAyahNum = queue[nextIdx];
         const nextUrl = ayahUrls(S.sh, S.surah.n, nextAyahNum)[0];
-        if (_prefetchedUrl === nextUrl) return;
-        _prefetchedUrl = nextUrl;
-        _prefetchAudio.src = nextUrl;
-        _prefetchAudio.load();
+
+        // prefetch الصوت كـ blob
+        if (!_prefetchCache[nextUrl] && _prefetchingUrl !== nextUrl) {
+          _prefetchingUrl = nextUrl;
+          try {
+            const res = await fetch(nextUrl);
+            if (!res.ok) throw new Error("fetch failed");
+            const blob = await res.blob();
+            _prefetchCache[nextUrl] = URL.createObjectURL(blob);
+          } catch(e) {
+            console.warn("[prefetch audio] failed:", e.message);
+          }
+          _prefetchingUrl = "";
+        }
+
+        // prefetch نص الآية القادمة
+        const s = S.surah.n;
+        const ckey = `${s}:${nextAyahNum}`;
+        if (!verseCache[ckey]) {
+          try {
+            const arRes = await fetch(`https://api.alquran.cloud/v1/ayah/${s}:${nextAyahNum}/ar`);
+            if (!arRes.ok) throw new Error("failed");
+            const arData = await arRes.json();
+            verseCache[ckey] = { ar: arData.data?.text || "", en: "" };
+          } catch(e) {
+            console.warn("[prefetch verse] failed:", e.message);
+          }
+        }
+      }
+
+      function getPrefetchedUrl(originalUrl) {
+        return _prefetchCache[originalUrl] || null;
+      }
+
+      function cleanPrefetchCache(keepUrl) {
+        for (const url in _prefetchCache) {
+          if (url !== keepUrl) {
+            URL.revokeObjectURL(_prefetchCache[url]);
+            delete _prefetchCache[url];
+          }
+        }
       }
       // ─────────────────────────────────────────────────────────────────
 
@@ -5438,7 +5474,8 @@
         } else {
           surahNum = S.surah.n;
           ayahNum = curAN();
-          await loadVerse();
+          // ابدأ تحميل الصوت فوراً بالتوازي مع جلب النص
+          loadVerse(); // بدون await — لا نستنى النص
         }
         const urls = ayahUrls(S.sh, surahNum, ayahNum);
         const url = urls[0];
@@ -5452,9 +5489,12 @@
         $("npS").style.color = "#c9973a";
         audio._fallbackUrls = urls;
         audio._fallbackIdx = 1;
-        audio.src = urls[0];
+        const blobUrl = getPrefetchedUrl(urls[0]);
+        audio.src = blobUrl || urls[0];
         audio.load();
         if (autoPlay) pendingPlay = true;
+        // نظّف الـ cache القديم
+        cleanPrefetchCache(urls[0]);
       }
 
       function doPlay() {
@@ -5519,20 +5559,8 @@
         const total = getPlayQueue().length || S.vTo - S.vFrom + 1;
         if (S.active < total - 1) {
           S.active++;
-          // لو الآية القادمة جاهزة من الـ prefetch، استخدمها مباشرة
-          const queue = getPlayQueue();
-          const nextAyahNum = queue[S.active];
-          const nextUrl = S.sh && S.surah ? ayahUrls(S.sh, S.surah.n, nextAyahNum)[0] : "";
-          if (_prefetchedUrl === nextUrl && _prefetchAudio.readyState >= 3) {
-            // swap: نستخدم الـ prefetched audio مباشرة بدون تحميل جديد
-            audio.src = nextUrl;
-            curUrl = nextUrl;
-            _prefetchedUrl = "";
-            loadAudio(true);
-          } else {
-            curUrl = "";
-            loadAudio(true);
-          }
+          curUrl = "";
+          loadAudio(true);
         } else {
           S.playing = false;
           if (
