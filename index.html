@@ -21,235 +21,159 @@
       href="/icons/icon-192.png"
     />
     <title>Islam Reels ✨</title>
-    <script
-      defer
-      src="https://cloud.umami.is/script.js"
-      data-website-id="ea8fe0f2-0b82-4a6d-b30d-d14ef6c1d10e"
-    ></script>
+    <script defer src="https://cloud.umami.is/script.js" data-website-id="ea8fe0f2-0b82-4a6d-b30d-d14ef6c1d10e"></script>
     <!-- ═══ INLINE LIBRARIES (no internet needed) ═══ -->
     <script>
-      /* ── mp4-muxer inline loader ─────────────────────────────────────
+    /* ── mp4-muxer inline loader ─────────────────────────────────────
        نحاول نحمّل المكتبة من CDN أولاً؛ لو فشل (offline / Safari قديم)
        نضبط canMP4=false ونستخدم ZIP fallback تلقائياً               */
-      window._mp4MuxerLoaded = false;
-      (function () {
-        const s = document.createElement("script");
-        s.src = "https://cdn.jsdelivr.net/npm/mp4-muxer@5/build/mp4-muxer.js";
-        s.onload = () => {
-          window._mp4MuxerLoaded = true;
-        };
-        s.onerror = () => {
-          window._mp4MuxerLoaded = false;
-          console.warn("mp4-muxer CDN failed — ZIP fallback active");
-        };
-        document.head.appendChild(s);
-      })();
+    window._mp4MuxerLoaded = false;
+    (function(){
+      const s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/mp4-muxer@5/build/mp4-muxer.js';
+      s.onload  = () => { window._mp4MuxerLoaded = true; };
+      s.onerror = () => { window._mp4MuxerLoaded = false;
+                          console.warn('mp4-muxer CDN failed — ZIP fallback active'); };
+      document.head.appendChild(s);
+    })();
 
-      /* ── FFmpeg WASM loader (WebM→MP4 — iOS Safe, no SharedArrayBuffer) ──
+    /* ── FFmpeg WASM loader (WebM→MP4 — iOS Safe, no SharedArrayBuffer) ──
        نستخدم @ffmpeg/core-st (single-thread) لأن iOS Safari يحجب
        SharedArrayBuffer بدون COOP/COEP headers                          */
-      window._ffmpegReady = false;
-      window._ffmpegLoading = false;
-      window._ffmpegInst = null;
+    window._ffmpegReady   = false;
+    window._ffmpegLoading = false;
+    window._ffmpegInst    = null;
 
-      async function _loadFFmpeg(onLog) {
-        if (window._ffmpegReady) return true;
-        if (window._ffmpegLoading) {
-          await new Promise((res) => {
-            const iv = setInterval(() => {
-              if (!window._ffmpegLoading) {
-                clearInterval(iv);
-                res();
-              }
-            }, 300);
-          });
-          return window._ffmpegReady;
-        }
-        window._ffmpegLoading = true;
-        try {
-          const { FFmpeg } =
-            await import("https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js");
-          const { toBlobURL } =
-            await import("https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/esm/index.js");
-
-          const ff = new FFmpeg();
-          if (onLog) ff.on("log", ({ message }) => onLog(message));
-
-          /* single-thread أولاً (لا يحتاج SharedArrayBuffer — آمن على iOS Safari) */
-          const ST =
-            "https://cdn.jsdelivr.net/npm/@ffmpeg/core-st@0.12.6/dist/esm";
-          const MT =
-            "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/esm";
-
-          let loaded = false;
-          for (const base of [ST, MT]) {
-            try {
-              await ff.load({
-                coreURL: await toBlobURL(
-                  `${base}/ffmpeg-core.js`,
-                  "text/javascript",
-                ),
-                wasmURL: await toBlobURL(
-                  `${base}/ffmpeg-core.wasm`,
-                  "application/wasm",
-                ),
-              });
-              loaded = true;
-              console.log("FFmpeg loaded from", base);
-              break;
-            } catch (e) {
-              console.warn("FFmpeg attempt failed:", base, e.message);
-            }
-          }
-
-          if (!loaded) throw new Error("All FFmpeg CDNs failed");
-          window._ffmpegInst = ff;
-          window._ffmpegReady = true;
-        } catch (e) {
-          console.error("FFmpeg WASM load failed:", e);
-          window._ffmpegReady = false;
-        }
-        window._ffmpegLoading = false;
+    async function _loadFFmpeg(onLog) {
+      if (window._ffmpegReady) return true;
+      if (window._ffmpegLoading) {
+        await new Promise(res => {
+          const iv = setInterval(() => {
+            if (!window._ffmpegLoading) { clearInterval(iv); res(); }
+          }, 300);
+        });
         return window._ffmpegReady;
       }
+      window._ffmpegLoading = true;
+      try {
+        const { FFmpeg } = await import(
+          'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js'
+        );
+        const { toBlobURL } = await import(
+          'https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/esm/index.js'
+        );
 
-      /* ── JSZip minimal inline (لتصدير ZIP frames كـ fallback) ───────
+        const ff = new FFmpeg();
+        if (onLog) ff.on('log', ({ message }) => onLog(message));
+
+        /* single-thread أولاً (لا يحتاج SharedArrayBuffer — آمن على iOS Safari) */
+        const ST = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core-st@0.12.6/dist/esm';
+        const MT = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/esm';
+
+        let loaded = false;
+        for (const base of [ST, MT]) {
+          try {
+            await ff.load({
+              coreURL : await toBlobURL(`${base}/ffmpeg-core.js`,   'text/javascript'),
+              wasmURL : await toBlobURL(`${base}/ffmpeg-core.wasm`, 'application/wasm'),
+            });
+            loaded = true;
+            console.log('FFmpeg loaded from', base);
+            break;
+          } catch(e) {
+            console.warn('FFmpeg attempt failed:', base, e.message);
+          }
+        }
+
+        if (!loaded) throw new Error('All FFmpeg CDNs failed');
+        window._ffmpegInst  = ff;
+        window._ffmpegReady = true;
+
+      } catch(e) {
+        console.error('FFmpeg WASM load failed:', e);
+        window._ffmpegReady = false;
+      }
+      window._ffmpegLoading = false;
+      return window._ffmpegReady;
+    }
+
+    /* ── JSZip minimal inline (لتصدير ZIP frames كـ fallback) ───────
        نستخدم نسخة مصغّرة مبنية inline — لا تحتاج إنترنت              */
-      /* jszip 3.10.1 minified — embedded inline */
+    /* jszip 3.10.1 minified — embedded inline */
     </script>
     <script>
-      /*!
-       * JSZip v3.10.1 - A JavaScript class for generating and reading zip files
-       * (c) 2009-2016 Stuart Knightley <stuart [at] stuartk.com>
-       * Dual licenced under the MIT license or GPLv3. See https://raw.github.com/Stuk/jszip/master/LICENSE.markdown
-       * JSZip uses the library pako released under the MIT license :
-       * https://github.com/nodeca/pako/blob/master/LICENSE
-       */
-      !function(e){if("object"==typeof exports&&"undefined"!=typeof module)module.exports=e();else if("function"==typeof define&&define.amd)define([],e);else{var t;t="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof self?self:this,t.JSZip=e()}}(function(){return function s(a,o,h){function u(r,e){if(!o[r]){if(!a[r]){var t="function"==typeof require&&require;if(!e&&t)return t(r,!0);if(l)return l(r,!0);var i=new Error("Cannot find module '"+r+"'");throw i.code="MODULE_NOT_FOUND",i}var n=o[r]={exports:{}};a[r][0].call(n.exports,function(e){var t=a[r][1][e];return u(t||e)},n,n.exports,s,a,o,h)}return o[r].exports}for(var l="function"==typeof require&&require,e=0;e<h.length;e++)u(h[e]);return u}({1:[function(e,t,r){"use strict";var d=e("./utils"),c=e("./support"),p="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";r.encode=function(e){for(var t,r,i,n,s,a,o,h=[],u=0,l=e.length,f=l,c="string"==typeof e;u<l;)f=l-u,t=c?e.charCodeAt(u++):e[u++],r=u<l?c?e.charCodeAt(u++):e[u++]:0,i=u<l?c?e.charCodeAt(u++):e[u++]:0,n=t>>2,s=(3&t)<<4|r>>4,a=(15&r)<<2|i>>6,o=63&i,f<3&&(o=64,f<2&&(a=64)),h.push(p[n]+p[s]+p[a]+p[o]);return h.join("")},r.decode=function(e){var t,r,i,n,s,a,o=0,h=0,u=[];e=e.replace(/[^A-Za-z0-9\+\/\=]/g,"");do{n=p.indexOf(e.charAt(o++)),s=p.indexOf(e.charAt(o++)),a=p.indexOf(e.charAt(o++));var l=p.indexOf(e.charAt(o++));t=n<<2|s>>4,r=(15&s)<<4|a>>2,i=(3&a)<<6|l,u[h++]=t,64!==a&&(u[h++]=r),64!==l&&(u[h++]=i)}while(o<e.length);return d.transformTo("uint8array",u.join(""))}},{"./support":30,"./utils":32}],2:[function(e,t,r){"use strict";var i=e("./utils"),n=e("./external"),s=e("./utf8"),h=e("./utils"),a=e("./zipEntry"),o=(e("./utf8"),e("./compressions")),u=e("./support");function l(e,t,r,i){this.files=[],this.loadOptions=t,this.comment=null,this.entriesCount=0,this.centralDirOffset=0,this.commentLength=0,this._decodeObfuscatedEntry=null}l.prototype={checkSignature:function(e){if(!this.reader.readString(4)===e)throw new Error("Corrupted zip or bug: unexpected signature("+d(e)+", expected "+d(e)+")")},isSignature:function(e,t){var r=this.reader.index;this.reader.setIndex(e);var i=this.reader.readString(4);this.reader.setIndex(r);return t===i},readBlockEndOfCentral:function(){this.diskNumber=this.reader.readInt(2),this.diskWithCentralDirStart=this.reader.readInt(2),this.centralDirRecordsOnThisDisk=this.reader.readInt(2),this.centralDirRecords=this.reader.readInt(2),this.centralDirSize=this.reader.readInt(4),this.centralDirOffset=this.reader.readInt(4),this.commentLength=this.reader.readInt(2),this.comment=this.reader.readData(this.commentLength)},readBlockZip64EndOfCentral:function(){this.zip64EndOfCentralSize=this.reader.readInt(8),this.reader.skip(4),this.diskNumber=this.reader.readInt(4),this.diskWithCentralDirStart=this.reader.readInt(4),this.centralDirRecordsOnThisDisk=this.reader.readInt(8),this.centralDirRecords=this.reader.readInt(8),this.centralDirSize=this.reader.readInt(8),this.centralDirOffset=this.reader.readInt(8)},readBlockZip64EndOfCentralLocator:function(){this.diskWithZip64CentralDirStart=this.reader.readInt(4),this.relativeOffsetEndOfZip64CentralDir=this.reader.readInt(8),this.disksCount=this.reader.readInt(4);if(1<this.disksCount)throw new Error("Multi-volumes zip are not supported")},readLocalFiles:function(){var e,t;for(e=0;e<this.files.length;e++)t=this.files[e],this.reader.setIndex(t.localHeaderOffset),this.checkSignature("PK\x03\x04"),t.readLocalPart(this.reader),t.handleUTF8(),t.processAttributes()},readCentralDir:function(){var e;for(this.reader.setIndex(this.centralDirOffset);this.reader.readAndCheckSignature("PK\x01\x02");)e=new a({zip64:this.zip64},this.loadOptions),e.readCentralPart(this.reader),this.files.push(e);if(this.centralDirRecords!==this.files.length&&0!==this.centralDirRecords&&0===this.files.length)throw new Error("Corrupted zip or bug: expected "+this.centralDirRecords+" records in central dir, got "+this.files.length)},readEndOfCentral:function(){var e=this.reader.lastIndexOfSignature("PK\x05\x06");if(e<0){if(this.reader.lastIndexOfSignature("PK\x06\x06")<0)throw new Error("Corrupted zip: can't find end of central directory");throw new Error("Corrupted zip: can't find end of central directory. Is this a zip64 ?")}this.reader.setIndex(e);this.checkSignature("PK\x05\x06"),this.readBlockEndOfCentral();var t=this.centralDirOffset+this.centralDirSize;if(this.readBlockZip64EndOfCentralLocator(),this.isSignature(t,"PK\x06\x07")){this.reader.setIndex(t);this.checkSignature("PK\x06\x06"),this.readBlockZip64EndOfCentral()}},prepareReader:function(e){this.reader=i.getTypeWorker(e)},load:function(e){this.prepareReader(e),this.readEndOfCentral(),this.readCentralDir(),this.readLocalFiles()}},t.exports=l},{"./compressions":3,"./external":6,"./support":30,"./utf8":31,"./utils":32,"./zipEntry":33}],3:[function(e,t,r){"use strict";r.STORE={magic:"\0\0",compressWorker:function(e){return new(e("./stream/GenericWorker"))("STORE compression")},uncompressWorker:function(){return new(e("./stream/GenericWorker"))("STORE decompression")}},r.DEFLATE=e("./flate")},{"./flate":7,"./stream/GenericWorker":28}],4:[function(e,t,r){"use strict";var o=e("./utils");var h=function(){this.table=new Uint32Array(256);for(var e=0;e<256;e++){var t=e;for(var r=0;r<8;r++)t=1&t?3988292384^t>>>1:t>>>1;this.table[e]=t}};h.prototype.crc32=function(e,t,r,i){for(var n=r;n<i;n++)e=this.table[(e^t[n])&255]^e>>>8;return e};var e=new h;r.crc32=function(e,t,r,i){return e^(new h).crc32(-1,t,r,i)^-1}},{"./utils":32}],5:[function(e,t,r){"use strict";r.base64=!1,r.binary=!1,r.dir=!1,r.createFolders=!0,r.date=null,r.compression=null,r.compressionOptions=null,r.comment=null,r.unixPermissions=null,r.dosPermissions=null},{}],6:[function(e,t,r){"use strict";r.Promise="undefined"!=typeof Promise?Promise:e("lie")},{"lie":37}],7:[function(e,t,r){"use strict";var i=e("pako"),n=e("./utils"),s=e("./stream/GenericWorker"),a="undefined"!=typeof Uint8Array&&"undefined"!=typeof Uint16Array&&"undefined"!=typeof Uint32Array;r.compressWorker=function(e){return new c(e)},r.uncompressWorker=function(){return new f};function o(e,t){s.call(this,t);this._pako=null;this._pakoAction=e;this._pakoOptions={};this.meta={}}n.inherits(o,s),o.prototype.processChunk=function(e){this.meta=e.meta,null===this._pako&&this._createPako();this._pako.push(n.transformTo("uint8array",e.data),!1)},o.prototype.flush=function(){s.prototype.flush.call(this);try{this._pako.push([],!0)}catch(e){throw e.message="FlateWorker on flush : "+e.message,e}},o.prototype.cleanUp=function(){s.prototype.cleanUp.call(this);this._pako=null},o.prototype._createPako=function(){this._pako="Deflate"===this._pakoAction?new i.Deflate(this._pakoOptions):new i.Inflate(this._pakoOptions);var t=this;this._pako.onData=function(e){t.push({data:e,meta:t.meta})}};function h(){o.call(this,"Deflate")}n.inherits(h,o);function c(e){h.call(this);this._pakoOptions={level:e.level||-1},this.meta={}}n.inherits(c,h);function f(){o.call(this,"Inflate")}n.inherits(f,o),t.exports={compressWorker:r.compressWorker,uncompressWorker:r.uncompressWorker}},{"./stream/GenericWorker":28,"./utils":32,pako:38}],8:[function(e,t,r){"use strict";function i(e,t){var r,i="";for(r=0;r<t;r++)i+=String.fromCharCode(255&e),e>>>=8;return i}function n(e,t,r,i,n,s){var a,o,h=e.file,u=e.compression,l=s!==y.utf8encode,f=g.transformTo("string",s(h.name)),c=g.transformTo("string",y.utf8encode(h.name)),d=h.comment,p=g.transformTo("string",s(d)),m=g.transformTo("string",y.utf8encode(d)),_=c.length!==f.length,b=m.length!==p.length,v="";v+="\n\x00",v+=l||!_?"\0\0":"\0\b",v+=u.magic,v+=i(n,4),v+=i(h.crc32,4),v+=i(e.compressedSize,4),v+=i(h.uncompressedSize,4),v+=i(f.length,2),v+=i(a=(_||b?"\x01"+(15&(o=0)):"")+(_?"\u0000"+c:"")+("!\0\0\0\0"+(b?"!\0\0\0"+m:"")),2),a&&v+="ut",v+=a,v+="\0\0\0\0\0\0\0\0",v+=i(e.compressedSize,4),v+=i(h.uncompressedSize,4),v+=f;var A=v+e.compressedContent,x="\x02\x01";x+=l||!_?"\0\0":"\0\b",x+=u.magic,x+=i(n,4),x+=i(h.crc32,4),x+=i(e.compressedSize,4),x+=i(h.uncompressedSize,4),x+=i(f.length,2),x+="\0\0",x+="\0\0",x+="\0\0",x+="\0\0",x+="\0\0\0\0",x+=i(t,4),x+=f;return{fileRecord:A,dirRecord:x}}var g=e("./utils"),y=e("./utf8"),b=e("./compressions"),v=e("./defaults");function s(e,t){this.files=[],this.loadOptions=t}s.prototype.load=function(){throw new Error("Load method is not defined. Is the file from a Blob? Did you load JSZip.fromBlob() ? Is this feature supported by your browser? See http://stuk.github.io/jszip/documentation/api_jszip/from_blob.html")},s.prototype.filter=function(t){var r=[];return this.files.forEach(function(e){t(e.name,e)&&r.push(e)}),r},s.prototype.file=function(e,t,r){if(1===arguments.length)return this.files[e]?this.files[e]:null;var i=new v;if(i.binary=!1,i.base64=!1,"string"==typeof t)i.binary=!0;else if(Array.isArray(t)){var n=new Uint8Array(t.length);for(var s=0;s<t.length;s++)n[s]=t[s];t=n}else if(t instanceof ArrayBuffer)t=new Uint8Array(t);return i.date=new Date,r&&(i.binary=null!=r.binary&&r.binary,i.base64=null!=r.base64&&r.base64,i.date=r.date||i.date,i.compression=r.compression||null),this.files[e]={name:e,content:t,options:i},this},s.prototype.generate=function(e){throw new Error("Removed in JSZip 3.0, please check the upgrade guide.")},s.prototype.generateAsync=function(e,t){var r={type:e&&e.type||"blob",mimeType:e&&e.mimeType};var i={platform:e&&e.platform||"DOS"};return(new Promise(function(t,r){var i=[],n=0,s=0;for(var a in this.files){var o=this.files[a];if(o)s++}if(0===s){t(new Blob([],{type:r.mimeType||"application/zip"}))}else{var h=0;for(var u in this.files){var l=this.files[u];if(l){n(l,function(e){i.push(e);if(++h===s)t(i)},r)}}}})).then(function(e){return new Blob(e,{type:r.mimeType||"application/zip"})})};var a=s;t.exports={ZipObject:a,loadAsync:function(){throw new Error("Removed method. Please use JSZip.loadAsync")}}},{"./compressions":3,"./defaults":5,"./utf8":31,"./utils":32}],9:[function(e,t,r){},{}],10:[function(e,t,r){"use strict";function i(e){return e}t.exports={copy:i}},{}],11:[function(e,t,r){"use strict";t.exports=function(e,t){return e===t}},{}],12:[function(e,t,r){"use strict";t.exports=function(){this.listeners={},this.onAny=null}},{}],13:[function(e,t,r){"use strict";var i=e("./error");function n(){this.listeners={}}n.prototype={constructor:n,on:function(e,t){return this.listeners[e]=this.listeners[e]||[],this.listeners[e].push(t),this},off:function(e,t){this.listeners[e]=this.listeners[e]||[];var r=this.listeners[e].indexOf(t);return-1!==r&&this.listeners[e].splice(r,1),this},emit:function(e){this.listeners[e]=this.listeners[e]||[];var t=Array.prototype.slice.call(arguments,1);return this.listeners[e].forEach(function(e){e.apply(null,t)}),this}},t.exports=n},{"./error":14}],14:[function(e,t,r){"use strict";t.exports=function(e){this.message=e}},{}],15:[function(e,t,r){"use strict";r.JSZip=e("./jszip"),r.utils=e("./utils"),r.base64=e("./base64"),r.utf8=e("./utf8"),r.compressions=e("./compressions")},{"./base64":1,"./compressions":3,"./jszip":8,"./utf8":31,"./utils":32}],16:[function(e,t,r){"use strict";t.exports=e("./jszip")},{"./jszip":8}],17:[function(e,t,r){},{}],18:[function(e,t,r){},{}],19:[function(e,t,r){},{}],20:[function(e,t,r){},{}],21:[function(e,t,r){},{}],22:[function(e,t,r){},{}],23:[function(e,t,r){"use strict";var i=e("./DataWorker"),n=e("./DataLengthProbe"),s=e("./Crc32Probe");r.STORE=function(e,t){return e.pipe(n("compressedSize")).pipe(s()).pipe(n("uncompressedSize")).pipe(new(e("./stream/GenericWorker"))("STORE compression"))},r.DEFLATE=e("./flate")},{"./DataLengthProbe":24,"./DataWorker":25,"./Crc32Probe":26,"./flate":7,"./stream/GenericWorker":28}],24:[function(e,t,r){"use strict";var i=e("../utils"),n=e("./GenericWorker");function s(e){n.call(this,"DataLengthProbe for "+e);this.propName=e,this.withStreamInfo(e,0)}i.inherits(s,n),s.prototype.processChunk=function(e){if(e){var t=i.getTypeWorker(e.data);this.streamInfo[this.propName]+=t.index}this.push(e)},t.exports=s},{"../utils":32,"./GenericWorker":28}],25:[function(e,t,r){"use strict";var i=e("../utils"),n=e("./GenericWorker"),s=e("../support");function a(e){n.call(this,"DataWorker");var t=this;this.dataIsReady=!1,this.index=0,this.max=0,this.data=null,this.type="",this._tickScheduled=!1,e.then(function(e){t.dataIsReady=!0;t.data=e;t.max=e&&e.length||0;t.type=i.getTypeOf(e);if(!t.isPaused)t._tickAndRepeat()},function(e){t.error(e)})}i.inherits(a,n),a.prototype.cleanUp=function(){n.prototype.cleanUp.call(this);this.data=null},a.prototype.resume=function(){return!!n.prototype.resume.call(this)&&(!this.dataIsReady||(this._tickAndRepeat(),!0))},a.prototype._tickAndRepeat=function(){this._tickScheduled=!1,this.isPaused||this.isFinished||(this._tick(),this.isFinished||( setTimeout(this._tickAndRepeat.bind(this),16),this._tickScheduled=!0))},a.prototype._tick=function(){if(this.isPaused||this.isFinished)return!1;var e=i.MAX_VALUE_16BITS,t=null,r=Math.min(this.max,this.index+e);if(this.index>=this.max)return this.end();switch(this.type){case"string":t=this.data.substring(this.index,r);break;case"uint8array":t=this.data.subarray(this.index,r);break;case"array":case"nodebuffer":t=this.data.slice(this.index,r)}this.index=r,this.push({data:t,meta:{percent:this.max?this.index/this.max*100:0}})},t.exports=a},{"../support":30,"../utils":32,"./GenericWorker":28}],26:[function(e,t,r){"use strict";var i=e("../crc32"),n=e("./GenericWorker"),s=e("../utils");function a(){n.call(this,"Crc32Probe");this.withStreamInfo("crc32",0)}s.inherits(a,n),a.prototype.processChunk=function(e){this.streamInfo.crc32=i.crc32(this.streamInfo.crc32,e.data,0,e.data.length),this.push(e)},t.exports=a},{"../crc32":4,"../utils":32,"./GenericWorker":28}],27:[function(e,t,r){"use strict";var i=e("../utils"),n=e("./GenericWorker");function s(e){n.call(this,"Utf8DecodeWorker");this.remaining=null;this.decoder="undefined"!=typeof TextDecoder?new TextDecoder("utf-8"):null}i.inherits(s,n),s.prototype.processChunk=function(e){var t=i.transformTo("uint8array",e.data);if(this.remaining){var r=new Uint8Array(this.remaining.length+t.length);r.set(this.remaining,0);r.set(t,this.remaining.length);t=r}var n=this._processAllData(t);this.remaining=n.length?n:null;e.data=null;this.push({data:n,meta:e.meta})},s.prototype._processAllData=function(e){if(this.decoder)return this.decoder.decode(e);var t="";for(var r=0;r<e.length;r++)t+=String.fromCharCode(e[r]);return t},t.exports=s},{"../utils":32,"./GenericWorker":28}],28:[function(e,t,r){"use strict";function i(e){this.name=e||"default",this.streamInfo={},this.generatedError=null,this.extraStreamInfo={},this.isPaused=!0,this.isFinished=!1,this.isLocked=!1,this._listeners={data:[],error:[],end:[]},this.previous=null}i.prototype={push:function(e){this.emit("data",e)},end:function(){if(this.isFinished)return!1;this.flush();try{this.emit("end")}catch(e){this.emit("error",e)}return this.isFinished=!0},error:function(e){return!this.isFinished&&(this.isPaused?this.generatedError=e:(this.isFinished=!0,this.emit("error",e),this.previous&&this.previous.error(e),this.cleanUp()),!0)},on:function(e,t){return this._listeners[e].push(t),this},cleanUp:function(){this.previous=this.generatedError=null,this._listeners={}},simpleTransform:function(e,t,r){},resume:function(){if(!this.isPaused||this.isLocked)return!1;this.isPaused=!1,this.previous&&!this.previous.isPaused&&this.previous.resume();return!0},pause:function(){this.isPaused=!0},pipe:function(e){return e.previous=this,this.on("data",function(t){e.processChunk(t)}).on("end",function(){e.end()}).on("error",function(t){e.error(t)}),e.resume(),this},checkClearCache:function(){},emit:function(e,t){if(this._listeners[e])for(var r=0;r<this._listeners[e].length;r++)this._listeners[e][r].call(this,t)},flush:function(){}},t.exports=i},{}],29:[function(e,t,r){"use strict";var n=e("../utils"),s=e("./GenericWorker");function i(e,t,r){s.call(this,"ConvertWorker to "+t);this.destType=t}n.inherits(i,s),i.prototype.processChunk=function(e){this.push({data:n.transformTo(this.destType,e.data),meta:e.meta})},t.exports=i},{"../utils":32,"./GenericWorker":28}],30:[function(e,t,r){"use strict";r.base64=!0,r.array=!0,r.string=!0,r.arraybuffer="undefined"!=typeof ArrayBuffer&&"undefined"!=typeof Uint8Array,r.nodebuffer="undefined"!=typeof Buffer,r.uint8array="undefined"!=typeof Uint8Array,r.blob="undefined"!=typeof ArrayBuffer&&"undefined"!=typeof Uint8Array&&"undefined"!=typeof Blob&&(function(){try{return new Blob([""],{type:"application/zip"}),!0}catch(e){return!1}})(),r.nodestream=!1},{}],31:[function(e,t,r){"use strict";var o=e("./utils"),h=e("./support");var u=new Uint8Array(256);for(var i=0;i<256;i++)u[i]=252<=i?6:248<=i?5:240<=i?4:224<=i?3:192<=i?2:1;u[254]=u[254]=1;r.utf8encode=function(e){if(h.nodebuffer)return o.newBufferFrom(e,"utf-8");var t,r,i,n,s=[],a=0,o=e.length;for(a=0;a<o;){r=e.charCodeAt(a++);if(55296<=r&&r<=56319&&a<o){i=e.charCodeAt(a++);56320==(64512&i)?r=((1023&r)<<10)+(1023&i)+65536:a--}r<128?s.push(r):r<2048?s.push(192|r>>6,128|63&r):r<65536?s.push(224|r>>12,128|r>>6&63,128|63&r):s.push(240|r>>18,128|r>>12&63,128|r>>6&63,128|63&r)}return new Uint8Array(s)},r.utf8decode=function(e,t){return 2===t.type&&h.uint8array?e instanceof Uint8Array?e:o.transformTo("uint8array",e):(o.transformTo("string",e),t.string)};t.exports={utf8encode:r.utf8encode,utf8decode:r.utf8decode}},{"./support":30,"./utils":32}],32:[function(e,t,r){"use strict";var i=e("./support"),n=e("./base64"),o={};function s(e){return"undefined"!=typeof e&&null!==e}o.getTypeOf=function(e){if("string"==typeof e)return"string";if("[object Array]"===Object.prototype.toString.call(e))return"array";if(i.nodebuffer&&Buffer.isBuffer(e))return"nodebuffer";if(i.uint8array&&e instanceof Uint8Array)return"uint8array";if(i.arraybuffer&&e instanceof ArrayBuffer)return"arraybuffer"},o.transformTo=function(e,t){if(t||(t=""),e===o.getTypeOf(t))return t;throw new Error("Unable to convert "+o.getTypeOf(t)+" to "+e)},o.MAX_VALUE_16BITS=65535,o.MAX_VALUE_32BITS=-1,o.pretty=function(e){var t="",r=0;for(r=0;r<(e||"").length;r++)t+="\\x"+("0"+e.charCodeAt(r).toString(16)).slice(-2);return t},o.delay=function(e,t,r){setImmediate(function(){e.apply(r||null,t)})},o.inherits=function(e,t){var r=function(){};r.prototype=t.prototype,e.prototype=new r},o.extend=function(){var e={};for(var t=0;t<arguments.length;t++){var r=arguments[t];for(var i in r)Object.prototype.hasOwnProperty.call(r,i)&&(e[i]=r[i])}return e},o.prepareContent=function(e,t,r,i,n){return Promise.resolve(n).then(function(e){return e})},t.exports=o},{"./base64":1,"./support":30}],33:[function(e,t,r){"use strict";function i(e,t){this.options=e;this.loadOptions=t}i.prototype={isEncrypted:function(){return 1==(1&this.bitFlag)},useUTF8:function(){return 2048==(2048&this.bitFlag)},readLocalPart:function(e){var t,r;if(e.skip(22),this.fileName=e.readData(e.readInt(2)),this.localExtraFields=e.readData(e.readInt(2)),this.fileName=this.handleUTF8FileName(),this.isEncrypted())throw new Error("Encrypted zip are not supported");if(-1==this.compressionMethod)throw new Error("Corrupted zip: missing compression method");},readCentralPart:function(e){this.versionMadeBy=e.readInt(2),e.skip(2),this.bitFlag=e.readInt(2),this.compressionMethod=e.readString(2),this.date=e.readDate(),this.crc32=e.readInt(4),this.compressedSize=e.readInt(4),this.uncompressedSize=e.readInt(4);var t=e.readInt(2),r=e.readInt(2),i=e.readInt(2);e.skip(8),this.localHeaderOffset=e.readInt(4);var n=e.readData(t);this.fileName=n,this.extra=e.readData(r),this.fileComment=e.readData(i)},processAttributes:function(){},handleUTF8FileName:function(){var e=o.transformTo("string",this.fileName);if(this.useUTF8())return h.utf8decode(e);return e}},t.exports=i},{"./compressions":3,"./utf8":31,"./utils":32}],34:[function(e,t,r){"use strict";var n=e("./utils");t.exports={stringToArrayBuffer:function(e){var t=new Uint8Array(e.length);for(var r=0;r<e.length;r++)t[r]=e.charCodeAt(r)&255;return t.buffer},arrayBufferToString:function(e){var t=new Uint8Array(e),r="";for(var i=0;i<t.length;i++)r+=String.fromCharCode(t[i]);return r},newUint8Array:function(e){return new Uint8Array(e)},newArrayBuffer:function(e){return new ArrayBuffer(e)},newBufferFrom:function(e,t){if("undefined"!=typeof Buffer)return Buffer.from(e,t);var r=e.length;var i=new Uint8Array(r);for(var n=0;n<r;n++)i[n]=e.charCodeAt(n);return i.buffer}},{"./utils":32}],35:[function(e,t,r){},{}],36:[function(e,t,r){},{}],37:[function(e,t,r){},{}],38:[function(e,t,r){},{}]},{},[16])(16)});
-      /* end JSZip inline — using a simplified fallback instead for reliability */
+    /*!
+     * JSZip v3.10.1 - A JavaScript class for generating and reading zip files
+     * (c) 2009-2016 Stuart Knightley <stuart [at] stuartk.com>
+     * Dual licenced under the MIT license or GPLv3. See https://raw.github.com/Stuk/jszip/master/LICENSE.markdown
+     * JSZip uses the library pako released under the MIT license :
+     * https://github.com/nodeca/pako/blob/master/LICENSE
+     */
+    !function(e){if("object"==typeof exports&&"undefined"!=typeof module)module.exports=e();else if("function"==typeof define&&define.amd)define([],e);else{var t;t="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof self?self:this,t.JSZip=e()}}(function(){return function s(a,o,h){function u(r,e){if(!o[r]){if(!a[r]){var t="function"==typeof require&&require;if(!e&&t)return t(r,!0);if(l)return l(r,!0);var i=new Error("Cannot find module '"+r+"'");throw i.code="MODULE_NOT_FOUND",i}var n=o[r]={exports:{}};a[r][0].call(n.exports,function(e){var t=a[r][1][e];return u(t||e)},n,n.exports,s,a,o,h)}return o[r].exports}for(var l="function"==typeof require&&require,e=0;e<h.length;e++)u(h[e]);return u}({1:[function(e,t,r){"use strict";var d=e("./utils"),c=e("./support"),p="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";r.encode=function(e){for(var t,r,i,n,s,a,o,h=[],u=0,l=e.length,f=l,c="string"==typeof e;u<l;)f=l-u,t=c?e.charCodeAt(u++):e[u++],r=u<l?c?e.charCodeAt(u++):e[u++]:0,i=u<l?c?e.charCodeAt(u++):e[u++]:0,n=t>>2,s=(3&t)<<4|r>>4,a=(15&r)<<2|i>>6,o=63&i,f<3&&(o=64,f<2&&(a=64)),h.push(p[n]+p[s]+p[a]+p[o]);return h.join("")},r.decode=function(e){var t,r,i,n,s,a,o=0,h=0,u=[];e=e.replace(/[^A-Za-z0-9\+\/\=]/g,"");do{n=p.indexOf(e.charAt(o++)),s=p.indexOf(e.charAt(o++)),a=p.indexOf(e.charAt(o++));var l=p.indexOf(e.charAt(o++));t=n<<2|s>>4,r=(15&s)<<4|a>>2,i=(3&a)<<6|l,u[h++]=t,64!==a&&(u[h++]=r),64!==l&&(u[h++]=i)}while(o<e.length);return d.transformTo("uint8array",u.join(""))}},{"./support":30,"./utils":32}],2:[function(e,t,r){"use strict";var i=e("./utils"),n=e("./external"),s=e("./utf8"),h=e("./utils"),a=e("./zipEntry"),o=(e("./utf8"),e("./compressions")),u=e("./support");function l(e,t,r,i){this.files=[],this.loadOptions=t,this.comment=null,this.entriesCount=0,this.centralDirOffset=0,this.commentLength=0,this._decodeObfuscatedEntry=null}l.prototype={checkSignature:function(e){if(!this.reader.readString(4)===e)throw new Error("Corrupted zip or bug: unexpected signature("+d(e)+", expected "+d(e)+")")},isSignature:function(e,t){var r=this.reader.index;this.reader.setIndex(e);var i=this.reader.readString(4);this.reader.setIndex(r);return t===i},readBlockEndOfCentral:function(){this.diskNumber=this.reader.readInt(2),this.diskWithCentralDirStart=this.reader.readInt(2),this.centralDirRecordsOnThisDisk=this.reader.readInt(2),this.centralDirRecords=this.reader.readInt(2),this.centralDirSize=this.reader.readInt(4),this.centralDirOffset=this.reader.readInt(4),this.commentLength=this.reader.readInt(2),this.comment=this.reader.readData(this.commentLength)},readBlockZip64EndOfCentral:function(){this.zip64EndOfCentralSize=this.reader.readInt(8),this.reader.skip(4),this.diskNumber=this.reader.readInt(4),this.diskWithCentralDirStart=this.reader.readInt(4),this.centralDirRecordsOnThisDisk=this.reader.readInt(8),this.centralDirRecords=this.reader.readInt(8),this.centralDirSize=this.reader.readInt(8),this.centralDirOffset=this.reader.readInt(8)},readBlockZip64EndOfCentralLocator:function(){this.diskWithZip64CentralDirStart=this.reader.readInt(4),this.relativeOffsetEndOfZip64CentralDir=this.reader.readInt(8),this.disksCount=this.reader.readInt(4);if(1<this.disksCount)throw new Error("Multi-volumes zip are not supported")},readLocalFiles:function(){var e,t;for(e=0;e<this.files.length;e++)t=this.files[e],this.reader.setIndex(t.localHeaderOffset),this.checkSignature("PK\x03\x04"),t.readLocalPart(this.reader),t.handleUTF8(),t.processAttributes()},readCentralDir:function(){var e;for(this.reader.setIndex(this.centralDirOffset);this.reader.readAndCheckSignature("PK\x01\x02");)e=new a({zip64:this.zip64},this.loadOptions),e.readCentralPart(this.reader),this.files.push(e);if(this.centralDirRecords!==this.files.length&&0!==this.centralDirRecords&&0===this.files.length)throw new Error("Corrupted zip or bug: expected "+this.centralDirRecords+" records in central dir, got "+this.files.length)},readEndOfCentral:function(){var e=this.reader.lastIndexOfSignature("PK\x05\x06");if(e<0){if(this.reader.lastIndexOfSignature("PK\x06\x06")<0)throw new Error("Corrupted zip: can't find end of central directory");throw new Error("Corrupted zip: can't find end of central directory. Is this a zip64 ?")}this.reader.setIndex(e);this.checkSignature("PK\x05\x06"),this.readBlockEndOfCentral();var t=this.centralDirOffset+this.centralDirSize;if(this.readBlockZip64EndOfCentralLocator(),this.isSignature(t,"PK\x06\x07")){this.reader.setIndex(t);this.checkSignature("PK\x06\x06"),this.readBlockZip64EndOfCentral()}},prepareReader:function(e){this.reader=i.getTypeWorker(e)},load:function(e){this.prepareReader(e),this.readEndOfCentral(),this.readCentralDir(),this.readLocalFiles()}},t.exports=l},{"./compressions":3,"./external":6,"./support":30,"./utf8":31,"./utils":32,"./zipEntry":33}],3:[function(e,t,r){"use strict";r.STORE={magic:"\0\0",compressWorker:function(e){return new(e("./stream/GenericWorker"))("STORE compression")},uncompressWorker:function(){return new(e("./stream/GenericWorker"))("STORE decompression")}},r.DEFLATE=e("./flate")},{"./flate":7,"./stream/GenericWorker":28}],4:[function(e,t,r){"use strict";var o=e("./utils");var h=function(){this.table=new Uint32Array(256);for(var e=0;e<256;e++){var t=e;for(var r=0;r<8;r++)t=1&t?3988292384^t>>>1:t>>>1;this.table[e]=t}};h.prototype.crc32=function(e,t,r,i){for(var n=r;n<i;n++)e=this.table[(e^t[n])&255]^e>>>8;return e};var e=new h;r.crc32=function(e,t,r,i){return e^(new h).crc32(-1,t,r,i)^-1}},{"./utils":32}],5:[function(e,t,r){"use strict";r.base64=!1,r.binary=!1,r.dir=!1,r.createFolders=!0,r.date=null,r.compression=null,r.compressionOptions=null,r.comment=null,r.unixPermissions=null,r.dosPermissions=null},{}],6:[function(e,t,r){"use strict";r.Promise="undefined"!=typeof Promise?Promise:e("lie")},{"lie":37}],7:[function(e,t,r){"use strict";var i=e("pako"),n=e("./utils"),s=e("./stream/GenericWorker"),a="undefined"!=typeof Uint8Array&&"undefined"!=typeof Uint16Array&&"undefined"!=typeof Uint32Array;r.compressWorker=function(e){return new c(e)},r.uncompressWorker=function(){return new f};function o(e,t){s.call(this,t);this._pako=null;this._pakoAction=e;this._pakoOptions={};this.meta={}}n.inherits(o,s),o.prototype.processChunk=function(e){this.meta=e.meta,null===this._pako&&this._createPako();this._pako.push(n.transformTo("uint8array",e.data),!1)},o.prototype.flush=function(){s.prototype.flush.call(this);try{this._pako.push([],!0)}catch(e){throw e.message="FlateWorker on flush : "+e.message,e}},o.prototype.cleanUp=function(){s.prototype.cleanUp.call(this);this._pako=null},o.prototype._createPako=function(){this._pako="Deflate"===this._pakoAction?new i.Deflate(this._pakoOptions):new i.Inflate(this._pakoOptions);var t=this;this._pako.onData=function(e){t.push({data:e,meta:t.meta})}};function h(){o.call(this,"Deflate")}n.inherits(h,o);function c(e){h.call(this);this._pakoOptions={level:e.level||-1},this.meta={}}n.inherits(c,h);function f(){o.call(this,"Inflate")}n.inherits(f,o),t.exports={compressWorker:r.compressWorker,uncompressWorker:r.uncompressWorker}},{"./stream/GenericWorker":28,"./utils":32,pako:38}],8:[function(e,t,r){"use strict";function i(e,t){var r,i="";for(r=0;r<t;r++)i+=String.fromCharCode(255&e),e>>>=8;return i}function n(e,t,r,i,n,s){var a,o,h=e.file,u=e.compression,l=s!==y.utf8encode,f=g.transformTo("string",s(h.name)),c=g.transformTo("string",y.utf8encode(h.name)),d=h.comment,p=g.transformTo("string",s(d)),m=g.transformTo("string",y.utf8encode(d)),_=c.length!==f.length,b=m.length!==p.length,v="";v+="\n\x00",v+=l||!_?"\0\0":"\0\b",v+=u.magic,v+=i(n,4),v+=i(h.crc32,4),v+=i(e.compressedSize,4),v+=i(h.uncompressedSize,4),v+=i(f.length,2),v+=i(a=(_||b?"\x01"+(15&(o=0)):"")+(_?"\u0000"+c:"")+("!\0\0\0\0"+(b?"!\0\0\0"+m:"")),2),a&&v+="ut",v+=a,v+="\0\0\0\0\0\0\0\0",v+=i(e.compressedSize,4),v+=i(h.uncompressedSize,4),v+=f;var A=v+e.compressedContent,x="\x02\x01";x+=l||!_?"\0\0":"\0\b",x+=u.magic,x+=i(n,4),x+=i(h.crc32,4),x+=i(e.compressedSize,4),x+=i(h.uncompressedSize,4),x+=i(f.length,2),x+="\0\0",x+="\0\0",x+="\0\0",x+="\0\0",x+="\0\0\0\0",x+=i(t,4),x+=f;return{fileRecord:A,dirRecord:x}}var g=e("./utils"),y=e("./utf8"),b=e("./compressions"),v=e("./defaults");function s(e,t){this.files=[],this.loadOptions=t}s.prototype.load=function(){throw new Error("Load method is not defined. Is the file from a Blob? Did you load JSZip.fromBlob() ? Is this feature supported by your browser? See http://stuk.github.io/jszip/documentation/api_jszip/from_blob.html")},s.prototype.filter=function(t){var r=[];return this.files.forEach(function(e){t(e.name,e)&&r.push(e)}),r},s.prototype.file=function(e,t,r){if(1===arguments.length)return this.files[e]?this.files[e]:null;var i=new v;if(i.binary=!1,i.base64=!1,"string"==typeof t)i.binary=!0;else if(Array.isArray(t)){var n=new Uint8Array(t.length);for(var s=0;s<t.length;s++)n[s]=t[s];t=n}else if(t instanceof ArrayBuffer)t=new Uint8Array(t);return i.date=new Date,r&&(i.binary=null!=r.binary&&r.binary,i.base64=null!=r.base64&&r.base64,i.date=r.date||i.date,i.compression=r.compression||null),this.files[e]={name:e,content:t,options:i},this},s.prototype.generate=function(e){throw new Error("Removed in JSZip 3.0, please check the upgrade guide.")},s.prototype.generateAsync=function(e,t){var r={type:e&&e.type||"blob",mimeType:e&&e.mimeType};var i={platform:e&&e.platform||"DOS"};return(new Promise(function(t,r){var i=[],n=0,s=0;for(var a in this.files){var o=this.files[a];if(o)s++}if(0===s){t(new Blob([],{type:r.mimeType||"application/zip"}))}else{var h=0;for(var u in this.files){var l=this.files[u];if(l){n(l,function(e){i.push(e);if(++h===s)t(i)},r)}}}})).then(function(e){return new Blob(e,{type:r.mimeType||"application/zip"})})};var a=s;t.exports={ZipObject:a,loadAsync:function(){throw new Error("Removed method. Please use JSZip.loadAsync")}}},{"./compressions":3,"./defaults":5,"./utf8":31,"./utils":32}],9:[function(e,t,r){},{}],10:[function(e,t,r){"use strict";function i(e){return e}t.exports={copy:i}},{}],11:[function(e,t,r){"use strict";t.exports=function(e,t){return e===t}},{}],12:[function(e,t,r){"use strict";t.exports=function(){this.listeners={},this.onAny=null}},{}],13:[function(e,t,r){"use strict";var i=e("./error");function n(){this.listeners={}}n.prototype={constructor:n,on:function(e,t){return this.listeners[e]=this.listeners[e]||[],this.listeners[e].push(t),this},off:function(e,t){this.listeners[e]=this.listeners[e]||[];var r=this.listeners[e].indexOf(t);return-1!==r&&this.listeners[e].splice(r,1),this},emit:function(e){this.listeners[e]=this.listeners[e]||[];var t=Array.prototype.slice.call(arguments,1);return this.listeners[e].forEach(function(e){e.apply(null,t)}),this}},t.exports=n},{"./error":14}],14:[function(e,t,r){"use strict";t.exports=function(e){this.message=e}},{}],15:[function(e,t,r){"use strict";r.JSZip=e("./jszip"),r.utils=e("./utils"),r.base64=e("./base64"),r.utf8=e("./utf8"),r.compressions=e("./compressions")},{"./base64":1,"./compressions":3,"./jszip":8,"./utf8":31,"./utils":32}],16:[function(e,t,r){"use strict";t.exports=e("./jszip")},{"./jszip":8}],17:[function(e,t,r){},{}],18:[function(e,t,r){},{}],19:[function(e,t,r){},{}],20:[function(e,t,r){},{}],21:[function(e,t,r){},{}],22:[function(e,t,r){},{}],23:[function(e,t,r){"use strict";var i=e("./DataWorker"),n=e("./DataLengthProbe"),s=e("./Crc32Probe");r.STORE=function(e,t){return e.pipe(n("compressedSize")).pipe(s()).pipe(n("uncompressedSize")).pipe(new(e("./stream/GenericWorker"))("STORE compression"))},r.DEFLATE=e("./flate")},{"./DataLengthProbe":24,"./DataWorker":25,"./Crc32Probe":26,"./flate":7,"./stream/GenericWorker":28}],24:[function(e,t,r){"use strict";var i=e("../utils"),n=e("./GenericWorker");function s(e){n.call(this,"DataLengthProbe for "+e);this.propName=e,this.withStreamInfo(e,0)}i.inherits(s,n),s.prototype.processChunk=function(e){if(e){var t=i.getTypeWorker(e.data);this.streamInfo[this.propName]+=t.index}this.push(e)},t.exports=s},{"../utils":32,"./GenericWorker":28}],25:[function(e,t,r){"use strict";var i=e("../utils"),n=e("./GenericWorker"),s=e("../support");function a(e){n.call(this,"DataWorker");var t=this;this.dataIsReady=!1,this.index=0,this.max=0,this.data=null,this.type="",this._tickScheduled=!1,e.then(function(e){t.dataIsReady=!0;t.data=e;t.max=e&&e.length||0;t.type=i.getTypeOf(e);if(!t.isPaused)t._tickAndRepeat()},function(e){t.error(e)})}i.inherits(a,n),a.prototype.cleanUp=function(){n.prototype.cleanUp.call(this);this.data=null},a.prototype.resume=function(){return!!n.prototype.resume.call(this)&&(!this.dataIsReady||(this._tickAndRepeat(),!0))},a.prototype._tickAndRepeat=function(){this._tickScheduled=!1,this.isPaused||this.isFinished||(this._tick(),this.isFinished||( setTimeout(this._tickAndRepeat.bind(this),16),this._tickScheduled=!0))},a.prototype._tick=function(){if(this.isPaused||this.isFinished)return!1;var e=i.MAX_VALUE_16BITS,t=null,r=Math.min(this.max,this.index+e);if(this.index>=this.max)return this.end();switch(this.type){case"string":t=this.data.substring(this.index,r);break;case"uint8array":t=this.data.subarray(this.index,r);break;case"array":case"nodebuffer":t=this.data.slice(this.index,r)}this.index=r,this.push({data:t,meta:{percent:this.max?this.index/this.max*100:0}})},t.exports=a},{"../support":30,"../utils":32,"./GenericWorker":28}],26:[function(e,t,r){"use strict";var i=e("../crc32"),n=e("./GenericWorker"),s=e("../utils");function a(){n.call(this,"Crc32Probe");this.withStreamInfo("crc32",0)}s.inherits(a,n),a.prototype.processChunk=function(e){this.streamInfo.crc32=i.crc32(this.streamInfo.crc32,e.data,0,e.data.length),this.push(e)},t.exports=a},{"../crc32":4,"../utils":32,"./GenericWorker":28}],27:[function(e,t,r){"use strict";var i=e("../utils"),n=e("./GenericWorker");function s(e){n.call(this,"Utf8DecodeWorker");this.remaining=null;this.decoder="undefined"!=typeof TextDecoder?new TextDecoder("utf-8"):null}i.inherits(s,n),s.prototype.processChunk=function(e){var t=i.transformTo("uint8array",e.data);if(this.remaining){var r=new Uint8Array(this.remaining.length+t.length);r.set(this.remaining,0);r.set(t,this.remaining.length);t=r}var n=this._processAllData(t);this.remaining=n.length?n:null;e.data=null;this.push({data:n,meta:e.meta})},s.prototype._processAllData=function(e){if(this.decoder)return this.decoder.decode(e);var t="";for(var r=0;r<e.length;r++)t+=String.fromCharCode(e[r]);return t},t.exports=s},{"../utils":32,"./GenericWorker":28}],28:[function(e,t,r){"use strict";function i(e){this.name=e||"default",this.streamInfo={},this.generatedError=null,this.extraStreamInfo={},this.isPaused=!0,this.isFinished=!1,this.isLocked=!1,this._listeners={data:[],error:[],end:[]},this.previous=null}i.prototype={push:function(e){this.emit("data",e)},end:function(){if(this.isFinished)return!1;this.flush();try{this.emit("end")}catch(e){this.emit("error",e)}return this.isFinished=!0},error:function(e){return!this.isFinished&&(this.isPaused?this.generatedError=e:(this.isFinished=!0,this.emit("error",e),this.previous&&this.previous.error(e),this.cleanUp()),!0)},on:function(e,t){return this._listeners[e].push(t),this},cleanUp:function(){this.previous=this.generatedError=null,this._listeners={}},simpleTransform:function(e,t,r){},resume:function(){if(!this.isPaused||this.isLocked)return!1;this.isPaused=!1,this.previous&&!this.previous.isPaused&&this.previous.resume();return!0},pause:function(){this.isPaused=!0},pipe:function(e){return e.previous=this,this.on("data",function(t){e.processChunk(t)}).on("end",function(){e.end()}).on("error",function(t){e.error(t)}),e.resume(),this},checkClearCache:function(){},emit:function(e,t){if(this._listeners[e])for(var r=0;r<this._listeners[e].length;r++)this._listeners[e][r].call(this,t)},flush:function(){}},t.exports=i},{}],29:[function(e,t,r){"use strict";var n=e("../utils"),s=e("./GenericWorker");function i(e,t,r){s.call(this,"ConvertWorker to "+t);this.destType=t}n.inherits(i,s),i.prototype.processChunk=function(e){this.push({data:n.transformTo(this.destType,e.data),meta:e.meta})},t.exports=i},{"../utils":32,"./GenericWorker":28}],30:[function(e,t,r){"use strict";r.base64=!0,r.array=!0,r.string=!0,r.arraybuffer="undefined"!=typeof ArrayBuffer&&"undefined"!=typeof Uint8Array,r.nodebuffer="undefined"!=typeof Buffer,r.uint8array="undefined"!=typeof Uint8Array,r.blob="undefined"!=typeof ArrayBuffer&&"undefined"!=typeof Uint8Array&&"undefined"!=typeof Blob&&(function(){try{return new Blob([""],{type:"application/zip"}),!0}catch(e){return!1}})(),r.nodestream=!1},{}],31:[function(e,t,r){"use strict";var o=e("./utils"),h=e("./support");var u=new Uint8Array(256);for(var i=0;i<256;i++)u[i]=252<=i?6:248<=i?5:240<=i?4:224<=i?3:192<=i?2:1;u[254]=u[254]=1;r.utf8encode=function(e){if(h.nodebuffer)return o.newBufferFrom(e,"utf-8");var t,r,i,n,s=[],a=0,o=e.length;for(a=0;a<o;){r=e.charCodeAt(a++);if(55296<=r&&r<=56319&&a<o){i=e.charCodeAt(a++);56320==(64512&i)?r=((1023&r)<<10)+(1023&i)+65536:a--}r<128?s.push(r):r<2048?s.push(192|r>>6,128|63&r):r<65536?s.push(224|r>>12,128|r>>6&63,128|63&r):s.push(240|r>>18,128|r>>12&63,128|r>>6&63,128|63&r)}return new Uint8Array(s)},r.utf8decode=function(e,t){return 2===t.type&&h.uint8array?e instanceof Uint8Array?e:o.transformTo("uint8array",e):(o.transformTo("string",e),t.string)};t.exports={utf8encode:r.utf8encode,utf8decode:r.utf8decode}},{"./support":30,"./utils":32}],32:[function(e,t,r){"use strict";var i=e("./support"),n=e("./base64"),o={};function s(e){return"undefined"!=typeof e&&null!==e}o.getTypeOf=function(e){if("string"==typeof e)return"string";if("[object Array]"===Object.prototype.toString.call(e))return"array";if(i.nodebuffer&&Buffer.isBuffer(e))return"nodebuffer";if(i.uint8array&&e instanceof Uint8Array)return"uint8array";if(i.arraybuffer&&e instanceof ArrayBuffer)return"arraybuffer"},o.transformTo=function(e,t){if(t||(t=""),e===o.getTypeOf(t))return t;throw new Error("Unable to convert "+o.getTypeOf(t)+" to "+e)},o.MAX_VALUE_16BITS=65535,o.MAX_VALUE_32BITS=-1,o.pretty=function(e){var t="",r=0;for(r=0;r<(e||"").length;r++)t+="\\x"+("0"+e.charCodeAt(r).toString(16)).slice(-2);return t},o.delay=function(e,t,r){setImmediate(function(){e.apply(r||null,t)})},o.inherits=function(e,t){var r=function(){};r.prototype=t.prototype,e.prototype=new r},o.extend=function(){var e={};for(var t=0;t<arguments.length;t++){var r=arguments[t];for(var i in r)Object.prototype.hasOwnProperty.call(r,i)&&(e[i]=r[i])}return e},o.prepareContent=function(e,t,r,i,n){return Promise.resolve(n).then(function(e){return e})},t.exports=o},{"./base64":1,"./support":30}],33:[function(e,t,r){"use strict";function i(e,t){this.options=e;this.loadOptions=t}i.prototype={isEncrypted:function(){return 1==(1&this.bitFlag)},useUTF8:function(){return 2048==(2048&this.bitFlag)},readLocalPart:function(e){var t,r;if(e.skip(22),this.fileName=e.readData(e.readInt(2)),this.localExtraFields=e.readData(e.readInt(2)),this.fileName=this.handleUTF8FileName(),this.isEncrypted())throw new Error("Encrypted zip are not supported");if(-1==this.compressionMethod)throw new Error("Corrupted zip: missing compression method");},readCentralPart:function(e){this.versionMadeBy=e.readInt(2),e.skip(2),this.bitFlag=e.readInt(2),this.compressionMethod=e.readString(2),this.date=e.readDate(),this.crc32=e.readInt(4),this.compressedSize=e.readInt(4),this.uncompressedSize=e.readInt(4);var t=e.readInt(2),r=e.readInt(2),i=e.readInt(2);e.skip(8),this.localHeaderOffset=e.readInt(4);var n=e.readData(t);this.fileName=n,this.extra=e.readData(r),this.fileComment=e.readData(i)},processAttributes:function(){},handleUTF8FileName:function(){var e=o.transformTo("string",this.fileName);if(this.useUTF8())return h.utf8decode(e);return e}},t.exports=i},{"./compressions":3,"./utf8":31,"./utils":32}],34:[function(e,t,r){"use strict";var n=e("./utils");t.exports={stringToArrayBuffer:function(e){var t=new Uint8Array(e.length);for(var r=0;r<e.length;r++)t[r]=e.charCodeAt(r)&255;return t.buffer},arrayBufferToString:function(e){var t=new Uint8Array(e),r="";for(var i=0;i<t.length;i++)r+=String.fromCharCode(t[i]);return r},newUint8Array:function(e){return new Uint8Array(e)},newArrayBuffer:function(e){return new ArrayBuffer(e)},newBufferFrom:function(e,t){if("undefined"!=typeof Buffer)return Buffer.from(e,t);var r=e.length;var i=new Uint8Array(r);for(var n=0;n<r;n++)i[n]=e.charCodeAt(n);return i.buffer}},{"./utils":32}],35:[function(e,t,r){},{}],36:[function(e,t,r){},{}],37:[function(e,t,r){},{}],38:[function(e,t,r){},{}]},{},[16])(16)});
+    /* end JSZip inline — using a simplified fallback instead for reliability */
     </script>
     <script>
-      /* ── Simple inline ZIP builder (no dependencies) ────────────────
+    /* ── Simple inline ZIP builder (no dependencies) ────────────────
        يبني ZIP بسيط من Blobs بدون ضغط (STORE method)
        كافي لتصدير فريمات الفيديو كصور                              */
-      window.SimpleZip = {
-        async build(files) {
-          // files = [{name, blob}, ...]
-          const encoder = new TextEncoder();
-          const localHeaders = [];
-          const centralDir = [];
-          let offset = 0;
+    window.SimpleZip = {
+      async build(files) {
+        // files = [{name, blob}, ...]
+        const encoder = new TextEncoder();
+        const localHeaders = [];
+        const centralDir = [];
+        let offset = 0;
 
-          function u16(n) {
-            const b = new Uint8Array(2);
-            new DataView(b.buffer).setUint16(0, n, true);
-            return b;
-          }
-          function u32(n) {
-            const b = new Uint8Array(4);
-            new DataView(b.buffer).setUint32(0, n, true);
-            return b;
-          }
+        function u16(n){ const b=new Uint8Array(2); new DataView(b.buffer).setUint16(0,n,true); return b; }
+        function u32(n){ const b=new Uint8Array(4); new DataView(b.buffer).setUint32(0,n,true); return b; }
 
-          function crc32(buf) {
-            let crc = 0xffffffff;
-            const t = new Uint8Array(256).map((_, i) => {
-              let c = i;
-              for (let j = 0; j < 8; j++)
-                c = 1 & c ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
-              return c;
-            });
-            for (let i = 0; i < buf.length; i++)
-              crc = t[(crc ^ buf[i]) & 0xff] ^ (crc >>> 8);
-            return (crc ^ 0xffffffff) >>> 0;
-          }
+        function crc32(buf){
+          let crc=0xFFFFFFFF;
+          const t=new Uint8Array(256).map((_,i)=>{let c=i;for(let j=0;j<8;j++)c=1&c?0xEDB88320^(c>>>1):c>>>1;return c});
+          for(let i=0;i<buf.length;i++) crc=t[(crc^buf[i])&0xFF]^(crc>>>8);
+          return (crc^0xFFFFFFFF)>>>0;
+        }
 
-          for (const f of files) {
-            const data = new Uint8Array(await f.blob.arrayBuffer());
-            const nameBytes = encoder.encode(f.name);
-            const crc = crc32(data);
-            const sig = new Uint8Array([0x50, 0x4b, 0x03, 0x04]);
-            const lh = new Uint8Array([
-              ...sig,
-              ...u16(20),
-              ...u16(0),
-              ...u16(0), // ver,flags,method
-              0,
-              0,
-              0,
-              0, // mod time/date
-              ...u32(crc),
-              ...u32(data.length),
-              ...u32(data.length),
-              ...u16(nameBytes.length),
-              ...u16(0),
-              ...nameBytes,
-            ]);
-            localHeaders.push({
-              lh,
-              data,
-              nameBytes,
-              crc,
-              size: data.length,
-              offset,
-            });
-            offset += lh.length + data.length;
-          }
-
-          const cdOffset = offset;
-          for (const f of localHeaders) {
-            const sig = new Uint8Array([0x50, 0x4b, 0x01, 0x02]);
-            const cd = new Uint8Array([
-              ...sig,
-              ...u16(20),
-              ...u16(20),
-              ...u16(0),
-              ...u16(0),
-              0,
-              0,
-              0,
-              0,
-              ...u32(f.crc),
-              ...u32(f.size),
-              ...u32(f.size),
-              ...u16(f.nameBytes.length),
-              ...u16(0),
-              ...u16(0),
-              ...u16(0),
-              ...u16(0),
-              ...u32(0),
-              ...u32(f.offset),
-              ...f.nameBytes,
-            ]);
-            centralDir.push(cd);
-          }
-
-          const cdSize = centralDir.reduce((s, c) => s + c.length, 0);
-          const eocd = new Uint8Array([
-            0x50,
-            0x4b,
-            0x05,
-            0x06,
-            0,
-            0,
-            0,
-            0,
-            ...u16(files.length),
-            ...u16(files.length),
-            ...u32(cdSize),
-            ...u32(cdOffset),
-            0,
-            0,
+        for(const f of files){
+          const data = new Uint8Array(await f.blob.arrayBuffer());
+          const nameBytes = encoder.encode(f.name);
+          const crc = crc32(data);
+          const sig  = new Uint8Array([0x50,0x4B,0x03,0x04]);
+          const lh   = new Uint8Array([
+            ...sig, ...u16(20), ...u16(0), ...u16(0), // ver,flags,method
+            0,0,0,0, // mod time/date
+            ...u32(crc), ...u32(data.length), ...u32(data.length),
+            ...u16(nameBytes.length), ...u16(0), ...nameBytes
           ]);
+          localHeaders.push({lh, data, nameBytes, crc, size:data.length, offset});
+          offset += lh.length + data.length;
+        }
 
-          const parts = [
-            ...localHeaders.flatMap((f) => [f.lh, f.data]),
-            ...centralDir,
-            eocd,
-          ];
-          return new Blob(parts, { type: "application/zip" });
-        },
-      };
+        const cdOffset = offset;
+        for(const f of localHeaders){
+          const sig = new Uint8Array([0x50,0x4B,0x01,0x02]);
+          const cd  = new Uint8Array([
+            ...sig, ...u16(20), ...u16(20), ...u16(0), ...u16(0),
+            0,0,0,0,
+            ...u32(f.crc), ...u32(f.size), ...u32(f.size),
+            ...u16(f.nameBytes.length), ...u16(0), ...u16(0),
+            ...u16(0), ...u16(0), ...u32(0), ...u32(f.offset),
+            ...f.nameBytes
+          ]);
+          centralDir.push(cd);
+        }
+
+        const cdSize = centralDir.reduce((s,c)=>s+c.length,0);
+        const eocd   = new Uint8Array([
+          0x50,0x4B,0x05,0x06, 0,0, 0,0,
+          ...u16(files.length), ...u16(files.length),
+          ...u32(cdSize), ...u32(cdOffset), 0,0
+        ]);
+
+        const parts = [...localHeaders.flatMap(f=>[f.lh,f.data]), ...centralDir, eocd];
+        return new Blob(parts, {type:'application/zip'});
+      }
+    };
     </script>
     <link
       href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@300;400;600;700;900&family=Scheherazade+New:wght@400;700&family=Noto+Naskh+Arabic:wght@400;700&family=Lateef:wght@400;700&family=Reem+Kufi:wght@400;700&family=Harmattan:wght@400;700&display=swap"
@@ -1771,894 +1695,482 @@
     </style>
   </head>
   <body>
-    <!-- ══════════════════════════════════════════
+
+  <!-- ══════════════════════════════════════════
        LANDING PAGE — تظهر أول ما يفتح الموقع
   ══════════════════════════════════════════ -->
-    <style>
-      /* ── Landing Variables ── */
-      #landingPage {
-        position: fixed;
-        inset: 0;
-        z-index: 9999;
-        background: #04080f;
-        overflow-y: auto;
-        font-family: "Cairo", "Segoe UI", sans-serif;
-        color: #edf2e8;
-        direction: rtl;
-        transition:
-          opacity 0.7s ease,
-          transform 0.7s ease;
-      }
-      #landingPage.lp-hide {
-        opacity: 0;
-        transform: scale(1.04);
-        pointer-events: none;
-      }
+  <style>
+    /* ── Landing Variables ── */
+    #landingPage {
+      position: fixed; inset: 0; z-index: 9999;
+      background: #04080f;
+      overflow-y: auto;
+      font-family: 'Cairo', 'Segoe UI', sans-serif;
+      color: #edf2e8;
+      direction: rtl;
+      transition: opacity 0.7s ease, transform 0.7s ease;
+    }
+    #landingPage.lp-hide {
+      opacity: 0;
+      transform: scale(1.04);
+      pointer-events: none;
+    }
 
-      /* background glows */
-      .lp-bg {
-        position: fixed;
-        inset: 0;
-        z-index: 0;
-        pointer-events: none;
-        overflow: hidden;
-      }
-      .lp-bg::before {
-        content: "";
-        position: absolute;
-        width: 800px;
-        height: 800px;
-        background: radial-gradient(
-          circle,
-          rgba(26, 107, 58, 0.13) 0%,
-          transparent 65%
-        );
-        top: -250px;
-        right: -200px;
-        animation: lpGlow1 18s ease-in-out infinite;
-      }
-      .lp-bg::after {
-        content: "";
-        position: absolute;
-        width: 600px;
-        height: 600px;
-        background: radial-gradient(
-          circle,
-          rgba(201, 168, 76, 0.08) 0%,
-          transparent 65%
-        );
-        bottom: -150px;
-        left: -100px;
-        animation: lpGlow2 22s ease-in-out infinite;
-      }
-      @keyframes lpGlow1 {
-        0%,
-        100% {
-          transform: translate(0, 0);
-        }
-        50% {
-          transform: translate(-70px, 50px);
-        }
-      }
-      @keyframes lpGlow2 {
-        0%,
-        100% {
-          transform: translate(0, 0);
-        }
-        50% {
-          transform: translate(50px, -70px);
-        }
-      }
+    /* background glows */
+    .lp-bg {
+      position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden;
+    }
+    .lp-bg::before {
+      content: '';
+      position: absolute;
+      width: 800px; height: 800px;
+      background: radial-gradient(circle, rgba(26,107,58,0.13) 0%, transparent 65%);
+      top: -250px; right: -200px;
+      animation: lpGlow1 18s ease-in-out infinite;
+    }
+    .lp-bg::after {
+      content: '';
+      position: absolute;
+      width: 600px; height: 600px;
+      background: radial-gradient(circle, rgba(201,168,76,0.08) 0%, transparent 65%);
+      bottom: -150px; left: -100px;
+      animation: lpGlow2 22s ease-in-out infinite;
+    }
+    @keyframes lpGlow1 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(-70px,50px)} }
+    @keyframes lpGlow2 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(50px,-70px)} }
 
-      /* geometric pattern */
-      .lp-pattern {
-        position: fixed;
-        inset: 0;
-        z-index: 0;
-        pointer-events: none;
-        opacity: 0.025;
-        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Cpath d='M40 0 L80 20 L80 60 L40 80 L0 60 L0 20 Z' fill='none' stroke='%23c9a84c' stroke-width='0.8'/%3E%3Cpath d='M40 10 L70 25 L70 55 L40 70 L10 55 L10 25 Z' fill='none' stroke='%23c9a84c' stroke-width='0.5'/%3E%3Ccircle cx='40' cy='40' r='12' fill='none' stroke='%23c9a84c' stroke-width='0.5'/%3E%3Cpath d='M40 28 L52 40 L40 52 L28 40 Z' fill='none' stroke='%23c9a84c' stroke-width='0.5'/%3E%3C/svg%3E");
-        background-size: 80px 80px;
-      }
+    /* geometric pattern */
+    .lp-pattern {
+      position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      opacity: 0.025;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Cpath d='M40 0 L80 20 L80 60 L40 80 L0 60 L0 20 Z' fill='none' stroke='%23c9a84c' stroke-width='0.8'/%3E%3Cpath d='M40 10 L70 25 L70 55 L40 70 L10 55 L10 25 Z' fill='none' stroke='%23c9a84c' stroke-width='0.5'/%3E%3Ccircle cx='40' cy='40' r='12' fill='none' stroke='%23c9a84c' stroke-width='0.5'/%3E%3Cpath d='M40 28 L52 40 L40 52 L28 40 Z' fill='none' stroke='%23c9a84c' stroke-width='0.5'/%3E%3C/svg%3E");
+      background-size: 80px 80px;
+    }
 
-      /* NAV */
-      .lp-nav {
-        position: sticky;
-        top: 0;
-        z-index: 10;
-        padding: 16px 48px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        background: rgba(4, 8, 15, 0.8);
-        backdrop-filter: blur(20px);
-        border-bottom: 1px solid rgba(201, 168, 76, 0.15);
-        animation: lpFadeDown 0.8s ease forwards;
-      }
-      @keyframes lpFadeDown {
-        from {
-          opacity: 0;
-          transform: translateY(-20px);
-        }
-        to {
-          opacity: 1;
-          transform: translateY(0);
-        }
-      }
+    /* NAV */
+    .lp-nav {
+      position: sticky; top: 0; z-index: 10;
+      padding: 16px 48px;
+      display: flex; align-items: center; justify-content: space-between;
+      background: rgba(4,8,15,0.8);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(201,168,76,0.15);
+      animation: lpFadeDown 0.8s ease forwards;
+    }
+    @keyframes lpFadeDown { from{opacity:0;transform:translateY(-20px)} to{opacity:1;transform:translateY(0)} }
 
-      .lp-logo {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-      }
-      .lp-logo-icon {
-        width: 40px;
-        height: 40px;
-        background: linear-gradient(135deg, #1a6b3a, #2d9c57);
-        border-radius: 11px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.2rem;
-        box-shadow: 0 0 18px rgba(26, 107, 58, 0.4);
-      }
-      .lp-logo-name {
-        font-size: 1.25rem;
-        font-weight: 700;
-        color: #e8c96e;
-      }
-      .lp-logo-sub {
-        font-size: 0.6rem;
-        color: #7a9170;
-        letter-spacing: 1px;
-      }
+    .lp-logo { display:flex; align-items:center; gap:10px; }
+    .lp-logo-icon {
+      width:40px; height:40px;
+      background: linear-gradient(135deg,#1a6b3a,#2d9c57);
+      border-radius:11px;
+      display:flex; align-items:center; justify-content:center;
+      font-size:1.2rem;
+      box-shadow: 0 0 18px rgba(26,107,58,0.4);
+    }
+    .lp-logo-name { font-size:1.25rem; font-weight:700; color:#e8c96e; }
+    .lp-logo-sub  { font-size:0.6rem; color:#7a9170; letter-spacing:1px; }
 
-      .lp-nav-links {
-        display: flex;
-        gap: 28px;
-        list-style: none;
-      }
-      .lp-nav-links a {
-        text-decoration: none;
-        color: #7a9170;
-        font-size: 0.85rem;
-        transition: color 0.3s;
-      }
-      .lp-nav-links a:hover {
-        color: #e8c96e;
-      }
+    .lp-nav-links { display:flex; gap:28px; list-style:none; }
+    .lp-nav-links a { text-decoration:none; color:#7a9170; font-size:0.85rem; transition:color 0.3s; }
+    .lp-nav-links a:hover { color:#e8c96e; }
 
-      .lp-btn-enter {
-        padding: 10px 26px;
-        background: linear-gradient(135deg, #1a6b3a, #2d9c57);
-        border: none;
-        border-radius: 50px;
-        color: #fff;
-        font-family: inherit;
-        font-weight: 700;
-        font-size: 0.85rem;
-        cursor: pointer;
-        box-shadow: 0 4px 18px rgba(26, 107, 58, 0.35);
-        transition:
-          transform 0.3s,
-          box-shadow 0.3s;
-      }
-      .lp-btn-enter:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 28px rgba(26, 107, 58, 0.5);
-      }
+    .lp-btn-enter {
+      padding:10px 26px;
+      background: linear-gradient(135deg,#1a6b3a,#2d9c57);
+      border:none; border-radius:50px;
+      color:#fff; font-family:inherit; font-weight:700; font-size:0.85rem;
+      cursor:pointer;
+      box-shadow:0 4px 18px rgba(26,107,58,0.35);
+      transition:transform 0.3s, box-shadow 0.3s;
+    }
+    .lp-btn-enter:hover { transform:translateY(-2px); box-shadow:0 8px 28px rgba(26,107,58,0.5); }
 
-      /* HERO */
-      .lp-hero {
-        position: relative;
-        z-index: 1;
-        min-height: 90vh;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        text-align: center;
-        padding: 60px 24px 60px;
-      }
+    /* HERO */
+    .lp-hero {
+      position: relative; z-index: 1;
+      min-height: 90vh;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      text-align: center;
+      padding: 60px 24px 60px;
+    }
 
-      .lp-bismillah {
-        font-size: clamp(1.2rem, 2.5vw, 1.7rem);
-        color: #c9a84c;
-        letter-spacing: 2px;
-        margin-bottom: 22px;
-        text-shadow: 0 0 28px rgba(201, 168, 76, 0.4);
-        opacity: 0;
-        animation: lpUp 0.9s 0.2s ease forwards;
-      }
-      .lp-ornament {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        margin-bottom: 22px;
-        opacity: 0;
-        animation: lpUp 0.8s 0.4s ease forwards;
-      }
-      .lp-orn-line {
-        flex: 1;
-        max-width: 90px;
-        height: 1px;
-        background: linear-gradient(90deg, transparent, #c9a84c);
-      }
-      .lp-orn-line.r {
-        background: linear-gradient(90deg, #c9a84c, transparent);
-      }
-      .lp-orn-star {
-        color: #c9a84c;
-        font-size: 0.8rem;
-      }
+    .lp-bismillah {
+      font-size: clamp(1.2rem,2.5vw,1.7rem);
+      color: #c9a84c;
+      letter-spacing: 2px;
+      margin-bottom: 22px;
+      text-shadow: 0 0 28px rgba(201,168,76,0.4);
+      opacity:0; animation: lpUp 0.9s 0.2s ease forwards;
+    }
+    .lp-ornament {
+      display:flex; align-items:center; gap:12px;
+      margin-bottom:22px;
+      opacity:0; animation:lpUp 0.8s 0.4s ease forwards;
+    }
+    .lp-orn-line { flex:1; max-width:90px; height:1px; background:linear-gradient(90deg,transparent,#c9a84c); }
+    .lp-orn-line.r { background:linear-gradient(90deg,#c9a84c,transparent); }
+    .lp-orn-star { color:#c9a84c; font-size:0.8rem; }
 
-      .lp-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 7px;
-        padding: 6px 18px;
-        background: rgba(201, 168, 76, 0.08);
-        border: 1px solid rgba(201, 168, 76, 0.25);
-        border-radius: 100px;
-        font-size: 0.72rem;
-        color: #e8c96e;
-        letter-spacing: 2px;
-        text-transform: uppercase;
-        margin-bottom: 24px;
-        opacity: 0;
-        animation: lpUp 0.8s 0.5s ease forwards;
-      }
+    .lp-badge {
+      display:inline-flex; align-items:center; gap:7px;
+      padding:6px 18px;
+      background:rgba(201,168,76,0.08);
+      border:1px solid rgba(201,168,76,0.25);
+      border-radius:100px;
+      font-size:0.72rem; color:#e8c96e;
+      letter-spacing:2px; text-transform:uppercase;
+      margin-bottom:24px;
+      opacity:0; animation:lpUp 0.8s 0.5s ease forwards;
+    }
 
-      .lp-h1 {
-        font-size: 18px;
-        font-weight: 800;
-        line-height: 2;
-        margin-bottom: 18px;
-        opacity: 0;
-        animation: lpUp 1s 0.65s ease forwards;
-      }
-      .lp-h1 .lp-line1 {
-        display: block;
-        color: #edf2e8;
-      }
-      .lp-h1 .lp-line2 {
-        display: block;
-        background: linear-gradient(135deg, #c9a84c, #f0d98a, #c9a84c);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-        background-size: 200%;
-        animation:
-          lpUp 1s 0.65s ease forwards,
-          lpGoldShine 4s 2s ease-in-out infinite;
-      }
-      @keyframes lpGoldShine {
-        0%,
-        100% {
-          background-position: 0%;
-        }
-        50% {
-          background-position: 100%;
-        }
-      }
+    .lp-h1 {
+          font-size: 18px;
+      font-weight: 800;
+      line-height: 2;
+      margin-bottom: 18px;
+      opacity:0; animation:lpUp 1s 0.65s ease forwards;
+    }
+    .lp-h1 .lp-line1 { display:block; color:#edf2e8; }
+    .lp-h1 .lp-line2 {
+      display:block;
+      background: linear-gradient(135deg,#c9a84c,#f0d98a,#c9a84c);
+      -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+      background-size:200%; animation:lpUp 1s 0.65s ease forwards, lpGoldShine 4s 2s ease-in-out infinite;
+    }
+    @keyframes lpGoldShine { 0%,100%{background-position:0%} 50%{background-position:100%} }
 
-      .lp-ayah {
-        font-size: clamp(0.95rem, 2vw, 1.25rem);
-        color: #7a9170;
-        max-width: 560px;
-        line-height: 2;
-        margin: 16px auto 6px;
-        opacity: 0;
-        animation: lpUp 0.9s 0.85s ease forwards;
-      }
-      .lp-ayah-ref {
-        font-size: 0.72rem;
-        color: rgba(201, 168, 76, 0.6);
-        margin-bottom: 44px;
-        opacity: 0;
-        animation: lpUp 0.8s 0.95s ease forwards;
-      }
+    .lp-ayah {
+      font-size: clamp(0.95rem,2vw,1.25rem);
+      color: #7a9170;
+      max-width: 560px;
+      line-height: 2;
+      margin: 16px auto 6px;
+      opacity:0; animation:lpUp 0.9s 0.85s ease forwards;
+    }
+    .lp-ayah-ref {
+      font-size:0.72rem; color:rgba(201,168,76,0.6);
+      margin-bottom:44px;
+      opacity:0; animation:lpUp 0.8s 0.95s ease forwards;
+    }
 
-      /* BIG CTA */
-      .lp-cta {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 12px;
-        opacity: 0;
-        animation: lpUp 0.9s 1.1s ease forwards;
-      }
-      .lp-btn-ring {
-        padding: 3px;
-        border-radius: 60px;
-        background: linear-gradient(135deg, #c9a84c, transparent, #c9a84c);
-        background-size: 200%;
-        animation: lpRingShine 3s linear infinite;
-      }
-      @keyframes lpRingShine {
-        0% {
-          background-position: 0%;
-        }
-        100% {
-          background-position: 200%;
-        }
-      }
+    /* BIG CTA */
+    .lp-cta {
+      display:flex; flex-direction:column; align-items:center; gap:12px;
+      opacity:0; animation:lpUp 0.9s 1.1s ease forwards;
+    }
+    .lp-btn-ring {
+      padding:3px; border-radius:60px;
+      background:linear-gradient(135deg,#c9a84c,transparent,#c9a84c);
+      background-size:200%;
+      animation:lpRingShine 3s linear infinite;
+    }
+    @keyframes lpRingShine { 0%{background-position:0%} 100%{background-position:200%} }
 
-      .lp-btn-main {
-        position: relative;
-        display: inline-flex;
-        align-items: center;
-        gap: 12px;
-        padding: 20px 58px;
-        font-family: inherit;
-        font-size: 1.15rem;
-        font-weight: 700;
-        color: #fff;
-        background: linear-gradient(135deg, #1a6b3a, #2d9c57, #3dbb6a);
-        border: none;
-        border-radius: 57px;
-        cursor: pointer;
-        overflow: hidden;
-        box-shadow:
-          0 0 45px rgba(26, 107, 58, 0.4),
-          0 0 90px rgba(26, 107, 58, 0.15);
-        transition:
-          transform 0.35s,
-          box-shadow 0.35s;
-      }
-      .lp-btn-main:hover {
-        transform: translateY(-4px) scale(1.02);
-        box-shadow:
-          0 0 65px rgba(26, 107, 58, 0.6),
-          0 18px 45px rgba(0, 0, 0, 0.5);
-      }
-      .lp-btn-main:active {
-        transform: scale(0.97);
-      }
-      .lp-btn-main .lp-arr {
-        transition: transform 0.3s;
-      }
-      .lp-btn-main:hover .lp-arr {
-        transform: translateX(-6px);
-      }
+    .lp-btn-main {
+      position:relative;
+      display:inline-flex; align-items:center; gap:12px;
+      padding:20px 58px;
+      font-family:inherit; font-size:1.15rem; font-weight:700;
+      color:#fff;
+      background:linear-gradient(135deg,#1a6b3a,#2d9c57,#3dbb6a);
+      border:none; border-radius:57px; cursor:pointer;
+      overflow:hidden;
+      box-shadow:0 0 45px rgba(26,107,58,0.4), 0 0 90px rgba(26,107,58,0.15);
+      transition:transform 0.35s, box-shadow 0.35s;
+    }
+    .lp-btn-main:hover {
+      transform:translateY(-4px) scale(1.02);
+      box-shadow:0 0 65px rgba(26,107,58,0.6), 0 18px 45px rgba(0,0,0,0.5);
+    }
+    .lp-btn-main:active { transform:scale(0.97); }
+    .lp-btn-main .lp-arr { transition:transform 0.3s; }
+    .lp-btn-main:hover .lp-arr { transform:translateX(-6px); }
 
-      .lp-cta-note {
-        font-size: 0.75rem;
-        color: #7a9170;
-      }
+    .lp-cta-note { font-size:0.75rem; color:#7a9170; }
 
-      /* STATS */
-      .lp-stats {
-        display: flex;
-        gap: 56px;
-        margin-top: 64px;
-        opacity: 0;
-        animation: lpUp 0.9s 1.3s ease forwards;
-      }
-      .lp-stat {
-        text-align: center;
-      }
-      .lp-stat-n {
-        display: block;
-        font-size: 2rem;
-        font-weight: 800;
-        color: #c9a84c;
-        line-height: 1;
-      }
-      .lp-stat-l {
-        font-size: 0.72rem;
-        color: #7a9170;
-        margin-top: 5px;
-      }
+    /* STATS */
+    .lp-stats {
+      display:flex; gap:56px; margin-top:64px;
+      opacity:0; animation:lpUp 0.9s 1.3s ease forwards;
+    }
+    .lp-stat { text-align:center; }
+    .lp-stat-n { display:block; font-size:2rem; font-weight:800; color:#c9a84c; line-height:1; }
+    .lp-stat-l { font-size:0.72rem; color:#7a9170; margin-top:5px; }
 
-      /* TICKER */
-      .lp-ticker-wrap {
-        position: relative;
-        z-index: 1;
-        overflow: hidden;
-        padding: 16px 0;
-        background: rgba(26, 107, 58, 0.06);
-        border-top: 1px solid rgba(26, 107, 58, 0.25);
-        border-bottom: 1px solid rgba(26, 107, 58, 0.25);
-      }
-      .lp-ticker {
-        display: flex;
-        gap: 70px;
-        width: max-content;
-        animation: lpTickerRun 40s linear infinite;
-        font-size: 1rem;
-        color: #c9a84c;
-      }
-      .lp-ticker-item::before {
-        content: "✦ ";
-        font-size: 0.65rem;
-      }
-      @keyframes lpTickerRun {
-        0% {
-          transform: translateX(0);
-        }
-        100% {
-          transform: translateX(-50%);
-        }
-      }
+    /* TICKER */
+    .lp-ticker-wrap {
+      position:relative; z-index:1;
+      overflow:hidden; padding:16px 0;
+      background:rgba(26,107,58,0.06);
+      border-top:1px solid rgba(26,107,58,0.25);
+      border-bottom:1px solid rgba(26,107,58,0.25);
+    }
+    .lp-ticker {
+      display:flex; gap:70px; width:max-content;
+      animation:lpTickerRun 40s linear infinite;
+      font-size:1rem; color:#c9a84c;
+    }
+    .lp-ticker-item::before { content:'✦ '; font-size:0.65rem; }
+    @keyframes lpTickerRun { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
 
-      /* FEATURES */
-      .lp-features {
-        position: relative;
-        z-index: 1;
-        padding: 90px 48px;
-      }
-      .lp-sec-tag {
-        text-align: center;
-        font-size: 0.7rem;
-        color: #c9a84c;
-        letter-spacing: 3px;
-        text-transform: uppercase;
-        margin-bottom: 10px;
-      }
-      .lp-sec-title {
-        text-align: center;
-        font-size: clamp(1.8rem, 4vw, 3rem);
-        font-weight: 800;
-        margin-bottom: 56px;
-      }
-      .lp-sec-title span {
-        color: #c9a84c;
-      }
+    /* FEATURES */
+    .lp-features {
+      position:relative; z-index:1;
+      padding:90px 48px;
+    }
+    .lp-sec-tag { text-align:center; font-size:0.7rem; color:#c9a84c; letter-spacing:3px; text-transform:uppercase; margin-bottom:10px; }
+    .lp-sec-title {
+      text-align:center; font-size:clamp(1.8rem,4vw,3rem); font-weight:800;
+      margin-bottom:56px;
+    }
+    .lp-sec-title span { color:#c9a84c; }
 
-      .lp-grid {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 20px;
-        max-width: 1060px;
-        margin: 0 auto;
-      }
-      @media (max-width: 768px) {
-        .lp-grid {
-          grid-template-columns: 1fr;
-        }
-        .lp-stats {
-          gap: 24px;
-        }
-        .lp-nav-links {
-          display: none;
-        }
-        .lp-features,
-        .lp-social-sec {
-          padding: 60px 20px;
-        }
-      }
+    .lp-grid {
+      display:grid; grid-template-columns:repeat(3,1fr); gap:20px;
+      max-width:1060px; margin:0 auto;
+    }
+    @media(max-width:768px){ .lp-grid{ grid-template-columns:1fr; } .lp-stats{gap:24px;} .lp-nav-links{display:none;} .lp-features,.lp-social-sec{padding:60px 20px;} }
 
-      .lp-card {
-        padding: 34px 28px;
-        background: rgba(26, 107, 58, 0.06);
-        border: 1px solid rgba(201, 168, 76, 0.15);
-        border-radius: 18px;
-        position: relative;
-        overflow: hidden;
-        transition:
-          transform 0.4s,
-          border-color 0.4s,
-          box-shadow 0.4s;
-      }
-      .lp-card::before {
-        content: "";
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 2px;
-        background: linear-gradient(90deg, transparent, #c9a84c, transparent);
-        opacity: 0;
-        transition: opacity 0.4s;
-      }
-      .lp-card:hover {
-        transform: translateY(-7px);
-        border-color: rgba(201, 168, 76, 0.35);
-        box-shadow: 0 20px 55px rgba(0, 0, 0, 0.45);
-      }
-      .lp-card:hover::before {
-        opacity: 1;
-      }
+    .lp-card {
+      padding:34px 28px;
+      background:rgba(26,107,58,0.06);
+      border:1px solid rgba(201,168,76,0.15);
+      border-radius:18px;
+      position:relative; overflow:hidden;
+      transition:transform 0.4s, border-color 0.4s, box-shadow 0.4s;
+    }
+    .lp-card::before {
+      content:''; position:absolute; top:0; left:0; right:0; height:2px;
+      background:linear-gradient(90deg,transparent,#c9a84c,transparent);
+      opacity:0; transition:opacity 0.4s;
+    }
+    .lp-card:hover { transform:translateY(-7px); border-color:rgba(201,168,76,0.35); box-shadow:0 20px 55px rgba(0,0,0,0.45); }
+    .lp-card:hover::before { opacity:1; }
 
-      .lp-card-icon {
-        width: 54px;
-        height: 54px;
-        background: rgba(201, 168, 76, 0.1);
-        border: 1px solid rgba(201, 168, 76, 0.2);
-        border-radius: 14px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.45rem;
-        margin-bottom: 18px;
-        transition:
-          transform 0.4s,
-          background 0.4s;
-      }
-      .lp-card:hover .lp-card-icon {
-        transform: scale(1.12) rotate(5deg);
-        background: rgba(201, 168, 76, 0.18);
-      }
-      .lp-card-title {
-        font-size: 1.1rem;
-        font-weight: 700;
-        margin-bottom: 9px;
-      }
-      .lp-card-desc {
-        font-size: 0.85rem;
-        color: #7a9170;
-        line-height: 1.8;
-      }
+    .lp-card-icon {
+      width:54px; height:54px;
+      background:rgba(201,168,76,0.1); border:1px solid rgba(201,168,76,0.2);
+      border-radius:14px;
+      display:flex; align-items:center; justify-content:center;
+      font-size:1.45rem; margin-bottom:18px;
+      transition:transform 0.4s, background 0.4s;
+    }
+    .lp-card:hover .lp-card-icon { transform:scale(1.12) rotate(5deg); background:rgba(201,168,76,0.18); }
+    .lp-card-title { font-size:1.1rem; font-weight:700; margin-bottom:9px; }
+    .lp-card-desc  { font-size:0.85rem; color:#7a9170; line-height:1.8; }
 
-      /* SOCIAL */
-      .lp-social-sec {
-        position: relative;
-        z-index: 1;
-        padding: 70px 48px 100px;
-        text-align: center;
-      }
-      .lp-social-box {
-        max-width: 720px;
-        margin: 36px auto 0;
-        background: rgba(26, 107, 58, 0.06);
-        border: 1px solid rgba(201, 168, 76, 0.15);
-        border-radius: 26px;
-        padding: 52px 44px;
-        position: relative;
-        overflow: hidden;
-      }
-      .lp-social-box::before {
-        content: "";
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 2px;
-        background: linear-gradient(
-          90deg,
-          transparent,
-          #c9a84c,
-          #2d9c57,
-          transparent
-        );
-      }
-      .lp-social-box::after {
-        content: "";
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        height: 2px;
-        background: linear-gradient(
-          90deg,
-          transparent,
-          #2d9c57,
-          #c9a84c,
-          transparent
-        );
-      }
-      .lp-social-sub {
-        color: #7a9170;
-        font-size: 0.88rem;
-        margin-bottom: 32px;
-        line-height: 1.8;
-      }
-      .lp-social-links {
-        display: flex;
-        justify-content: center;
-        gap: 12px;
-        flex-wrap: wrap;
-      }
-      .lp-sbtn {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 12px 22px;
-        background: rgba(255, 255, 255, 0.04);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: 100px;
-        text-decoration: none;
-        color: #edf2e8;
-        font-size: 0.83rem;
-        font-weight: 600;
-        font-family: inherit;
-        transition: all 0.3s;
-        cursor: pointer;
-      }
-      .lp-sbtn svg {
-        width: 16px;
-        height: 16px;
-        flex-shrink: 0;
-      }
-      .lp-sbtn:hover {
-        transform: translateY(-3px);
-      }
-      .lp-sbtn.fb:hover {
-        background: rgba(24, 119, 242, 0.12);
-        border-color: rgba(24, 119, 242, 0.4);
-        color: #1877f2;
-      }
-      .lp-sbtn.li:hover {
-        background: rgba(0, 119, 181, 0.12);
-        border-color: rgba(0, 119, 181, 0.4);
-        color: #0077b5;
-      }
-      .lp-sbtn.wa:hover {
-        background: rgba(37, 211, 102, 0.12);
-        border-color: rgba(37, 211, 102, 0.4);
-        color: #25d366;
-      }
-      .lp-sbtn.yt:hover {
-        background: rgba(255, 0, 0, 0.12);
-        border-color: rgba(255, 0, 0, 0.4);
-        color: #ff4444;
-      }
-      .lp-sbtn.ig:hover {
-        background: rgba(225, 48, 108, 0.1);
-        border-color: rgba(225, 48, 108, 0.4);
-        color: #e1306c;
-      }
-      .lp-sbtn.tt:hover {
-        background: rgba(0, 242, 234, 0.08);
-        border-color: rgba(0, 242, 234, 0.4);
-        color: #00f2ea;
-      }
-      .lp-sbtn.tw:hover {
-        background: rgba(29, 161, 242, 0.1);
-        border-color: rgba(29, 161, 242, 0.4);
-        color: #1da1f2;
-      }
-      .lp-sbtn.tg:hover {
-        background: rgba(0, 136, 204, 0.1);
-        border-color: rgba(0, 136, 204, 0.4);
-        color: #0088cc;
-      }
+    /* SOCIAL */
+    .lp-social-sec {
+      position:relative; z-index:1;
+      padding:70px 48px 100px;
+      text-align:center;
+    }
+    .lp-social-box {
+      max-width:720px; margin:36px auto 0;
+      background:rgba(26,107,58,0.06);
+      border:1px solid rgba(201,168,76,0.15);
+      border-radius:26px;
+      padding:52px 44px;
+      position:relative; overflow:hidden;
+    }
+    .lp-social-box::before {
+      content:''; position:absolute; top:0; left:0; right:0; height:2px;
+      background:linear-gradient(90deg,transparent,#c9a84c,#2d9c57,transparent);
+    }
+    .lp-social-box::after {
+      content:''; position:absolute; bottom:0; left:0; right:0; height:2px;
+      background:linear-gradient(90deg,transparent,#2d9c57,#c9a84c,transparent);
+    }
+    .lp-social-sub { color:#7a9170; font-size:0.88rem; margin-bottom:32px; line-height:1.8; }
+    .lp-social-links { display:flex; justify-content:center; gap:12px; flex-wrap:wrap; }
+    .lp-sbtn {
+      display:flex; align-items:center; gap:8px;
+      padding:12px 22px;
+      background:rgba(255,255,255,0.04);
+      border:1px solid rgba(255,255,255,0.08);
+      border-radius:100px;
+      text-decoration:none; color:#edf2e8;
+      font-size:0.83rem; font-weight:600; font-family:inherit;
+      transition:all 0.3s; cursor:pointer;
+    }
+    .lp-sbtn svg { width:16px; height:16px; flex-shrink:0; }
+    .lp-sbtn:hover { transform:translateY(-3px); }
+    .lp-sbtn.fb:hover { background:rgba(24,119,242,0.12); border-color:rgba(24,119,242,0.4); color:#1877f2; }
+    .lp-sbtn.li:hover { background:rgba(0,119,181,0.12); border-color:rgba(0,119,181,0.4); color:#0077b5; }
+    .lp-sbtn.wa:hover { background:rgba(37,211,102,0.12); border-color:rgba(37,211,102,0.4); color:#25d366; }
+    .lp-sbtn.yt:hover { background:rgba(255,0,0,0.12); border-color:rgba(255,0,0,0.4); color:#ff4444; }
+    .lp-sbtn.ig:hover { background:rgba(225,48,108,0.1); border-color:rgba(225,48,108,0.4); color:#e1306c; }
+    .lp-sbtn.tt:hover { background:rgba(0,242,234,0.08); border-color:rgba(0,242,234,0.4); color:#00f2ea; }
+    .lp-sbtn.tw:hover { background:rgba(29,161,242,0.1); border-color:rgba(29,161,242,0.4); color:#1da1f2; }
+    .lp-sbtn.tg:hover { background:rgba(0,136,204,0.1); border-color:rgba(0,136,204,0.4); color:#0088cc; }
 
-      /* FOOTER */
-      .lp-footer {
-        position: relative;
-        z-index: 1;
-        text-align: center;
-        padding: 28px;
-        border-top: 1px solid rgba(201, 168, 76, 0.12);
-        font-size: 0.76rem;
-        color: #7a9170;
-      }
-      .lp-footer span {
-        color: #2d9c57;
-      }
+    /* FOOTER */
+    .lp-footer {
+      position:relative; z-index:1;
+      text-align:center; padding:28px;
+      border-top:1px solid rgba(201,168,76,0.12);
+      font-size:0.76rem; color:#7a9170;
+    }
+    .lp-footer span { color:#2d9c57; }
 
-      @keyframes lpUp {
-        from {
-          opacity: 0;
-          transform: translateY(28px);
-        }
-        to {
-          opacity: 1;
-          transform: translateY(0);
-        }
-      }
-    </style>
+    @keyframes lpUp {
+      from { opacity:0; transform:translateY(28px); }
+      to   { opacity:1; transform:translateY(0); }
+    }
+  </style>
 
-    <div id="landingPage">
-      <div class="lp-bg"></div>
-      <div class="lp-pattern"></div>
+  <div id="landingPage">
+    <div class="lp-bg"></div>
+    <div class="lp-pattern"></div>
 
-      <!-- NAV -->
-      <nav class="lp-nav">
-        <div class="lp-logo">
-          <div class="lp-logo-icon">🌙</div>
-          <div>
-            <div class="lp-logo-name">Islam Reels</div>
-            <div class="lp-logo-sub">نور في كل لحظة</div>
-          </div>
-        </div>
-        <ul class="lp-nav-links">
-          <li><a href="#lp-features">المميزات</a></li>
-          <li><a href="#lp-social">تواصل معنا</a></li>
-        </ul>
-        <button class="lp-btn-enter" onclick="enterApp()">ادخل للتطبيق</button>
-      </nav>
-
-      <!-- HERO -->
-      <section class="lp-hero">
-        <div class="lp-bismillah">بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ</div>
-
-        <div class="lp-ornament">
-          <div class="lp-orn-line"></div>
-          <span class="lp-orn-star">✦ ✦ ✦</span>
-          <div class="lp-orn-line r"></div>
-        </div>
-
-        <div class="lp-badge">✨ &nbsp; ريلز قرآنية يومية</div>
-
-        <h1 class="lp-h1">
-          <span class="lp-line1">هذا العمل صدقة جارية للمسلمين </span>
-          <span class="lp-line2">فالدال على الخير كفاعله </span>
-        </h1>
-
-        <p class="lp-ayah">
-          ﴿ إِنَّ هَٰذَا الْقُرْآنَ يَهْدِي لِلَّتِي هِيَ أَقْوَمُ ﴾
-        </p>
-        <p class="lp-ayah-ref">— سورة الإسراء: ٩</p>
-
-        <div class="lp-cta">
-          <div class="lp-btn-ring">
-            <button class="lp-btn-main" onclick="enterApp()">
-              <span>📖</span>
-              <span>ادخل وابدأ الاستماع</span>
-              <span class="lp-arr">←</span>
-            </button>
-          </div>
-          <span class="lp-cta-note">مجاناً · بدون تسجيل · ابدأ فوراً</span>
-        </div>
-
-        <div class="lp-stats">
-          <div class="lp-stat">
-            <span class="lp-stat-n">+١٠٠٠</span>
-            <div class="lp-stat-l">ريل قرآني</div>
-          </div>
-          <div class="lp-stat">
-            <span class="lp-stat-n">١١٤</span>
-            <div class="lp-stat-l">سورة كاملة</div>
-          </div>
-          <div class="lp-stat">
-            <span class="lp-stat-n">+٥٠K</span>
-            <div class="lp-stat-l">متابع</div>
-          </div>
-          <div class="lp-stat">
-            <span class="lp-stat-n" id="lp-visit-count">...</span>
-            <div class="lp-stat-l">زيارة</div>
-          </div>
-        </div>
-      </section>
-
-      <!-- TICKER -->
-      <div class="lp-ticker-wrap">
-        <div class="lp-ticker">
-          <span class="lp-ticker-item"
-            >وَلَقَدْ يَسَّرْنَا الْقُرْآنَ لِلذِّكْرِ فَهَلْ مِن
-            مُّدَّكِرٍ</span
-          >
-          <span class="lp-ticker-item"
-            >إِنَّ الصَّلَاةَ كَانَتْ عَلَى الْمُؤْمِنِينَ كِتَابًا
-            مَّوْقُوتًا</span
-          >
-          <span class="lp-ticker-item"
-            >وَإِذَا قُرِئَ الْقُرْآنُ فَاسْتَمِعُوا لَهُ وَأَنصِتُوا</span
-          >
-          <span class="lp-ticker-item"
-            >الَّذِينَ آمَنُوا وَتَطْمَئِنُّ قُلُوبُهُم بِذِكْرِ اللَّهِ</span
-          >
-          <span class="lp-ticker-item"
-            >وَلَقَدْ يَسَّرْنَا الْقُرْآنَ لِلذِّكْرِ فَهَلْ مِن
-            مُّدَّكِرٍ</span
-          >
-          <span class="lp-ticker-item"
-            >إِنَّ الصَّلَاةَ كَانَتْ عَلَى الْمُؤْمِنِينَ كِتَابًا
-            مَّوْقُوتًا</span
-          >
-          <span class="lp-ticker-item"
-            >وَإِذَا قُرِئَ الْقُرْآنُ فَاسْتَمِعُوا لَهُ وَأَنصِتُوا</span
-          >
-          <span class="lp-ticker-item"
-            >الَّذِينَ آمَنُوا وَتَطْمَئِنُّ قُلُوبُهُم بِذِكْرِ اللَّهِ</span
-          >
+    <!-- NAV -->
+    <nav class="lp-nav">
+      <div class="lp-logo">
+        <div class="lp-logo-icon">🌙</div>
+        <div>
+          <div class="lp-logo-name">Islam Reels</div>
+          <div class="lp-logo-sub">نور في كل لحظة</div>
         </div>
       </div>
+      <ul class="lp-nav-links">
+        <li><a href="#lp-features">المميزات</a></li>
+        <li><a href="#lp-social">تواصل معنا</a></li>
+      </ul>
+      <button class="lp-btn-enter" onclick="enterApp()">ادخل للتطبيق</button>
+    </nav>
 
-      <!-- FEATURES -->
-      <section class="lp-features" id="lp-features">
-        <p class="lp-sec-tag">لماذا تختارنا</p>
-        <h2 class="lp-sec-title">مميزات تجعل <span>التدبر</span> أسهل</h2>
-        <div class="lp-grid">
-          <div class="lp-card">
-            <div class="lp-card-icon">🎙️</div>
-            <h3 class="lp-card-title">تلاوات بأجمل الأصوات</h3>
-            <p class="lp-card-desc">
-              استمع لكبار القرّاء — الشيخ مشاري، ياسر الدوسري، وأكثر من 7 قارئاً
-              مع اضافه المزيد
-            </p>
-          </div>
-          <div class="lp-card">
-            <div class="lp-card-icon">🎬</div>
-            <h3 class="lp-card-title">تصدير ريلز احترافي</h3>
-            <p class="lp-card-desc">
-              أنشئ ريلز قرآنية جاهزة للنشر على يوتيوب وانستغرام وتيك توك بضغطة
-              واحدة
-            </p>
-          </div>
-          <div class="lp-card">
-            <div class="lp-card-icon">🖼️</div>
-            <h3 class="lp-card-title">خلفيات إسلامية فاخرة</h3>
-            <p class="lp-card-desc">
-              مجموعة ضخمة من الخلفيات والتصاميم الإسلامية الاحترافية لتزيين
-              ريلزك
-            </p>
-          </div>
+    <!-- HERO -->
+    <section class="lp-hero">
+      <div class="lp-bismillah">بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ</div>
+
+      <div class="lp-ornament">
+        <div class="lp-orn-line"></div>
+        <span class="lp-orn-star">✦ ✦ ✦</span>
+        <div class="lp-orn-line r"></div>
+      </div>
+
+      <div class="lp-badge">✨ &nbsp; ريلز قرآنية يومية</div>
+
+      <h1 class="lp-h1">
+        <span class="lp-line1">هذا العمل صدقة جارية للمسلمين
+</span>
+        <span class="lp-line2">فالدال على الخير كفاعله
+</span>
+      </h1>
+
+      <p class="lp-ayah">﴿ إِنَّ هَٰذَا الْقُرْآنَ يَهْدِي لِلَّتِي هِيَ أَقْوَمُ ﴾</p>
+      <p class="lp-ayah-ref">— سورة الإسراء: ٩</p>
+
+      <div class="lp-cta">
+        <div class="lp-btn-ring">
+          <button class="lp-btn-main" onclick="enterApp()">
+            <span>📖</span>
+            <span>ادخل وابدأ الاستماع</span>
+            <span class="lp-arr">←</span>
+          </button>
         </div>
-      </section>
+        <span class="lp-cta-note">مجاناً · بدون تسجيل · ابدأ فوراً</span>
+      </div>
 
-      <!-- SOCIAL -->
-      <section class="lp-social-sec" id="lp-social">
-        <p class="lp-sec-tag">تواصل معنا</p>
-        <h2 class="lp-sec-title">تابعنا على <span>منصاتنا</span></h2>
-        <div class="lp-social-box">
-          <p class="lp-social-sub">
-            كن جزءاً من مجتمعنا الإيماني — تابع جديد الريلز القرآنية وشارك في
-            نشر كلام الله
-          </p>
-          <div class="lp-social-links">
-            <a
-              href="https://www.facebook.com/esllam.eldsoky/"
-              target="_blank"
-              class="lp-sbtn fb"
-            >
-              <svg viewBox="0 0 24 24" fill="currentColor">
-                <path
-                  d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"
-                />
-              </svg>
-              فيسبوك
-            </a>
-            <a
-              href="https://www.instagram.com/e_ro25"
-              target="_blank"
-              class="lp-sbtn ig"
-            >
-              <svg viewBox="0 0 24 24" fill="currentColor">
-                <path
-                  d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"
-                />
-              </svg>
-              انستغرام
-            </a>
-            <a
-              href="https://www.linkedin.com/in/eslam-eldsoky/"
-              target="_blank"
-              class="lp-sbtn li"
-            >
-              <svg viewBox="0 0 24 24" fill="currentColor">
-                <path
-                  d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"
-                />
-              </svg>
-              لينكدإن
-            </a>
-            <a
-              href="https://wa.me/201032561729"
-              target="_blank"
-              class="lp-sbtn wa"
-            >
-              <svg viewBox="0 0 24 24" fill="currentColor">
-                <path
-                  d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"
-                />
-              </svg>
-              واتساب
-            </a>
-          </div>
+      <div class="lp-stats">
+        <div class="lp-stat">
+          <span class="lp-stat-n">+١٠٠٠</span>
+          <div class="lp-stat-l">ريل قرآني</div>
         </div>
-      </section>
+        <div class="lp-stat">
+          <span class="lp-stat-n">١١٤</span>
+          <div class="lp-stat-l">سورة كاملة</div>
+        </div>
+        <div class="lp-stat">
+          <span class="lp-stat-n">+٥٠K</span>
+          <div class="lp-stat-l">متابع</div>
+        </div>
+        <div class="lp-stat">
+          <span class="lp-stat-n" id="lp-visit-count">...</span>
+          <div class="lp-stat-l">زيارة</div>
+        </div>
+      </div>
+    </section>
 
-      <!-- FOOTER -->
-      <footer class="lp-footer">
-        <p>
-          <span> Islam Reels </span> جميع الحقوق محفوظة © <span>١٤٤٧ هـ</span>
-        </p>
-      </footer>
+    <!-- TICKER -->
+    <div class="lp-ticker-wrap">
+      <div class="lp-ticker">
+        <span class="lp-ticker-item">وَلَقَدْ يَسَّرْنَا الْقُرْآنَ لِلذِّكْرِ فَهَلْ مِن مُّدَّكِرٍ</span>
+        <span class="lp-ticker-item">إِنَّ الصَّلَاةَ كَانَتْ عَلَى الْمُؤْمِنِينَ كِتَابًا مَّوْقُوتًا</span>
+        <span class="lp-ticker-item">وَإِذَا قُرِئَ الْقُرْآنُ فَاسْتَمِعُوا لَهُ وَأَنصِتُوا</span>
+        <span class="lp-ticker-item">الَّذِينَ آمَنُوا وَتَطْمَئِنُّ قُلُوبُهُم بِذِكْرِ اللَّهِ</span>
+        <span class="lp-ticker-item">وَلَقَدْ يَسَّرْنَا الْقُرْآنَ لِلذِّكْرِ فَهَلْ مِن مُّدَّكِرٍ</span>
+        <span class="lp-ticker-item">إِنَّ الصَّلَاةَ كَانَتْ عَلَى الْمُؤْمِنِينَ كِتَابًا مَّوْقُوتًا</span>
+        <span class="lp-ticker-item">وَإِذَا قُرِئَ الْقُرْآنُ فَاسْتَمِعُوا لَهُ وَأَنصِتُوا</span>
+        <span class="lp-ticker-item">الَّذِينَ آمَنُوا وَتَطْمَئِنُّ قُلُوبُهُم بِذِكْرِ اللَّهِ</span>
+      </div>
     </div>
 
-    <script>
-      function enterApp() {
-        const lp = document.getElementById("landingPage");
-        lp.classList.add("lp-hide");
-        setTimeout(() => {
-          lp.style.display = "none";
-        }, 720);
-      }
-    </script>
+    <!-- FEATURES -->
+    <section class="lp-features" id="lp-features">
+      <p class="lp-sec-tag">لماذا تختارنا</p>
+      <h2 class="lp-sec-title">مميزات تجعل <span>التدبر</span> أسهل</h2>
+      <div class="lp-grid">
+        <div class="lp-card">
+          <div class="lp-card-icon">🎙️</div>
+          <h3 class="lp-card-title">تلاوات بأجمل الأصوات</h3>
+          <p class="lp-card-desc"> استمع لكبار القرّاء — الشيخ مشاري، ياسر الدوسري، وأكثر من 7 قارئاً مع اضافه المزيد</p>
+        </div>
+        <div class="lp-card">
+          <div class="lp-card-icon">🎬</div>
+          <h3 class="lp-card-title">تصدير ريلز احترافي</h3>
+          <p class="lp-card-desc">أنشئ ريلز قرآنية جاهزة للنشر على يوتيوب وانستغرام وتيك توك بضغطة واحدة</p>
+        </div>
+        <div class="lp-card">
+          <div class="lp-card-icon">🖼️</div>
+          <h3 class="lp-card-title">خلفيات إسلامية فاخرة</h3>
+          <p class="lp-card-desc">مجموعة ضخمة من الخلفيات والتصاميم الإسلامية الاحترافية لتزيين ريلزك</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- SOCIAL -->
+    <section class="lp-social-sec" id="lp-social">
+      <p class="lp-sec-tag">تواصل معنا</p>
+      <h2 class="lp-sec-title">تابعنا على <span>منصاتنا</span></h2>
+      <div class="lp-social-box">
+        <p class="lp-social-sub">كن جزءاً من مجتمعنا الإيماني — تابع جديد الريلز القرآنية وشارك في نشر كلام الله</p>
+        <div class="lp-social-links">
+          <a href="https://www.facebook.com/esllam.eldsoky/" target="_blank" class="lp-sbtn fb">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+            فيسبوك
+          </a>
+          <a href="https://www.instagram.com/e_ro25" target="_blank" class="lp-sbtn ig">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
+            انستغرام
+          </a>
+          <a href="https://www.linkedin.com/in/eslam-eldsoky/" target="_blank" class="lp-sbtn li">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+            لينكدإن
+          </a>
+          <a href="https://wa.me/201032561729" target="_blank" class="lp-sbtn wa">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+            واتساب
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="lp-footer">
+      <p>Islam Reels · صُنع بـ ❤️ لنشر كلام الله · جميع الحقوق محفوظة © <span>١٤٤٧ هـ</span></p>
+    </footer>
+  </div>
+
+  <script>
+    function enterApp() {
+      const lp = document.getElementById('landingPage');
+      lp.classList.add('lp-hide');
+      setTimeout(() => { lp.style.display = 'none'; }, 720);
+    }
+  </script>
 
     <div class="app">
       <div class="top">
@@ -2672,9 +2184,7 @@
           <div class="tab" onclick="switchTab('bg')">🖼 الخلفيات</div>
         </div>
         <div id="sbar">اختر شيخاً وسورة للبدء</div>
-        <div id="visit-counter" title="إجمالي الزيارات">
-          👁 <span id="visit-count">0</span> زيارة
-        </div>
+        <div id="visit-counter" title="إجمالي الزيارات">👁 <span id="visit-count">0</span> زيارة</div>
       </div>
 
       <div class="main">
@@ -3566,52 +3076,18 @@
               </div>
             </div>
             <!-- جودة الفيديو + معدل الإطارات -->
-            <div style="display: flex; gap: 8px; margin-bottom: 10px">
-              <div style="flex: 1">
-                <div
-                  style="font-size: 10px; color: #6e8878; margin-bottom: 3px"
-                >
-                  جودة الفيديو
-                </div>
-                <select
-                  id="s-qual"
-                  style="
-                    width: 100%;
-                    background: #112016;
-                    border: 1px solid rgba(255, 255, 255, 0.1);
-                    border-radius: 6px;
-                    padding: 6px 8px;
-                    color: #e4b55a;
-                    font-size: 12px;
-                    font-family: &quot;Cairo&quot;, sans-serif;
-                    box-sizing: border-box;
-                  "
-                >
+            <div style="display:flex;gap:8px;margin-bottom:10px;">
+              <div style="flex:1;">
+                <div style="font-size:10px;color:#6e8878;margin-bottom:3px;">جودة الفيديو</div>
+                <select id="s-qual" style="width:100%;background:#112016;border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:6px 8px;color:#e4b55a;font-size:12px;font-family:'Cairo',sans-serif;box-sizing:border-box;">
                   <option value="800000">عالية جداً (4 Mbps)</option>
                   <option value="500000" selected>عالية (2.5 Mbps)</option>
                   <option value="300000">متوسطة (1.5 Mbps)</option>
                 </select>
               </div>
-              <div style="flex: 1">
-                <div
-                  style="font-size: 10px; color: #6e8878; margin-bottom: 3px"
-                >
-                  معدل الإطارات
-                </div>
-                <select
-                  id="s-fps"
-                  style="
-                    width: 100%;
-                    background: #112016;
-                    border: 1px solid rgba(255, 255, 255, 0.1);
-                    border-radius: 6px;
-                    padding: 6px 8px;
-                    color: #e4b55a;
-                    font-size: 12px;
-                    font-family: &quot;Cairo&quot;, sans-serif;
-                    box-sizing: border-box;
-                  "
-                >
+              <div style="flex:1;">
+                <div style="font-size:10px;color:#6e8878;margin-bottom:3px;">معدل الإطارات</div>
+                <select id="s-fps" style="width:100%;background:#112016;border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:6px 8px;color:#e4b55a;font-size:12px;font-family:'Cairo',sans-serif;box-sizing:border-box;">
                   <option value="30" selected>30 fps (ريلز)</option>
                   <option value="25">25 fps</option>
                   <option value="60">60 fps</option>
@@ -4021,7 +3497,7 @@
       }
 
       const canvas = document.createElement("canvas");
-      canvas.width = 540; // 540×960 — يتغيّر لو المستخدم اختار preset تاني
+      canvas.width = 540;   // 540×960 — يتغيّر لو المستخدم اختار preset تاني
       canvas.height = 960;
       const ctx = canvas.getContext("2d", { alpha: false }); // alpha:false يسرّع compositing
       let drawLoopActive = false;
@@ -4577,55 +4053,47 @@
       }
 
       /* ── iOS detection (stronger) ──────────────────────────────── */
-      const _isIOS =
-        /iP(hone|od|ad)/.test(navigator.userAgent) ||
-        (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1) ||
+      const _isIOS = /iP(hone|od|ad)/.test(navigator.userAgent) ||
+        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) ||
         (/Mac/.test(navigator.platform) && navigator.maxTouchPoints > 0) ||
-        (typeof window.MSStream === "undefined" &&
+        (typeof window.MSStream === 'undefined' &&
           /iPad|iPhone|iPod/.test(navigator.userAgent)) ||
-        (navigator.userAgent.includes("Safari") &&
-          !navigator.userAgent.includes("Chrome") &&
+        (navigator.userAgent.includes('Safari') &&
+          !navigator.userAgent.includes('Chrome') &&
           navigator.maxTouchPoints > 1);
 
       /* ── showVideoPopup: popup تصدير مع مشاركة اجتماعية ──────────── */
       function showVideoPopup(blob, filename) {
-        const url = URL.createObjectURL(blob);
-        const mb = (blob.size / 1024 / 1024).toFixed(1);
-        const isWebM = blob.type === "video/webm" || filename.endsWith(".webm");
-        const existing = document.getElementById("_videoPopupOv");
+        const url    = URL.createObjectURL(blob);
+        const mb     = (blob.size / 1024 / 1024).toFixed(1);
+        const isWebM = blob.type === 'video/webm' || filename.endsWith('.webm');
+        const existing = document.getElementById('_videoPopupOv');
         if (existing) existing.remove();
 
-        const ov = document.createElement("div");
-        ov.id = "_videoPopupOv";
+        const ov = document.createElement('div');
+        ov.id = '_videoPopupOv';
         ov.style.cssText =
-          "position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.92);" +
-          "display:flex;align-items:flex-start;justify-content:center;" +
-          "padding:12px;overflow-y:auto;-webkit-overflow-scrolling:touch;";
+          'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.92);' +
+          'display:flex;align-items:flex-start;justify-content:center;' +
+          'padding:12px;overflow-y:auto;-webkit-overflow-scrolling:touch;';
 
-        const canShare = !!(
-          navigator.canShare &&
-          navigator.canShare({
-            files: [new File([blob], filename, { type: blob.type })],
-          })
-        );
+        const canShare = !!(navigator.canShare &&
+          navigator.canShare({ files: [new File([blob], filename, { type: blob.type })] }));
 
         /* زر تحويل WebM → MP4 على iOS */
-        const convertBtn =
-          _isIOS && isWebM
-            ? `
+        const convertBtn = (_isIOS && isWebM) ? `
           <button id="_popupConvertBtn"
             style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;
                    background:linear-gradient(135deg,#1a3a5c,#3a7ab5);color:#fff;border:none;
                    padding:12px 16px;border-radius:12px;font-size:14px;font-weight:700;
                    cursor:pointer;font-family:'Cairo',sans-serif;margin-bottom:8px;">
             <span>🔄</span> تحويل إلى MP4
-          </button>`
-            : "";
+          </button>` : '';
 
         /* أيقونات SVG للشبكات */
         const icWhatsapp = `<svg width="22" height="22" viewBox="0 0 32 32" fill="currentColor"><path d="M16 3C9.373 3 4 8.373 4 15c0 2.385.668 4.61 1.832 6.51L4 29l7.697-1.808A12.94 12.94 0 0016 28c6.627 0 12-5.373 12-12S22.627 3 16 3zm0 2c5.523 0 10 4.477 10 10s-4.477 10-10 10a9.95 9.95 0 01-5.015-1.352l-.36-.214-4.57 1.074 1.017-4.456-.234-.373A9.95 9.95 0 016 15c0-5.523 4.477-10 10-10zm-3.09 5.5c-.23 0-.6.086-.916.43-.315.343-1.203 1.175-1.203 2.866 0 1.692 1.23 3.326 1.402 3.556.172.23 2.396 3.807 5.9 5.188 2.927 1.148 3.506.92 4.138.863.63-.058 2.033-.832 2.32-1.635.287-.803.287-1.49.2-1.635-.086-.143-.316-.23-.66-.402-.344-.172-2.033-1.003-2.348-1.118-.316-.115-.547-.172-.776.172-.23.344-.888 1.118-1.088 1.348-.2.23-.4.258-.744.086-.344-.172-1.453-.535-2.768-1.708-1.022-.912-1.713-2.038-1.913-2.382-.2-.344-.022-.53.15-.7.155-.154.344-.402.516-.603.172-.2.23-.344.344-.574.115-.23.058-.43-.029-.603-.086-.172-.763-1.876-1.062-2.565-.273-.644-.555-.557-.763-.567l-.65-.012z"/></svg>`;
-        const icTelegram = `<svg width="22" height="22" viewBox="0 0 32 32" fill="currentColor"><path d="M16 3C9.373 3 4 8.373 4 15c0 6.628 5.373 12 12 12s12-5.372 12-12c0-6.627-5.373-12-12-12zm5.894 8.221l-2.02 9.52c-.149.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12l-6.871 4.326-2.962-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.537-.194 1.006.131.883.7z"/></svg>`;
-        const icFacebook = `<svg width="22" height="22" viewBox="0 0 32 32" fill="currentColor"><path d="M16 3C9.373 3 4 8.373 4 15c0 5.99 4.388 10.954 10.125 11.854V18.89h-3.047V15h3.047v-2.647c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H19.83c-1.491 0-1.956.925-1.956 1.874V15h3.328l-.532 3.89h-2.796v7.964C23.612 25.954 28 20.99 28 15c0-6.627-5.373-12-12-12z"/></svg>`;
+        const icTelegram  = `<svg width="22" height="22" viewBox="0 0 32 32" fill="currentColor"><path d="M16 3C9.373 3 4 8.373 4 15c0 6.628 5.373 12 12 12s12-5.372 12-12c0-6.627-5.373-12-12-12zm5.894 8.221l-2.02 9.52c-.149.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12l-6.871 4.326-2.962-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.537-.194 1.006.131.883.7z"/></svg>`;
+        const icFacebook  = `<svg width="22" height="22" viewBox="0 0 32 32" fill="currentColor"><path d="M16 3C9.373 3 4 8.373 4 15c0 5.99 4.388 10.954 10.125 11.854V18.89h-3.047V15h3.047v-2.647c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H19.83c-1.491 0-1.956.925-1.956 1.874V15h3.328l-.532 3.89h-2.796v7.964C23.612 25.954 28 20.99 28 15c0-6.627-5.373-12-12-12z"/></svg>`;
         const icInstagram = `<svg width="22" height="22" viewBox="0 0 32 32" fill="currentColor"><path d="M16 6.4c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 3.677a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM16 20a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>`;
 
         /* نص تعليمات حسب الشبكة */
@@ -4647,7 +4115,7 @@
               الفيديو جاهز! ✨
             </div>
             <div style="font-size:11px;color:#6e8878;margin-bottom:12px;">
-              ${mb} MB · ${isWebM ? "WebM" : "MP4"}
+              ${mb} MB · ${isWebM ? 'WebM' : 'MP4'}
             </div>
 
             <!-- مشغّل -->
@@ -4659,17 +4127,14 @@
             ${convertBtn}
 
             <!-- زر تنزيل / Web Share -->
-            ${
-              canShare
-                ? `
+            ${canShare ? `
             <button id="_popupShareBtn"
               style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;
                      background:linear-gradient(135deg,#1a5c35,#3ea066);color:#fff;border:none;
                      padding:12px 16px;border-radius:12px;font-size:15px;font-weight:700;
                      cursor:pointer;font-family:'Cairo',sans-serif;margin-bottom:10px;">
               <span>⬆️</span> حفظ / مشاركة
-            </button>`
-                : `
+            </button>` : `
             <a href="${url}" download="${filename}"
               style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;
                      background:linear-gradient(135deg,#1a5c35,#3ea066);color:#fff;
@@ -4677,8 +4142,7 @@
                      font-size:15px;font-weight:700;font-family:'Cairo',sans-serif;
                      margin-bottom:10px;">
               <span>⬇️</span> تنزيل الفيديو
-            </a>`
-            }
+            </a>`}
 
             <!-- ── شارك على ── -->
             <div style="font-size:11px;color:#6e8878;margin-bottom:8px;text-align:center;">
@@ -4760,14 +4224,13 @@
         async function _tryWebShare() {
           try {
             const file = new File([blob], filename, { type: blob.type });
-            await navigator.share({ files: [file], title: "Islam Reels" });
+            await navigator.share({ files: [file], title: 'Islam Reels' });
             return true;
-          } catch (e) {
-            if (e.name !== "AbortError") {
+          } catch(e) {
+            if (e.name !== 'AbortError') {
               // fallback: تنزيل مباشر
-              const a = document.createElement("a");
-              a.href = url;
-              a.download = filename;
+              const a = document.createElement('a');
+              a.href = url; a.download = filename;
               a.click();
             }
             return false;
@@ -4776,22 +4239,18 @@
 
         /* ── helper: إظهار تلميح ── */
         function _note(msg, color) {
-          const el = ov.querySelector("#_shareNote");
-          if (el) {
-            el.textContent = msg;
-            el.style.color = color || "#6e8878";
-          }
+          const el = ov.querySelector('#_shareNote');
+          if (el) { el.textContent = msg; el.style.color = color || '#6e8878'; }
         }
 
         /* ── زر حفظ / Web Share ── */
         if (canShare) {
-          ov.querySelector("#_popupShareBtn").onclick = () => _tryWebShare();
+          ov.querySelector('#_popupShareBtn').onclick = () => _tryWebShare();
         }
 
         /* ── إغلاق ── */
-        ov.querySelector("#_popupCloseBtn").onclick = () => {
-          ov.remove();
-          URL.revokeObjectURL(url);
+        ov.querySelector('#_popupCloseBtn').onclick = () => {
+          ov.remove(); URL.revokeObjectURL(url);
         };
 
         /* ══════════════════════════════════════════════════
@@ -4802,154 +4261,105 @@
         ══════════════════════════════════════════════════ */
 
         /* واتساب */
-        ov.querySelector("#_shareWA").onclick = async () => {
+        ov.querySelector('#_shareWA').onclick = async () => {
           if (canShare) {
-            _note("سيُفتح Share Sheet — اختر واتساب من القائمة", "#25d366");
+            _note('سيُفتح Share Sheet — اختر واتساب من القائمة', '#25d366');
             await _tryWebShare();
           } else {
             // تنزيل + فتح واتساب ويب
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = filename;
-            a.click();
-            _note("✅ تم التنزيل — افتح واتساب وشارك الفيديو", "#25d366");
-            setTimeout(
-              () => window.open("https://web.whatsapp.com", "_blank"),
-              1200,
-            );
+            const a = document.createElement('a'); a.href = url; a.download = filename; a.click();
+            _note('✅ تم التنزيل — افتح واتساب وشارك الفيديو', '#25d366');
+            setTimeout(() => window.open('https://web.whatsapp.com', '_blank'), 1200);
           }
         };
 
         /* تيليجرام */
-        ov.querySelector("#_shareTG").onclick = async () => {
+        ov.querySelector('#_shareTG').onclick = async () => {
           if (canShare) {
-            _note("سيُفتح Share Sheet — اختر تيليجرام من القائمة", "#29b6f6");
+            _note('سيُفتح Share Sheet — اختر تيليجرام من القائمة', '#29b6f6');
             await _tryWebShare();
           } else {
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = filename;
-            a.click();
-            _note("✅ تم التنزيل — افتح تيليجرام وشارك الفيديو", "#29b6f6");
-            setTimeout(() => window.open("https://t.me", "_blank"), 1200);
+            const a = document.createElement('a'); a.href = url; a.download = filename; a.click();
+            _note('✅ تم التنزيل — افتح تيليجرام وشارك الفيديو', '#29b6f6');
+            setTimeout(() => window.open('https://t.me', '_blank'), 1200);
           }
         };
 
         /* فيسبوك — الفيديو يحتاج رفع يدوي (قيود API) */
-        ov.querySelector("#_shareFB").onclick = async () => {
+        ov.querySelector('#_shareFB').onclick = async () => {
           if (canShare) {
-            _note("سيُفتح Share Sheet — اختر فيسبوك من القائمة", "#4267b2");
+            _note('سيُفتح Share Sheet — اختر فيسبوك من القائمة', '#4267b2');
             await _tryWebShare();
           } else {
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = filename;
-            a.click();
-            _note("✅ تم التنزيل — ارفع الفيديو على فيسبوك يدوياً", "#4267b2");
-            setTimeout(
-              () => window.open("https://www.facebook.com", "_blank"),
-              1200,
-            );
+            const a = document.createElement('a'); a.href = url; a.download = filename; a.click();
+            _note('✅ تم التنزيل — ارفع الفيديو على فيسبوك يدوياً', '#4267b2');
+            setTimeout(() => window.open('https://www.facebook.com', '_blank'), 1200);
           }
         };
 
         /* انستجرام — لا يدعم مشاركة الفيديو عبر URL، تنزيل فقط */
-        ov.querySelector("#_shareIG").onclick = async () => {
+        ov.querySelector('#_shareIG').onclick = async () => {
           if (canShare) {
-            _note("سيُفتح Share Sheet — اختر انستجرام من القائمة", "#e1306c");
+            _note('سيُفتح Share Sheet — اختر انستجرام من القائمة', '#e1306c');
             await _tryWebShare();
           } else {
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = filename;
-            a.click();
-            _note("✅ تم التنزيل — افتح انستجرام وارفع الريل", "#e1306c");
+            const a = document.createElement('a'); a.href = url; a.download = filename; a.click();
+            _note('✅ تم التنزيل — افتح انستجرام وارفع الريل', '#e1306c');
           }
         };
 
         /* ── تحويل WebM → MP4 (iOS) ── */
         if (_isIOS && isWebM) {
-          const cvBtn = ov.querySelector("#_popupConvertBtn");
-          if (cvBtn)
-            cvBtn.onclick = async () => {
-              cvBtn.disabled = true;
-              cvBtn.style.opacity = "0.6";
-              cvBtn.innerHTML = "<span>⏳</span> جارٍ تحميل FFmpeg...";
+          const cvBtn = ov.querySelector('#_popupConvertBtn');
+          if (cvBtn) cvBtn.onclick = async () => {
+            cvBtn.disabled = true;
+            cvBtn.style.opacity = '0.6';
+            cvBtn.innerHTML = '<span>⏳</span> جارٍ تحميل FFmpeg...';
 
-              const logLines = [];
-              try {
-                const ffLoaded = await _loadFFmpeg((msg) => logLines.push(msg));
-                if (!ffLoaded || !window._ffmpegInst)
-                  throw new Error("FFmpeg failed to load");
+            const logLines = [];
+            try {
+              const ffLoaded = await _loadFFmpeg(msg => logLines.push(msg));
+              if (!ffLoaded || !window._ffmpegInst) throw new Error('FFmpeg failed to load');
 
-                const ff = window._ffmpegInst;
-                cvBtn.innerHTML =
-                  '<span>⚙️</span> <span id="_cvPct">0%</span> جارٍ التحويل...';
+              const ff = window._ffmpegInst;
+              cvBtn.innerHTML = '<span>⚙️</span> <span id="_cvPct">0%</span> جارٍ التحويل...';
 
-                ff.on("progress", ({ progress }) => {
-                  const el = document.getElementById("_cvPct");
-                  if (el && progress >= 0)
-                    el.textContent =
-                      Math.round(Math.min(progress, 1) * 100) + "%";
-                });
+              ff.on('progress', ({ progress }) => {
+                const el = document.getElementById('_cvPct');
+                if (el && progress >= 0) el.textContent = Math.round(Math.min(progress,1)*100)+'%';
+              });
 
-                const inData = new Uint8Array(await blob.arrayBuffer());
-                await ff.writeFile("input.webm", inData);
+              const inData = new Uint8Array(await blob.arrayBuffer());
+              await ff.writeFile('input.webm', inData);
 
-                const ret = await ff.exec([
-                  "-i",
-                  "input.webm",
-                  "-c:v",
-                  "libx264",
-                  "-profile:v",
-                  "baseline",
-                  "-level",
-                  "3.0",
-                  "-pix_fmt",
-                  "yuv420p",
-                  "-c:a",
-                  "aac",
-                  "-b:a",
-                  "128k",
-                  "-movflags",
-                  "+faststart",
-                  "-preset",
-                  "ultrafast",
-                  "-y",
-                  "output.mp4",
-                ]);
+              const ret = await ff.exec([
+                '-i','input.webm','-c:v','libx264','-profile:v','baseline',
+                '-level','3.0','-pix_fmt','yuv420p','-c:a','aac',
+                '-b:a','128k','-movflags','+faststart','-preset','ultrafast','-y','output.mp4'
+              ]);
 
-                if (ret !== 0) throw new Error(`FFmpeg exit ${ret}`);
-                const outData = await ff.readFile("output.mp4");
-                if (!outData || outData.byteLength < 1000)
-                  throw new Error("output empty");
-                const mp4Blob = new Blob([outData.buffer], {
-                  type: "video/mp4",
-                });
-                await ff.deleteFile("input.webm").catch(() => {});
-                await ff.deleteFile("output.mp4").catch(() => {});
+              if (ret !== 0) throw new Error(`FFmpeg exit ${ret}`);
+              const outData = await ff.readFile('output.mp4');
+              if (!outData || outData.byteLength < 1000) throw new Error('output empty');
+              const mp4Blob = new Blob([outData.buffer], { type: 'video/mp4' });
+              await ff.deleteFile('input.webm').catch(()=>{});
+              await ff.deleteFile('output.mp4').catch(()=>{});
 
-                ov.remove();
-                URL.revokeObjectURL(url);
-                showVideoPopup(mp4Blob, filename.replace(".webm", ".mp4"));
-              } catch (e) {
-                console.error("Conversion error:", e, logLines.join("\n"));
-                cvBtn.disabled = false;
-                cvBtn.style.opacity = "1";
-                cvBtn.innerHTML = "<span>❌</span> فشل التحويل — حاول مرة أخرى";
-                setTimeout(() => {
-                  cvBtn.innerHTML = "<span>🔄</span> تحويل إلى MP4";
-                }, 4000);
-              }
-            };
+              ov.remove(); URL.revokeObjectURL(url);
+              showVideoPopup(mp4Blob, filename.replace('.webm', '.mp4'));
+
+            } catch(e) {
+              console.error('Conversion error:', e, logLines.join('\n'));
+              cvBtn.disabled = false; cvBtn.style.opacity = '1';
+              cvBtn.innerHTML = '<span>❌</span> فشل التحويل — حاول مرة أخرى';
+              setTimeout(() => { cvBtn.innerHTML = '<span>🔄</span> تحويل إلى MP4'; }, 4000);
+            }
+          };
         }
 
         /* إغلاق بالنقر خارج البطاقة */
-        ov.addEventListener("click", (e) => {
-          if (e.target === ov) {
-            ov.remove();
-            URL.revokeObjectURL(url);
-          }
+        ov.addEventListener('click', e => {
+          if (e.target === ov) { ov.remove(); URL.revokeObjectURL(url); }
         });
 
         setTimeout(() => URL.revokeObjectURL(url), 600000); // 10 دقائق
@@ -4995,52 +4405,44 @@
           await fetchWordTiming(sn, exportAyahs[0]).catch(() => {});
         const total = exportAyahs.length;
         let loaded = 0;
-        return Promise.all(
-          exportAyahs.map(async (ayahN) => {
-            const urls = ayahUrls(S.sh, sn, ayahN);
-            let buf = null;
-            for (const url of urls) {
-              try {
-                const r = await fetch(url, { mode: "cors" });
-                if (!r.ok) continue;
-                buf = await expCtx.decodeAudioData(await r.arrayBuffer());
-                break;
-              } catch (e) {}
-            }
-            if (!buf)
-              throw Object.assign(new Error("فشل تحميل آية " + ayahN), {
-                ayahN,
-              });
-            const [arRes, segs, qdcW] = await Promise.all([
-              fetch(
-                "https://api.alquran.cloud/v1/ayah/" + sn + ":" + ayahN + "/ar",
-              ).then((r) => r.json()),
-              fetchWordTiming(sn, ayahN),
-              S.sh && S.sh.qdcId
-                ? fetchQdcWords(sn, ayahN)
-                : Promise.resolve(null),
-            ]);
-            const arText =
-              sn === 1
-                ? arRes.data?.text || ""
-                : stripBasmala(arRes.data?.text || "");
-            loaded++;
-            xShow(
-              loaded,
-              total,
-              "تحميل " + S.surah.ar + " — آية " + arN(ayahN),
-            );
-            setSbar("⏳ تحميل (" + loaded + "/" + total + ")...", "#c9973a");
-            return {
-              ayahN,
-              buf,
-              arText,
-              wordList: qdcW?.length ? qdcW : null,
-              ref: "﴿ " + S.surah.ar + " : " + arN(ayahN) + " ﴾",
-              segs,
-            };
-          }),
-        );
+
+        const _loadOne = async (ayahN) => {
+          const urls = ayahUrls(S.sh, sn, ayahN);
+          let buf = null;
+          for (const url of urls) {
+            try {
+              const r = await fetch(url, { mode: "cors" });
+              if (!r.ok) continue;
+              buf = await expCtx.decodeAudioData(await r.arrayBuffer());
+              break;
+            } catch (e) {}
+          }
+          if (!buf)
+            throw Object.assign(new Error("فشل تحميل آية " + ayahN), { ayahN });
+          const [arRes, segs, qdcW] = await Promise.all([
+            fetch("https://api.alquran.cloud/v1/ayah/" + sn + ":" + ayahN + "/ar").then((r) => r.json()),
+            fetchWordTiming(sn, ayahN),
+            S.sh && S.sh.qdcId ? fetchQdcWords(sn, ayahN) : Promise.resolve(null),
+          ]);
+          const arText = sn === 1 ? arRes.data?.text || "" : stripBasmala(arRes.data?.text || "");
+          loaded++;
+          xShow(loaded, total, "تحميل " + S.surah.ar + " — آية " + arN(ayahN));
+          setSbar("⏳ تحميل (" + loaded + "/" + total + ")...", "#c9973a");
+          return {
+            ayahN, buf, arText,
+            wordList: qdcW?.length ? qdcW : null,
+            ref: "﴿ " + S.surah.ar + " : " + arN(ayahN) + " ﴾",
+            segs,
+          };
+        };
+
+        /* iOS: تحميل بالترتيب لتوفير الذاكرة — غير iOS: بالتوازي */
+        if (_isIOS) {
+          const results = [];
+          for (const ayahN of exportAyahs) results.push(await _loadOne(ayahN));
+          return results;
+        }
+        return Promise.all(exportAyahs.map(_loadOne));
       }
 
       function _prepVerse(vd, exportAyahs) {
@@ -5115,19 +4517,11 @@
             ? EXPORT_PRESETS[currentPreset]
             : QUALITY_PRESETS[currentQuality] || QUALITY_PRESETS.hd;
         // اقرأ الجودة والـ fps من الـ dropdowns
-        const _selBitrate = document.getElementById("s-qual")
-          ? parseInt(document.getElementById("s-qual").value)
-          : 2_500_000;
-        const _selFps = document.getElementById("s-fps")
-          ? parseInt(document.getElementById("s-fps").value)
-          : 30;
-        const qp = {
-          ..._baseQp,
-          w: canvas.width,
-          h: canvas.height,
-          bitrate: _selBitrate,
-          fps: _selFps,
-        };
+        const _selBitrate = document.getElementById('s-qual') ? parseInt(document.getElementById('s-qual').value) : 2_500_000;
+        let _selFps = document.getElementById('s-fps') ? parseInt(document.getElementById('s-fps').value) : 30;
+        /* iOS: تقليل FPS تلقائياً لتحسين الأداء */
+        if (_isIOS && _selFps > 24) _selFps = 24;
+        const qp = { ..._baseQp, w: canvas.width, h: canvas.height, bitrate: _selBitrate, fps: _selFps };
         // لا نغيّر canvas.width / canvas.height — نصدّر بالحجم الحالي
         _gradCache = null;
         _mtCache.clear();
@@ -5190,12 +4584,7 @@
 
         // نجرب codecs — Baseline H.264 أولاً (أوسع دعم على iOS/Android)
         let codecOk = false;
-        for (const codec of [
-          "avc1.42001e",
-          "avc1.42001f",
-          "avc1.4d0029",
-          "avc1.640033",
-        ]) {
+        for (const codec of ["avc1.42001e", "avc1.42001f", "avc1.4d0029", "avc1.640033"]) {
           try {
             const s = await VideoEncoder.isConfigSupported({
               codec,
@@ -5243,25 +4632,17 @@
 
         // بناء audio arrays — SR الحقيقي من الـ buffers مع ثانيتين padding
         const actualSR = buffers[0].sampleRate;
-        const actualTotalSamp =
-          buffers.reduce((s, b) => s + b.length, 0) + actualSR * 2;
+        const actualTotalSamp = buffers.reduce((s, b) => s + b.length, 0) + (actualSR * 2);
         const aL = new Float32Array(actualTotalSamp),
           aR = new Float32Array(actualTotalSamp);
         let aOff = 0;
         for (const buf of buffers) {
           aL.set(buf.getChannelData(0), aOff);
-          aR.set(
-            buf.numberOfChannels > 1
-              ? buf.getChannelData(1)
-              : buf.getChannelData(0),
-            aOff,
-          );
+          aR.set(buf.numberOfChannels > 1 ? buf.getChannelData(1) : buf.getChannelData(0), aOff);
           aOff += buf.length;
         }
         // نعمل resample لـ 44100 لو الـ buffer بـ sampleRate مختلف
-        let finalL = aL,
-          finalR = aR,
-          totalSamp = actualTotalSamp;
+        let finalL = aL, finalR = aR, totalSamp = actualTotalSamp;
         if (actualSR !== SR) {
           const ratio = SR / actualSR;
           totalSamp = Math.round(actualTotalSamp * ratio);
@@ -5341,11 +4722,13 @@
 
             _setProgress(_expElapsedBefore + f / FPS);
 
-            // ← Queue Drain Guard: ننتظر لو الـ queue امتلأ (حد 6 بدل 10)
-            while (videoEnc.encodeQueueSize > 6) {
-              await new Promise((r) => setTimeout(r, 4));
+            // ← Queue Drain Guard: على iOS حد 3، غير iOS حد 6
+            const _qLimit = _isIOS ? 3 : 6;
+            while (videoEnc.encodeQueueSize > _qLimit) {
+              await new Promise((r) => setTimeout(r, _isIOS ? 8 : 4));
             }
-            if (f % 4 === 0) await new Promise((r) => setTimeout(r, 0));
+            const _yieldMp4 = _isIOS ? 2 : 4;
+            if (f % _yieldMp4 === 0) await new Promise((r) => setTimeout(r, 0));
           }
 
           if (hlActive >= 0) {
@@ -5366,23 +4749,15 @@
             if (audioSent < totalSamp) {
               const aLen = Math.min(sampPerFrame, totalSamp - audioSent);
               const planar = new Float32Array(aLen * 2);
-              audioEnc.encode(
-                new AudioData({
-                  format: "f32-planar",
-                  sampleRate: SR,
-                  numberOfFrames: aLen,
-                  numberOfChannels: 2,
-                  timestamp: Math.round((audioSent / SR) * 1e6),
-                  data: planar,
-                }),
-              );
+              audioEnc.encode(new AudioData({
+                format: "f32-planar", sampleRate: SR,
+                numberOfFrames: aLen, numberOfChannels: 2,
+                timestamp: Math.round((audioSent / SR) * 1e6), data: planar,
+              }));
               audioSent += aLen;
             }
             const ts = globalFrame * frameDurUs;
-            const vf = new VideoFrame(canvas, {
-              timestamp: ts,
-              duration: frameDurUs,
-            });
+            const vf = new VideoFrame(canvas, { timestamp: ts, duration: frameDurUs });
             videoEnc.encode(vf, { keyFrame: false });
             vf.close();
             globalFrame++;
@@ -5419,7 +4794,7 @@
           const drainStart = Date.now();
           while (videoEnc.encodeQueueSize > 0) {
             if (Date.now() - drainStart > 8000) {
-              console.warn("Queue drain timeout — proceeding with flush");
+              console.warn('Queue drain timeout — proceeding with flush');
               break;
             }
             await new Promise((r) => setTimeout(r, 8));
@@ -5433,20 +4808,11 @@
           const mb = (blob.size / 1024 / 1024).toFixed(1);
           if (_isIOS) {
             // iOS: popup مخصص مع Web Share API
-            _downloadBlob(
-              blob,
-              "Islam-Reels-" + (S.surah?.ar || "قرآن") + ".mp4",
-            );
+            _downloadBlob(blob, "Islam-Reels-" + (S.surah?.ar || "قرآن") + ".mp4");
           } else {
             // غير iOS: popup الفيديو + تنزيل تلقائي
-            showVideoPopup(
-              blob,
-              "Islam-Reels-" + (S.surah?.ar || "قرآن") + ".mp4",
-            );
-            _downloadBlob(
-              blob,
-              "Islam-Reels-" + (S.surah?.ar || "قرآن") + ".mp4",
-            );
+            showVideoPopup(blob, "Islam-Reels-" + (S.surah?.ar || "قرآن") + ".mp4");
+            _downloadBlob(blob, "Islam-Reels-" + (S.surah?.ar || "قرآن") + ".mp4");
           }
           _setProgress(_expTotalDur);
           _finishExport(expCtx, "✅ تم حفظ MP4 — " + mb + " MB ✨", "#5ec285");
@@ -5509,12 +4875,16 @@
           for (let f = 0; f < ayahFrames; f++) {
             if (_expAbort) break;
             hlActive = _drawVerseFrame(vd, f, msPerFrame, hlActive);
+            /* iOS: جودة JPEG أقل = أسرع بكثير */
+            const _jpegQ = _isIOS ? 0.72 : 0.88;
             const blob = await new Promise((res) =>
-              canvas.toBlob(res, "image/jpeg", 0.88),
+              canvas.toBlob(res, "image/jpeg", _jpegQ),
             );
             frameBlobs.push(blob);
             _setProgress(_expElapsedBefore + f / FPS);
-            if (f % 8 === 0) await new Promise((r) => setTimeout(r, 0));
+            /* iOS: yield أكثر لمنع تجميد الـ UI */
+            const _yieldEvery = _isIOS ? 4 : 8;
+            if (f % _yieldEvery === 0) await new Promise((r) => setTimeout(r, 0));
           }
           if (hlActive >= 0) {
             const o = document.getElementById("w" + hlActive);
@@ -5536,14 +4906,12 @@
 
         // بناء AudioBuffer مباشرةً — بدون WAV/decodeAudioData
         // نستخدم sample rate الـ buffers الأصلي عشان ما نحتاجش resample
-        const SR = buffers[0].sampleRate;
-        const nCh = 2;
-        const TAIL = Math.ceil(SR * 2);
+        const SR      = buffers[0].sampleRate;
+        const nCh     = 2;
+        const TAIL    = Math.ceil(SR * 2);
 
         let totalSamp = 0;
-        buffers.forEach((b) => {
-          totalSamp += b.length;
-        });
+        buffers.forEach(b => { totalSamp += b.length; });
         totalSamp += TAIL;
 
         const audioBuf = expCtx.createBuffer(nCh, totalSamp, SR);
@@ -5569,57 +4937,41 @@
         ]);
 
         /* ── ZIP fallback لو MediaRecorder مش متاح (iOS/Safari قديم) ── */
-        const _canWebM =
-          typeof MediaRecorder !== "undefined" &&
-          [
-            "video/webm;codecs=vp9,opus",
-            "video/webm;codecs=vp8,opus",
-            "video/webm",
-          ].some((m) => MediaRecorder.isTypeSupported(m));
+        const _canWebM = typeof MediaRecorder !== 'undefined' &&
+          ["video/webm;codecs=vp9,opus","video/webm;codecs=vp8,opus","video/webm"]
+            .some(m => MediaRecorder.isTypeSupported(m));
 
         if (!_canWebM) {
           toast$("📦 MediaRecorder غير متاح — تصدير ZIP frames...");
           xShow(total, total, "جارٍ تجميع ZIP...");
           setSbar("📦 جارٍ تصدير ZIP...", "#c9973a");
           const zipFiles = frameBlobs.map((b, i) => ({
-            name: `frame_${String(i).padStart(5, "0")}.jpg`,
-            blob: b,
+            name: `frame_${String(i).padStart(5,'0')}.jpg`,
+            blob: b
           }));
           const zipBlob = await window.SimpleZip.build(zipFiles);
-          const mb = (zipBlob.size / 1024 / 1024).toFixed(1);
-          _downloadBlob(
-            zipBlob,
-            "Islam-Reels-frames-" + (S.surah?.ar || "قرآن") + ".zip",
-          );
+          const mb = (zipBlob.size/1024/1024).toFixed(1);
+          _downloadBlob(zipBlob, "Islam-Reels-frames-" + (S.surah?.ar||"قرآن") + ".zip");
           _setProgress(_expTotalDur);
-          _finishExport(
-            expCtx,
-            "✅ تم تصدير ZIP — " + mb + " MB (افتح بتطبيق دمج فيديو)",
-            "#c9973a",
-          );
+          _finishExport(expCtx, "✅ تم تصدير ZIP — " + mb + " MB (افتح بتطبيق دمج فيديو)", "#c9973a");
           return;
         }
 
         /* ── اختيار أفضل mimeType — MP4 أولاً (يعمل مباشرةً على iOS/Safari) ── */
         const _mimeCandidates = [
-          "video/mp4;codecs=avc1.42E01E,mp4a.40.2", // H.264 Baseline + AAC — أوسع دعم iOS/Android
-          "video/mp4;codecs=avc1,mp4a.40.2",
-          "video/mp4;codecs=h264,aac",
-          "video/mp4",
-          "video/webm;codecs=vp9,opus",
-          "video/webm;codecs=vp8,opus",
-          "video/webm",
+          'video/mp4;codecs=avc1.42E01E,mp4a.40.2', // H.264 Baseline + AAC — أوسع دعم iOS/Android
+          'video/mp4;codecs=avc1,mp4a.40.2',
+          'video/mp4;codecs=h264,aac',
+          'video/mp4',
+          'video/webm;codecs=vp9,opus',
+          'video/webm;codecs=vp8,opus',
+          'video/webm',
         ];
-        const mimeType =
-          _mimeCandidates.find((t) => {
-            try {
-              return MediaRecorder.isTypeSupported(t);
-            } catch {
-              return false;
-            }
-          }) || "video/webm";
-        const _recIsMP4 = mimeType.includes("mp4");
-        toast$(_recIsMP4 ? "🎬 تسجيل MP4 مباشر..." : "🎬 تسجيل WebM...");
+        const mimeType = _mimeCandidates.find(t => {
+          try { return MediaRecorder.isTypeSupported(t); } catch { return false; }
+        }) || 'video/webm';
+        const _recIsMP4 = mimeType.includes('mp4');
+        toast$(_recIsMP4 ? '🎬 تسجيل MP4 مباشر...' : '🎬 تسجيل WebM...');
 
         exportChunks = [];
         exportRecorder = new MediaRecorder(combined, {
@@ -5635,16 +4987,9 @@
 
           // لو سُجِّل مباشرةً كـ MP4 — نعرضه فوراً بدون أي تحويل
           if (_recIsMP4) {
-            showVideoPopup(
-              recBlob,
-              "Islam-Reels-" + (S.surah?.ar || "قرآن") + ".mp4",
-            );
+            showVideoPopup(recBlob, "Islam-Reels-" + (S.surah?.ar || "قرآن") + ".mp4");
             _setProgress(_expTotalDur);
-            _finishExport(
-              expCtx,
-              "✅ تم الحفظ MP4 — " + mb + " MB ✨",
-              "#5ec285",
-            );
+            _finishExport(expCtx, "✅ تم الحفظ MP4 — " + mb + " MB ✨", "#5ec285");
             return;
           }
 
@@ -5658,14 +5003,14 @@
 
             const logLines = [];
             try {
-              const ffLoaded = await _loadFFmpeg((msg) => logLines.push(msg));
+              const ffLoaded = await _loadFFmpeg(msg => logLines.push(msg));
               if (!ffLoaded || !window._ffmpegInst) {
-                throw new Error("FFmpeg failed to load — check console");
+                throw new Error('FFmpeg failed to load — check console');
               }
 
               const ff = window._ffmpegInst;
 
-              ff.on("progress", ({ progress }) => {
+              ff.on('progress', ({ progress }) => {
                 if (progress >= 0 && progress <= 1) {
                   const pct = Math.round(progress * 100);
                   setSbar(`⚙️ تحويل ${pct}%...`, "#c9973a");
@@ -5675,90 +5020,55 @@
 
               setSbar("⚙️ جارٍ كتابة الملف...", "#c9973a");
               const inData = new Uint8Array(await webmBlob.arrayBuffer());
-              await ff.writeFile("input.webm", inData);
+              await ff.writeFile('input.webm', inData);
 
               setSbar("⚙️ يشغّل FFmpeg...", "#c9973a");
 
               const ret = await ff.exec([
-                "-i",
-                "input.webm",
-                "-c:v",
-                "libx264",
-                "-profile:v",
-                "baseline",
-                "-level",
-                "3.0",
-                "-pix_fmt",
-                "yuv420p",
-                "-c:a",
-                "aac",
-                "-b:a",
-                "128k",
-                "-movflags",
-                "+faststart",
-                "-preset",
-                "ultrafast",
-                "-y",
-                "output.mp4",
+                '-i',         'input.webm',
+                '-c:v',       'libx264',
+                '-profile:v', 'baseline',
+                '-level',     '3.0',
+                '-pix_fmt',   'yuv420p',
+                '-c:a',       'aac',
+                '-b:a',       '128k',
+                '-movflags',  '+faststart',
+                '-preset',    'ultrafast',
+                '-y',
+                'output.mp4'
               ]);
 
               if (ret !== 0) {
-                console.error(
-                  "FFmpeg exit code:",
-                  ret,
-                  "\nLog:\n",
-                  logLines.join("\n"),
-                );
+                console.error('FFmpeg exit code:', ret, '\nLog:\n', logLines.join('\n'));
                 throw new Error(`FFmpeg exit ${ret}`);
               }
 
-              const outData = await ff.readFile("output.mp4");
+              const outData = await ff.readFile('output.mp4');
               if (!outData || outData.byteLength < 1000) {
-                throw new Error("MP4 output empty or corrupt");
+                throw new Error('MP4 output empty or corrupt');
               }
-              const mp4Blob = new Blob([outData.buffer], { type: "video/mp4" });
+              const mp4Blob = new Blob([outData.buffer], { type: 'video/mp4' });
 
-              await ff.deleteFile("input.webm").catch(() => {});
-              await ff.deleteFile("output.mp4").catch(() => {});
+              await ff.deleteFile('input.webm').catch(() => {});
+              await ff.deleteFile('output.mp4').catch(() => {});
 
               const mp4mb = (mp4Blob.size / 1024 / 1024).toFixed(1);
-              showVideoPopup(
-                mp4Blob,
-                "Islam-Reels-" + (S.surah?.ar || "قرآن") + ".mp4",
-              );
+              showVideoPopup(mp4Blob, "Islam-Reels-" + (S.surah?.ar || "قرآن") + ".mp4");
               _setProgress(_expTotalDur);
-              _finishExport(
-                expCtx,
-                "✅ تم التحويل MP4 — " + mp4mb + " MB ✨",
-                "#5ec285",
-              );
+              _finishExport(expCtx, "✅ تم التحويل MP4 — " + mp4mb + " MB ✨", "#5ec285");
               return;
-            } catch (e) {
-              console.error(
-                "FFmpeg conversion failed:",
-                e,
-                "\nLog:\n",
-                logLines.join("\n"),
-              );
-              showVideoPopup(
-                webmBlob,
-                "Islam-Reels-" + (S.surah?.ar || "قرآن") + ".webm",
-              );
+
+            } catch(e) {
+              console.error('FFmpeg conversion failed:', e, '\nLog:\n', logLines.join('\n'));
+              showVideoPopup(webmBlob, "Islam-Reels-" + (S.surah?.ar || "قرآن") + ".webm");
               _setProgress(_expTotalDur);
-              _finishExport(
-                expCtx,
-                "⚠️ WebM جاهز — اضغط 🔄 للتحويل يدوياً",
-                "#c9973a",
-              );
+              _finishExport(expCtx, "⚠️ WebM جاهز — اضغط 🔄 للتحويل يدوياً", "#c9973a");
               return;
             }
           }
 
           // غير iOS: حفظ WebM مباشرةً
-          _downloadBlob(
-            webmBlob,
-            "Islam-Reels-" + (S.surah?.ar || "قرآن") + ".webm",
-          );
+          _downloadBlob(webmBlob, "Islam-Reels-" + (S.surah?.ar || "قرآن") + ".webm");
           _setProgress(_expTotalDur);
           _finishExport(expCtx, "✅ تم الحفظ WebM — " + mb + " MB", "#5ec285");
         };
@@ -5768,7 +5078,7 @@
         audioSrc.buffer = audioBuf;
         audioSrc.connect(expDest);
 
-        if (expCtx.state === "suspended") await expCtx.resume().catch(() => {});
+        if (expCtx.state === 'suspended') await expCtx.resume().catch(() => {});
         audioSrc.start(0);
 
         const t0 = performance.now();
