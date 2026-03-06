@@ -2,9 +2,19 @@
 <html lang="ar" dir="rtl">
   <head>
     <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy" content="
+      default-src 'self';
+      script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com blob:;
+      style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+      font-src 'self' https://fonts.gstatic.com data:;
+      connect-src 'self' https://cdn.jsdelivr.net https://unpkg.com https://api.alquran.cloud https://api.qurancdn.com https://everyayah.com https://cdn.islamic.network https://verses.quran.com https://al-quran.info https://quran-api.pages.dev;
+      img-src 'self' data: blob:;
+      media-src 'self' blob: https://everyayah.com https://cdn.islamic.network https://verses.quran.com;
+      worker-src 'self' blob:;
+      child-src blob:;
+    ">
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <!-- PWA -->
-    <link rel="manifest" href="/manifest.json" />
     <meta name="theme-color" content="#c9973a" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -21,36 +31,50 @@
       href="/icons/icon-192.png"
     />
     <title>Islam Reels ✨</title>
-    <script
-      defer
-      src="https://cloud.umami.is/script.js"
-      data-website-id="ea8fe0f2-0b82-4a6d-b30d-d14ef6c1d10e"
-    ></script>
-    <!-- ═══ INLINE LIBRARIES (no internet needed) ═══ -->
+
+    <!-- ═══ LIBRARIES & LOADERS ═══
+         الأولوية: /libs/* محلي → jsdelivr CDN → unpkg CDN → ZIP fallback
+         ضع الملفات في /libs/ للعمل بدون إنترنت بعد أول تحميل (SW cache)
+         SimpleZip: مضمّنة inline — لا تحتاج إنترنت ═══ -->
     <script>
-      /* ── mp4-muxer inline loader ─────────────────────────────────────
-       نحاول نحمّل المكتبة من CDN أولاً؛ لو فشل (offline / Safari قديم)
-       نضبط canMP4=false ونستخدم ZIP fallback تلقائياً               */
+      /* ── mp4-muxer loader — local-first ثم CDN fallbacks ──────────
+         الأولوية: /libs/mp4-muxer.js → jsdelivr → unpkg → ZIP fallback */
       window._mp4MuxerLoaded = false;
       (function () {
-        const s = document.createElement("script");
-        s.src = "https://cdn.jsdelivr.net/npm/mp4-muxer@5/build/mp4-muxer.js";
-        s.onload = () => {
-          window._mp4MuxerLoaded = true;
-        };
-        s.onerror = () => {
-          window._mp4MuxerLoaded = false;
-          console.warn("mp4-muxer CDN failed — ZIP fallback active");
-        };
-        document.head.appendChild(s);
+        const SOURCES = [
+          "/libs/mp4-muxer.js",                                              // محلي
+          "https://cdn.jsdelivr.net/npm/mp4-muxer@5/build/mp4-muxer.js",    // CDN 1
+          "https://unpkg.com/mp4-muxer@5/build/mp4-muxer.js"                // CDN 2
+        ];
+        let idx = 0;
+        function tryNext() {
+          if (idx >= SOURCES.length) {
+            console.warn("mp4-muxer: all sources failed — ZIP fallback active");
+            return;
+          }
+          const s = document.createElement("script");
+          s.src = SOURCES[idx++];
+          s.onload = () => { window._mp4MuxerLoaded = true; };
+          s.onerror = () => { console.warn("mp4-muxer failed:", s.src); tryNext(); };
+          document.head.appendChild(s);
+        }
+        tryNext();
       })();
 
       /* ── FFmpeg WASM loader (WebM→MP4 — iOS Safe, no SharedArrayBuffer) ──
        نستخدم @ffmpeg/core-st (single-thread) لأن iOS Safari يحجب
        SharedArrayBuffer بدون COOP/COEP headers                          */
-      window._ffmpegReady = false;
-      window._ffmpegLoading = false;
-      window._ffmpegInst = null;
+      /* تجميع متغيرات FFmpeg في namespace واحد بدلاً من تلويث window */
+      window._islamReels = window._islamReels || {};
+      window._islamReels.ffmpegReady = false;
+      window._islamReels.ffmpegLoading = false;
+      window._islamReels.ffmpegInst = null;
+      /* للتوافق مع الكود القديم */
+      Object.defineProperties(window, {
+        _ffmpegReady:   { get: () => window._islamReels.ffmpegReady,   set: v => { window._islamReels.ffmpegReady = v; }},
+        _ffmpegLoading: { get: () => window._islamReels.ffmpegLoading, set: v => { window._islamReels.ffmpegLoading = v; }},
+        _ffmpegInst:    { get: () => window._islamReels.ffmpegInst,    set: v => { window._islamReels.ffmpegInst = v; }},
+      });
 
       async function _loadFFmpeg(onLog) {
         if (window._ffmpegReady) return true;
@@ -67,43 +91,64 @@
         }
         window._ffmpegLoading = true;
         try {
-          const { FFmpeg } =
-            await import("https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js");
-          const { toBlobURL } =
-            await import("https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/esm/index.js");
-
-          const ff = new FFmpeg();
-          if (onLog) ff.on("log", ({ message }) => onLog(message));
-
-          /* single-thread أولاً (لا يحتاج SharedArrayBuffer — آمن على iOS Safari) */
-          const ST =
-            "https://cdn.jsdelivr.net/npm/@ffmpeg/core-st@0.12.6/dist/esm";
-          const MT =
-            "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/esm";
+          /* تنبيه: dynamic import من CDN قد يُحجب بواسطة CSP أو Safari القديم
+             الحل الكامل: استضف هذه الملفات على سيرفرك بدلاً من CDN */
+          /* ── FFmpeg: local-first ثم CDN fallbacks ────────────────
+             lazy loading — يُحمَّل فقط عند استدعاء _loadFFmpeg()    */
+          const FFMPEG_SOURCES = [
+            {
+              main:  "/libs/ffmpeg/index.js",
+              util:  "/libs/ffmpeg/util.js",
+              core:  "/libs/ffmpeg-core.js",
+              wasm:  "/libs/ffmpeg-core.wasm",
+              label: "local"
+            },
+            {
+              main:  "https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js",
+              util:  "https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/esm/index.js",
+              core:  "https://cdn.jsdelivr.net/npm/@ffmpeg/core-st@0.12.6/dist/esm/ffmpeg-core.js",
+              wasm:  "https://cdn.jsdelivr.net/npm/@ffmpeg/core-st@0.12.6/dist/esm/ffmpeg-core.wasm",
+              label: "jsdelivr"
+            },
+            {
+              main:  "https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js",
+              util:  "https://unpkg.com/@ffmpeg/util@0.12.1/dist/esm/index.js",
+              core:  "https://unpkg.com/@ffmpeg/core-st@0.12.6/dist/esm/ffmpeg-core.js",
+              wasm:  "https://unpkg.com/@ffmpeg/core-st@0.12.6/dist/esm/ffmpeg-core.wasm",
+              label: "unpkg"
+            }
+          ];
 
           let loaded = false;
-          for (const base of [ST, MT]) {
+          let FFmpeg, toBlobURL;
+
+          for (const src of FFMPEG_SOURCES) {
             try {
+              const [mainMod, utilMod] = await Promise.all([
+                import(src.main),
+                import(src.util)
+              ]);
+              FFmpeg    = mainMod.FFmpeg;
+              toBlobURL = utilMod.toBlobURL;
+
+              const ff = new FFmpeg();
+              if (onLog) ff.on("log", ({ message }) => onLog(message));
+
               await ff.load({
-                coreURL: await toBlobURL(
-                  `${base}/ffmpeg-core.js`,
-                  "text/javascript",
-                ),
-                wasmURL: await toBlobURL(
-                  `${base}/ffmpeg-core.wasm`,
-                  "application/wasm",
-                ),
+                coreURL: await toBlobURL(src.core, "text/javascript"),
+                wasmURL: await toBlobURL(src.wasm, "application/wasm"),
               });
+
+              window._ffmpegInst = ff;
               loaded = true;
-              console.log("FFmpeg loaded from", base);
+              console.log("FFmpeg loaded from:", src.label);
               break;
             } catch (e) {
-              console.warn("FFmpeg attempt failed:", base, e.message);
+              console.warn(`FFmpeg source [${src.label}] failed:`, e.message);
             }
           }
 
-          if (!loaded) throw new Error("All FFmpeg CDNs failed");
-          window._ffmpegInst = ff;
+          if (!loaded) throw new Error("All FFmpeg sources failed (local + all CDNs)");
           window._ffmpegReady = true;
         } catch (e) {
           console.error("FFmpeg WASM load failed:", e);
@@ -113,22 +158,19 @@
         return window._ffmpegReady;
       }
 
-      /* ── JSZip minimal inline (لتصدير ZIP frames كـ fallback) ───────
-       نستخدم نسخة مصغّرة مبنية inline — لا تحتاج إنترنت              */
-      /* jszip 3.10.1 minified — embedded inline */
-    </script>
-    <script>
-      /*!
-       * JSZip v3.10.1 - A JavaScript class for generating and reading zip files
-       * (c) 2009-2016 Stuart Knightley <stuart [at] stuartk.com>
-       * Dual licenced under the MIT license or GPLv3. See https://raw.github.com/Stuk/jszip/master/LICENSE.markdown
-       * JSZip uses the library pako released under the MIT license :
-       * https://github.com/nodeca/pako/blob/master/LICENSE
-       */
-      !function(e){if("object"==typeof exports&&"undefined"!=typeof module)module.exports=e();else if("function"==typeof define&&define.amd)define([],e);else{var t;t="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof self?self:this,t.JSZip=e()}}(function(){return function s(a,o,h){function u(r,e){if(!o[r]){if(!a[r]){var t="function"==typeof require&&require;if(!e&&t)return t(r,!0);if(l)return l(r,!0);var i=new Error("Cannot find module '"+r+"'");throw i.code="MODULE_NOT_FOUND",i}var n=o[r]={exports:{}};a[r][0].call(n.exports,function(e){var t=a[r][1][e];return u(t||e)},n,n.exports,s,a,o,h)}return o[r].exports}for(var l="function"==typeof require&&require,e=0;e<h.length;e++)u(h[e]);return u}({1:[function(e,t,r){"use strict";var d=e("./utils"),c=e("./support"),p="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";r.encode=function(e){for(var t,r,i,n,s,a,o,h=[],u=0,l=e.length,f=l,c="string"==typeof e;u<l;)f=l-u,t=c?e.charCodeAt(u++):e[u++],r=u<l?c?e.charCodeAt(u++):e[u++]:0,i=u<l?c?e.charCodeAt(u++):e[u++]:0,n=t>>2,s=(3&t)<<4|r>>4,a=(15&r)<<2|i>>6,o=63&i,f<3&&(o=64,f<2&&(a=64)),h.push(p[n]+p[s]+p[a]+p[o]);return h.join("")},r.decode=function(e){var t,r,i,n,s,a,o=0,h=0,u=[];e=e.replace(/[^A-Za-z0-9\+\/\=]/g,"");do{n=p.indexOf(e.charAt(o++)),s=p.indexOf(e.charAt(o++)),a=p.indexOf(e.charAt(o++));var l=p.indexOf(e.charAt(o++));t=n<<2|s>>4,r=(15&s)<<4|a>>2,i=(3&a)<<6|l,u[h++]=t,64!==a&&(u[h++]=r),64!==l&&(u[h++]=i)}while(o<e.length);return d.transformTo("uint8array",u.join(""))}},{"./support":30,"./utils":32}],2:[function(e,t,r){"use strict";var i=e("./utils"),n=e("./external"),s=e("./utf8"),h=e("./utils"),a=e("./zipEntry"),o=(e("./utf8"),e("./compressions")),u=e("./support");function l(e,t,r,i){this.files=[],this.loadOptions=t,this.comment=null,this.entriesCount=0,this.centralDirOffset=0,this.commentLength=0,this._decodeObfuscatedEntry=null}l.prototype={checkSignature:function(e){if(!this.reader.readString(4)===e)throw new Error("Corrupted zip or bug: unexpected signature("+d(e)+", expected "+d(e)+")")},isSignature:function(e,t){var r=this.reader.index;this.reader.setIndex(e);var i=this.reader.readString(4);this.reader.setIndex(r);return t===i},readBlockEndOfCentral:function(){this.diskNumber=this.reader.readInt(2),this.diskWithCentralDirStart=this.reader.readInt(2),this.centralDirRecordsOnThisDisk=this.reader.readInt(2),this.centralDirRecords=this.reader.readInt(2),this.centralDirSize=this.reader.readInt(4),this.centralDirOffset=this.reader.readInt(4),this.commentLength=this.reader.readInt(2),this.comment=this.reader.readData(this.commentLength)},readBlockZip64EndOfCentral:function(){this.zip64EndOfCentralSize=this.reader.readInt(8),this.reader.skip(4),this.diskNumber=this.reader.readInt(4),this.diskWithCentralDirStart=this.reader.readInt(4),this.centralDirRecordsOnThisDisk=this.reader.readInt(8),this.centralDirRecords=this.reader.readInt(8),this.centralDirSize=this.reader.readInt(8),this.centralDirOffset=this.reader.readInt(8)},readBlockZip64EndOfCentralLocator:function(){this.diskWithZip64CentralDirStart=this.reader.readInt(4),this.relativeOffsetEndOfZip64CentralDir=this.reader.readInt(8),this.disksCount=this.reader.readInt(4);if(1<this.disksCount)throw new Error("Multi-volumes zip are not supported")},readLocalFiles:function(){var e,t;for(e=0;e<this.files.length;e++)t=this.files[e],this.reader.setIndex(t.localHeaderOffset),this.checkSignature("PK\x03\x04"),t.readLocalPart(this.reader),t.handleUTF8(),t.processAttributes()},readCentralDir:function(){var e;for(this.reader.setIndex(this.centralDirOffset);this.reader.readAndCheckSignature("PK\x01\x02");)e=new a({zip64:this.zip64},this.loadOptions),e.readCentralPart(this.reader),this.files.push(e);if(this.centralDirRecords!==this.files.length&&0!==this.centralDirRecords&&0===this.files.length)throw new Error("Corrupted zip or bug: expected "+this.centralDirRecords+" records in central dir, got "+this.files.length)},readEndOfCentral:function(){var e=this.reader.lastIndexOfSignature("PK\x05\x06");if(e<0){if(this.reader.lastIndexOfSignature("PK\x06\x06")<0)throw new Error("Corrupted zip: can't find end of central directory");throw new Error("Corrupted zip: can't find end of central directory. Is this a zip64 ?")}this.reader.setIndex(e);this.checkSignature("PK\x05\x06"),this.readBlockEndOfCentral();var t=this.centralDirOffset+this.centralDirSize;if(this.readBlockZip64EndOfCentralLocator(),this.isSignature(t,"PK\x06\x07")){this.reader.setIndex(t);this.checkSignature("PK\x06\x06"),this.readBlockZip64EndOfCentral()}},prepareReader:function(e){this.reader=i.getTypeWorker(e)},load:function(e){this.prepareReader(e),this.readEndOfCentral(),this.readCentralDir(),this.readLocalFiles()}},t.exports=l},{"./compressions":3,"./external":6,"./support":30,"./utf8":31,"./utils":32,"./zipEntry":33}],3:[function(e,t,r){"use strict";r.STORE={magic:"\0\0",compressWorker:function(e){return new(e("./stream/GenericWorker"))("STORE compression")},uncompressWorker:function(){return new(e("./stream/GenericWorker"))("STORE decompression")}},r.DEFLATE=e("./flate")},{"./flate":7,"./stream/GenericWorker":28}],4:[function(e,t,r){"use strict";var o=e("./utils");var h=function(){this.table=new Uint32Array(256);for(var e=0;e<256;e++){var t=e;for(var r=0;r<8;r++)t=1&t?3988292384^t>>>1:t>>>1;this.table[e]=t}};h.prototype.crc32=function(e,t,r,i){for(var n=r;n<i;n++)e=this.table[(e^t[n])&255]^e>>>8;return e};var e=new h;r.crc32=function(e,t,r,i){return e^(new h).crc32(-1,t,r,i)^-1}},{"./utils":32}],5:[function(e,t,r){"use strict";r.base64=!1,r.binary=!1,r.dir=!1,r.createFolders=!0,r.date=null,r.compression=null,r.compressionOptions=null,r.comment=null,r.unixPermissions=null,r.dosPermissions=null},{}],6:[function(e,t,r){"use strict";r.Promise="undefined"!=typeof Promise?Promise:e("lie")},{"lie":37}],7:[function(e,t,r){"use strict";var i=e("pako"),n=e("./utils"),s=e("./stream/GenericWorker"),a="undefined"!=typeof Uint8Array&&"undefined"!=typeof Uint16Array&&"undefined"!=typeof Uint32Array;r.compressWorker=function(e){return new c(e)},r.uncompressWorker=function(){return new f};function o(e,t){s.call(this,t);this._pako=null;this._pakoAction=e;this._pakoOptions={};this.meta={}}n.inherits(o,s),o.prototype.processChunk=function(e){this.meta=e.meta,null===this._pako&&this._createPako();this._pako.push(n.transformTo("uint8array",e.data),!1)},o.prototype.flush=function(){s.prototype.flush.call(this);try{this._pako.push([],!0)}catch(e){throw e.message="FlateWorker on flush : "+e.message,e}},o.prototype.cleanUp=function(){s.prototype.cleanUp.call(this);this._pako=null},o.prototype._createPako=function(){this._pako="Deflate"===this._pakoAction?new i.Deflate(this._pakoOptions):new i.Inflate(this._pakoOptions);var t=this;this._pako.onData=function(e){t.push({data:e,meta:t.meta})}};function h(){o.call(this,"Deflate")}n.inherits(h,o);function c(e){h.call(this);this._pakoOptions={level:e.level||-1},this.meta={}}n.inherits(c,h);function f(){o.call(this,"Inflate")}n.inherits(f,o),t.exports={compressWorker:r.compressWorker,uncompressWorker:r.uncompressWorker}},{"./stream/GenericWorker":28,"./utils":32,pako:38}],8:[function(e,t,r){"use strict";function i(e,t){var r,i="";for(r=0;r<t;r++)i+=String.fromCharCode(255&e),e>>>=8;return i}function n(e,t,r,i,n,s){var a,o,h=e.file,u=e.compression,l=s!==y.utf8encode,f=g.transformTo("string",s(h.name)),c=g.transformTo("string",y.utf8encode(h.name)),d=h.comment,p=g.transformTo("string",s(d)),m=g.transformTo("string",y.utf8encode(d)),_=c.length!==f.length,b=m.length!==p.length,v="";v+="\n\x00",v+=l||!_?"\0\0":"\0\b",v+=u.magic,v+=i(n,4),v+=i(h.crc32,4),v+=i(e.compressedSize,4),v+=i(h.uncompressedSize,4),v+=i(f.length,2),v+=i(a=(_||b?"\x01"+(15&(o=0)):"")+(_?"\u0000"+c:"")+("!\0\0\0\0"+(b?"!\0\0\0"+m:"")),2),a&&v+="ut",v+=a,v+="\0\0\0\0\0\0\0\0",v+=i(e.compressedSize,4),v+=i(h.uncompressedSize,4),v+=f;var A=v+e.compressedContent,x="\x02\x01";x+=l||!_?"\0\0":"\0\b",x+=u.magic,x+=i(n,4),x+=i(h.crc32,4),x+=i(e.compressedSize,4),x+=i(h.uncompressedSize,4),x+=i(f.length,2),x+="\0\0",x+="\0\0",x+="\0\0",x+="\0\0",x+="\0\0\0\0",x+=i(t,4),x+=f;return{fileRecord:A,dirRecord:x}}var g=e("./utils"),y=e("./utf8"),b=e("./compressions"),v=e("./defaults");function s(e,t){this.files=[],this.loadOptions=t}s.prototype.load=function(){throw new Error("Load method is not defined. Is the file from a Blob? Did you load JSZip.fromBlob() ? Is this feature supported by your browser? See http://stuk.github.io/jszip/documentation/api_jszip/from_blob.html")},s.prototype.filter=function(t){var r=[];return this.files.forEach(function(e){t(e.name,e)&&r.push(e)}),r},s.prototype.file=function(e,t,r){if(1===arguments.length)return this.files[e]?this.files[e]:null;var i=new v;if(i.binary=!1,i.base64=!1,"string"==typeof t)i.binary=!0;else if(Array.isArray(t)){var n=new Uint8Array(t.length);for(var s=0;s<t.length;s++)n[s]=t[s];t=n}else if(t instanceof ArrayBuffer)t=new Uint8Array(t);return i.date=new Date,r&&(i.binary=null!=r.binary&&r.binary,i.base64=null!=r.base64&&r.base64,i.date=r.date||i.date,i.compression=r.compression||null),this.files[e]={name:e,content:t,options:i},this},s.prototype.generate=function(e){throw new Error("Removed in JSZip 3.0, please check the upgrade guide.")},s.prototype.generateAsync=function(e,t){var r={type:e&&e.type||"blob",mimeType:e&&e.mimeType};var i={platform:e&&e.platform||"DOS"};return(new Promise(function(t,r){var i=[],n=0,s=0;for(var a in this.files){var o=this.files[a];if(o)s++}if(0===s){t(new Blob([],{type:r.mimeType||"application/zip"}))}else{var h=0;for(var u in this.files){var l=this.files[u];if(l){n(l,function(e){i.push(e);if(++h===s)t(i)},r)}}}})).then(function(e){return new Blob(e,{type:r.mimeType||"application/zip"})})};var a=s;t.exports={ZipObject:a,loadAsync:function(){throw new Error("Removed method. Please use JSZip.loadAsync")}}},{"./compressions":3,"./defaults":5,"./utf8":31,"./utils":32}],9:[function(e,t,r){},{}],10:[function(e,t,r){"use strict";function i(e){return e}t.exports={copy:i}},{}],11:[function(e,t,r){"use strict";t.exports=function(e,t){return e===t}},{}],12:[function(e,t,r){"use strict";t.exports=function(){this.listeners={},this.onAny=null}},{}],13:[function(e,t,r){"use strict";var i=e("./error");function n(){this.listeners={}}n.prototype={constructor:n,on:function(e,t){return this.listeners[e]=this.listeners[e]||[],this.listeners[e].push(t),this},off:function(e,t){this.listeners[e]=this.listeners[e]||[];var r=this.listeners[e].indexOf(t);return-1!==r&&this.listeners[e].splice(r,1),this},emit:function(e){this.listeners[e]=this.listeners[e]||[];var t=Array.prototype.slice.call(arguments,1);return this.listeners[e].forEach(function(e){e.apply(null,t)}),this}},t.exports=n},{"./error":14}],14:[function(e,t,r){"use strict";t.exports=function(e){this.message=e}},{}],15:[function(e,t,r){"use strict";r.JSZip=e("./jszip"),r.utils=e("./utils"),r.base64=e("./base64"),r.utf8=e("./utf8"),r.compressions=e("./compressions")},{"./base64":1,"./compressions":3,"./jszip":8,"./utf8":31,"./utils":32}],16:[function(e,t,r){"use strict";t.exports=e("./jszip")},{"./jszip":8}],17:[function(e,t,r){},{}],18:[function(e,t,r){},{}],19:[function(e,t,r){},{}],20:[function(e,t,r){},{}],21:[function(e,t,r){},{}],22:[function(e,t,r){},{}],23:[function(e,t,r){"use strict";var i=e("./DataWorker"),n=e("./DataLengthProbe"),s=e("./Crc32Probe");r.STORE=function(e,t){return e.pipe(n("compressedSize")).pipe(s()).pipe(n("uncompressedSize")).pipe(new(e("./stream/GenericWorker"))("STORE compression"))},r.DEFLATE=e("./flate")},{"./DataLengthProbe":24,"./DataWorker":25,"./Crc32Probe":26,"./flate":7,"./stream/GenericWorker":28}],24:[function(e,t,r){"use strict";var i=e("../utils"),n=e("./GenericWorker");function s(e){n.call(this,"DataLengthProbe for "+e);this.propName=e,this.withStreamInfo(e,0)}i.inherits(s,n),s.prototype.processChunk=function(e){if(e){var t=i.getTypeWorker(e.data);this.streamInfo[this.propName]+=t.index}this.push(e)},t.exports=s},{"../utils":32,"./GenericWorker":28}],25:[function(e,t,r){"use strict";var i=e("../utils"),n=e("./GenericWorker"),s=e("../support");function a(e){n.call(this,"DataWorker");var t=this;this.dataIsReady=!1,this.index=0,this.max=0,this.data=null,this.type="",this._tickScheduled=!1,e.then(function(e){t.dataIsReady=!0;t.data=e;t.max=e&&e.length||0;t.type=i.getTypeOf(e);if(!t.isPaused)t._tickAndRepeat()},function(e){t.error(e)})}i.inherits(a,n),a.prototype.cleanUp=function(){n.prototype.cleanUp.call(this);this.data=null},a.prototype.resume=function(){return!!n.prototype.resume.call(this)&&(!this.dataIsReady||(this._tickAndRepeat(),!0))},a.prototype._tickAndRepeat=function(){this._tickScheduled=!1,this.isPaused||this.isFinished||(this._tick(),this.isFinished||( setTimeout(this._tickAndRepeat.bind(this),16),this._tickScheduled=!0))},a.prototype._tick=function(){if(this.isPaused||this.isFinished)return!1;var e=i.MAX_VALUE_16BITS,t=null,r=Math.min(this.max,this.index+e);if(this.index>=this.max)return this.end();switch(this.type){case"string":t=this.data.substring(this.index,r);break;case"uint8array":t=this.data.subarray(this.index,r);break;case"array":case"nodebuffer":t=this.data.slice(this.index,r)}this.index=r,this.push({data:t,meta:{percent:this.max?this.index/this.max*100:0}})},t.exports=a},{"../support":30,"../utils":32,"./GenericWorker":28}],26:[function(e,t,r){"use strict";var i=e("../crc32"),n=e("./GenericWorker"),s=e("../utils");function a(){n.call(this,"Crc32Probe");this.withStreamInfo("crc32",0)}s.inherits(a,n),a.prototype.processChunk=function(e){this.streamInfo.crc32=i.crc32(this.streamInfo.crc32,e.data,0,e.data.length),this.push(e)},t.exports=a},{"../crc32":4,"../utils":32,"./GenericWorker":28}],27:[function(e,t,r){"use strict";var i=e("../utils"),n=e("./GenericWorker");function s(e){n.call(this,"Utf8DecodeWorker");this.remaining=null;this.decoder="undefined"!=typeof TextDecoder?new TextDecoder("utf-8"):null}i.inherits(s,n),s.prototype.processChunk=function(e){var t=i.transformTo("uint8array",e.data);if(this.remaining){var r=new Uint8Array(this.remaining.length+t.length);r.set(this.remaining,0);r.set(t,this.remaining.length);t=r}var n=this._processAllData(t);this.remaining=n.length?n:null;e.data=null;this.push({data:n,meta:e.meta})},s.prototype._processAllData=function(e){if(this.decoder)return this.decoder.decode(e);var t="";for(var r=0;r<e.length;r++)t+=String.fromCharCode(e[r]);return t},t.exports=s},{"../utils":32,"./GenericWorker":28}],28:[function(e,t,r){"use strict";function i(e){this.name=e||"default",this.streamInfo={},this.generatedError=null,this.extraStreamInfo={},this.isPaused=!0,this.isFinished=!1,this.isLocked=!1,this._listeners={data:[],error:[],end:[]},this.previous=null}i.prototype={push:function(e){this.emit("data",e)},end:function(){if(this.isFinished)return!1;this.flush();try{this.emit("end")}catch(e){this.emit("error",e)}return this.isFinished=!0},error:function(e){return!this.isFinished&&(this.isPaused?this.generatedError=e:(this.isFinished=!0,this.emit("error",e),this.previous&&this.previous.error(e),this.cleanUp()),!0)},on:function(e,t){return this._listeners[e].push(t),this},cleanUp:function(){this.previous=this.generatedError=null,this._listeners={}},simpleTransform:function(e,t,r){},resume:function(){if(!this.isPaused||this.isLocked)return!1;this.isPaused=!1,this.previous&&!this.previous.isPaused&&this.previous.resume();return!0},pause:function(){this.isPaused=!0},pipe:function(e){return e.previous=this,this.on("data",function(t){e.processChunk(t)}).on("end",function(){e.end()}).on("error",function(t){e.error(t)}),e.resume(),this},checkClearCache:function(){},emit:function(e,t){if(this._listeners[e])for(var r=0;r<this._listeners[e].length;r++)this._listeners[e][r].call(this,t)},flush:function(){}},t.exports=i},{}],29:[function(e,t,r){"use strict";var n=e("../utils"),s=e("./GenericWorker");function i(e,t,r){s.call(this,"ConvertWorker to "+t);this.destType=t}n.inherits(i,s),i.prototype.processChunk=function(e){this.push({data:n.transformTo(this.destType,e.data),meta:e.meta})},t.exports=i},{"../utils":32,"./GenericWorker":28}],30:[function(e,t,r){"use strict";r.base64=!0,r.array=!0,r.string=!0,r.arraybuffer="undefined"!=typeof ArrayBuffer&&"undefined"!=typeof Uint8Array,r.nodebuffer="undefined"!=typeof Buffer,r.uint8array="undefined"!=typeof Uint8Array,r.blob="undefined"!=typeof ArrayBuffer&&"undefined"!=typeof Uint8Array&&"undefined"!=typeof Blob&&(function(){try{return new Blob([""],{type:"application/zip"}),!0}catch(e){return!1}})(),r.nodestream=!1},{}],31:[function(e,t,r){"use strict";var o=e("./utils"),h=e("./support");var u=new Uint8Array(256);for(var i=0;i<256;i++)u[i]=252<=i?6:248<=i?5:240<=i?4:224<=i?3:192<=i?2:1;u[254]=u[254]=1;r.utf8encode=function(e){if(h.nodebuffer)return o.newBufferFrom(e,"utf-8");var t,r,i,n,s=[],a=0,o=e.length;for(a=0;a<o;){r=e.charCodeAt(a++);if(55296<=r&&r<=56319&&a<o){i=e.charCodeAt(a++);56320==(64512&i)?r=((1023&r)<<10)+(1023&i)+65536:a--}r<128?s.push(r):r<2048?s.push(192|r>>6,128|63&r):r<65536?s.push(224|r>>12,128|r>>6&63,128|63&r):s.push(240|r>>18,128|r>>12&63,128|r>>6&63,128|63&r)}return new Uint8Array(s)},r.utf8decode=function(e,t){return 2===t.type&&h.uint8array?e instanceof Uint8Array?e:o.transformTo("uint8array",e):(o.transformTo("string",e),t.string)};t.exports={utf8encode:r.utf8encode,utf8decode:r.utf8decode}},{"./support":30,"./utils":32}],32:[function(e,t,r){"use strict";var i=e("./support"),n=e("./base64"),o={};function s(e){return"undefined"!=typeof e&&null!==e}o.getTypeOf=function(e){if("string"==typeof e)return"string";if("[object Array]"===Object.prototype.toString.call(e))return"array";if(i.nodebuffer&&Buffer.isBuffer(e))return"nodebuffer";if(i.uint8array&&e instanceof Uint8Array)return"uint8array";if(i.arraybuffer&&e instanceof ArrayBuffer)return"arraybuffer"},o.transformTo=function(e,t){if(t||(t=""),e===o.getTypeOf(t))return t;throw new Error("Unable to convert "+o.getTypeOf(t)+" to "+e)},o.MAX_VALUE_16BITS=65535,o.MAX_VALUE_32BITS=-1,o.pretty=function(e){var t="",r=0;for(r=0;r<(e||"").length;r++)t+="\\x"+("0"+e.charCodeAt(r).toString(16)).slice(-2);return t},o.delay=function(e,t,r){setImmediate(function(){e.apply(r||null,t)})},o.inherits=function(e,t){var r=function(){};r.prototype=t.prototype,e.prototype=new r},o.extend=function(){var e={};for(var t=0;t<arguments.length;t++){var r=arguments[t];for(var i in r)Object.prototype.hasOwnProperty.call(r,i)&&(e[i]=r[i])}return e},o.prepareContent=function(e,t,r,i,n){return Promise.resolve(n).then(function(e){return e})},t.exports=o},{"./base64":1,"./support":30}],33:[function(e,t,r){"use strict";function i(e,t){this.options=e;this.loadOptions=t}i.prototype={isEncrypted:function(){return 1==(1&this.bitFlag)},useUTF8:function(){return 2048==(2048&this.bitFlag)},readLocalPart:function(e){var t,r;if(e.skip(22),this.fileName=e.readData(e.readInt(2)),this.localExtraFields=e.readData(e.readInt(2)),this.fileName=this.handleUTF8FileName(),this.isEncrypted())throw new Error("Encrypted zip are not supported");if(-1==this.compressionMethod)throw new Error("Corrupted zip: missing compression method");},readCentralPart:function(e){this.versionMadeBy=e.readInt(2),e.skip(2),this.bitFlag=e.readInt(2),this.compressionMethod=e.readString(2),this.date=e.readDate(),this.crc32=e.readInt(4),this.compressedSize=e.readInt(4),this.uncompressedSize=e.readInt(4);var t=e.readInt(2),r=e.readInt(2),i=e.readInt(2);e.skip(8),this.localHeaderOffset=e.readInt(4);var n=e.readData(t);this.fileName=n,this.extra=e.readData(r),this.fileComment=e.readData(i)},processAttributes:function(){},handleUTF8FileName:function(){var e=o.transformTo("string",this.fileName);if(this.useUTF8())return h.utf8decode(e);return e}},t.exports=i},{"./compressions":3,"./utf8":31,"./utils":32}],34:[function(e,t,r){"use strict";var n=e("./utils");t.exports={stringToArrayBuffer:function(e){var t=new Uint8Array(e.length);for(var r=0;r<e.length;r++)t[r]=e.charCodeAt(r)&255;return t.buffer},arrayBufferToString:function(e){var t=new Uint8Array(e),r="";for(var i=0;i<t.length;i++)r+=String.fromCharCode(t[i]);return r},newUint8Array:function(e){return new Uint8Array(e)},newArrayBuffer:function(e){return new ArrayBuffer(e)},newBufferFrom:function(e,t){if("undefined"!=typeof Buffer)return Buffer.from(e,t);var r=e.length;var i=new Uint8Array(r);for(var n=0;n<r;n++)i[n]=e.charCodeAt(n);return i.buffer}},{"./utils":32}],35:[function(e,t,r){},{}],36:[function(e,t,r){},{}],37:[function(e,t,r){},{}],38:[function(e,t,r){},{}]},{},[16])(16)});
-      /* end JSZip inline — using a simplified fallback instead for reliability */
-    </script>
-    <script>
+      /* تنظيف FFmpeg وتحرير الذاكرة عند الانتهاء */
+      function _disposeFFmpeg() {
+        if (window._ffmpegInst) {
+          try { window._ffmpegInst.terminate(); } catch(e) {}
+          window._ffmpegInst = null;
+        }
+        window._ffmpegReady = false;
+        window._ffmpegLoading = false;
+      }
+      window._disposeFFmpeg = _disposeFFmpeg;
+      /* تنظيف تلقائي عند إغلاق الصفحة */
+      window.addEventListener('beforeunload', _disposeFFmpeg);
+
       /* ── Simple inline ZIP builder (no dependencies) ────────────────
        يبني ZIP بسيط من Blobs بدون ضغط (STORE method)
        كافي لتصدير فريمات الفيديو كصور                              */
@@ -151,16 +193,21 @@
             return b;
           }
 
-          function crc32(buf) {
-            let crc = 0xffffffff;
-            const t = new Uint8Array(256).map((_, i) => {
+          /* CRC32 table computed once — not recreated per file */
+          const _crc32Table = (() => {
+            const t = new Uint32Array(256);
+            for (let i = 0; i < 256; i++) {
               let c = i;
               for (let j = 0; j < 8; j++)
                 c = 1 & c ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
-              return c;
-            });
+              t[i] = c;
+            }
+            return t;
+          })();
+          function crc32(buf) {
+            let crc = 0xffffffff;
             for (let i = 0; i < buf.length; i++)
-              crc = t[(crc ^ buf[i]) & 0xff] ^ (crc >>> 8);
+              crc = _crc32Table[(crc ^ buf[i]) & 0xff] ^ (crc >>> 8);
             return (crc ^ 0xffffffff) >>> 0;
           }
 
@@ -349,26 +396,6 @@
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
-      }
-      #visit-counter {
-        display: flex;
-        align-items: center;
-        gap: 5px;
-        padding: 4px 10px;
-        border-radius: 100px;
-        border: 1px solid rgba(201, 151, 58, 0.25);
-        background: rgba(201, 151, 58, 0.07);
-        font-size: 11px;
-        color: #c9973a;
-        white-space: nowrap;
-        flex-shrink: 0;
-        cursor: default;
-        user-select: none;
-      }
-      #visit-counter span {
-        color: #e4b55a;
-        font-weight: 700;
-        font-size: 12px;
       }
       .panel {
         background: #0c1810;
@@ -2507,10 +2534,6 @@
             <span class="lp-stat-n">+٥٠K</span>
             <div class="lp-stat-l">متابع</div>
           </div>
-          <div class="lp-stat">
-            <span class="lp-stat-n" id="lp-visit-count">...</span>
-            <div class="lp-stat-l">زيارة</div>
-          </div>
         </div>
       </section>
 
@@ -2672,9 +2695,6 @@
           <div class="tab" onclick="switchTab('bg')">🖼 الخلفيات</div>
         </div>
         <div id="sbar">اختر شيخاً وسورة للبدء</div>
-        <div id="visit-counter" title="إجمالي الزيارات">
-          👁 <span id="visit-count">0</span> زيارة
-        </div>
       </div>
 
       <div class="main">
@@ -7786,58 +7806,22 @@
         setTimeout(renderOffsetTable, 400);
       };
 
-        /* ── Umami API — عداد الزيارات الحقيقية على Landing Page ──── */
-        (async function() {
-          const WEBSITE_ID = 'ea8fe0f2-0b82-4a6d-b30d-d14ef6c1d10e';
-          const API_KEY    = 'api_VEZ6xhc59w2EluMaGNpkb4TjSJwbdV6d';
-          const el = document.getElementById('lp-visit-count');
-          if (!el) return;
 
-          function toArabicNums(n) {
-            return n.toString().replace(/\d/g, d => '٠١٢٣٤٥٦٧٨٩'[d]);
-          }
-          function fmtNum(n) {
-            if (n >= 1000000) return '+' + toArabicNums(Math.floor(n/1000000)) + 'M';
-            if (n >= 1000)    return '+' + toArabicNums(Math.floor(n/1000))    + 'K';
-            return toArabicNums(n);
-          }
-
-          try {
-            const res = await fetch(
-              `https://api.umami.is/v1/websites/${WEBSITE_ID}/stats?startAt=0&endAt=${Date.now()}`,
-              { headers: { 'x-umami-api-key': API_KEY } }
-            );
-            if (!res.ok) throw new Error('API error');
-            const data = await res.json();
-            const visits = data?.pageviews?.value ?? data?.visits?.value ?? 0;
-            el.textContent = fmtNum(visits);
-          } catch(e) {
-            el.textContent = '—';
-            console.warn('Umami API error:', e);
-          }
-        })();
-
+        /* Service Worker — يخزّن الملفات الثقيلة بعد أول تحميل
+           يحتاج ملف /sw.js على السيرفر (مرفق مع المشروع)          */
         window.addEventListener("load", () => {
-          navigator.serviceWorker.register("/sw.js").catch(() => {});
+          if (!('serviceWorker' in navigator)) return;
+          navigator.serviceWorker.register('/sw.js', { scope: '/' })
+            .then(reg => {
+              console.log('[SW] registered, scope:', reg.scope);
+              /* تحديث تلقائي لو في نسخة جديدة */
+              reg.addEventListener('updatefound', () => {
+                console.log('[SW] new version found, installing...');
+              });
+            })
+            .catch(err => console.warn('[SW] registration failed:', err.message));
         });
 
-        /* ── عداد الزيارات ──────────────────────────────────────────
-           يحفظ عدد الزيارات في localStorage
-           يُعدّ كل فتح جديد للصفحة كزيارة واحدة                   */
-        (function() {
-          const KEY = 'islam_reels_visits';
-          let visits = parseInt(localStorage.getItem(KEY) || '0', 10);
-          visits += 1;
-          localStorage.setItem(KEY, visits);
-          const el = document.getElementById('visit-count');
-          if (el) {
-            // عرض الرقم بالأرقام العربية
-            function toArabicNums(n) {
-              return n.toString().replace(/\d/g, d => '٠١٢٣٤٥٦٧٨٩'[d]);
-            }
-            el.textContent = toArabicNums(visits);
-          }
-        })();
       }
     </script>
   </body>
