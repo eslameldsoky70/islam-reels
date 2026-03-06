@@ -4519,9 +4519,10 @@
         // اقرأ الجودة والـ fps من الـ dropdowns
         const _selBitrate = document.getElementById('s-qual') ? parseInt(document.getElementById('s-qual').value) : 2_500_000;
         let _selFps = document.getElementById('s-fps') ? parseInt(document.getElementById('s-fps').value) : 30;
-        /* iOS: تقليل FPS تلقائياً لتحسين الأداء */
-        if (_isIOS && _selFps > 24) _selFps = 24;
-        const qp = { ..._baseQp, w: canvas.width, h: canvas.height, bitrate: _selBitrate, fps: _selFps };
+        /* iOS 16+: نفس FPS كـ Android للحصول على نفس الجودة */
+        /* iOS: نرفع الـ bitrate قليلاً لأن H.264 encoder فيه أقل كفاءة من Android */
+        const _finalBitrate = _isIOS ? Math.round(_selBitrate * 1.25) : _selBitrate;
+        const qp = { ..._baseQp, w: canvas.width, h: canvas.height, bitrate: _finalBitrate, fps: _selFps };
         // لا نغيّر canvas.width / canvas.height — نصدّر بالحجم الحالي
         _gradCache = null;
         _mtCache.clear();
@@ -4536,7 +4537,10 @@
           typeof AudioEncoder !== "undefined" &&
           typeof Mp4Muxer !== "undefined";
 
-        if (_exportFmt === "mp4" && _turboMode && canMP4) {
+        /* iOS 16+: نجبر مسار WebCodecs (MP4) دائماً للحصول على نفس جودة Android */
+        const _forceMP4 = _isIOS && canMP4;
+
+        if ((_exportFmt === "mp4" && _turboMode && canMP4) || _forceMP4) {
           toast$("⚡ تصدير MP4...");
           setSbar("🔴 يصدّر " + total + " آية...", "#f47c7c");
           await _exportMP4(expCtx, qp, buffers, verseData, exportAyahs, total);
@@ -4875,10 +4879,8 @@
           for (let f = 0; f < ayahFrames; f++) {
             if (_expAbort) break;
             hlActive = _drawVerseFrame(vd, f, msPerFrame, hlActive);
-            /* iOS: جودة JPEG أقل = أسرع بكثير */
-            const _jpegQ = _isIOS ? 0.72 : 0.88;
             const blob = await new Promise((res) =>
-              canvas.toBlob(res, "image/jpeg", _jpegQ),
+              canvas.toBlob(res, "image/jpeg", 0.88),
             );
             frameBlobs.push(blob);
             _setProgress(_expElapsedBefore + f / FPS);
